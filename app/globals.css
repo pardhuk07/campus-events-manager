@@ -1,26 +1,81 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* 1. Base Dark Navy Theme */
+  --bg-navy-base: #060b18;
+  --bg-navy-surface: #0b1328;
+  --bg-navy-card: #101b37;
+  --bg-navy-subtle: #172447;
+  --border-navy: #1e2d4f;
+  --border-navy-light: #2b3d68;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* 2. Signature Violet-to-Cyan Gradient */
+  --gradient-brand: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #06b6d4 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #22d3ee 100%);
+  --glow-brand: rgba(124, 58, 237, 0.35);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* 3. Strict Status Colors (Used ONLY for Statuses) */
+  --status-approved: #10b981;
+  --status-approved-bg: rgba(16, 185, 129, 0.15);
+  --status-approved-border: rgba(16, 185, 129, 0.35);
+
+  --status-pending: #f59e0b;
+  --status-pending-bg: rgba(245, 158, 11, 0.15);
+  --status-pending-border: rgba(245, 158, 11, 0.35);
+
+  --status-conflict: #ef4444;
+  --status-conflict-bg: rgba(239, 68, 68, 0.2);
+  --status-conflict-border: rgba(239, 68, 68, 0.5);
+
+  /* 4. Distinct Club Colors (For Event Pills & Tags) */
+  --club-acm: #38bdf8;          /* Sky Blue */
+  --club-acm-bg: rgba(56, 189, 248, 0.15);
+  --club-acm-border: rgba(56, 189, 248, 0.4);
+
+  --club-ieee: #a855f7;         /* Purple */
+  --club-ieee-bg: rgba(168, 85, 247, 0.15);
+  --club-ieee-border: rgba(168, 85, 247, 0.4);
+
+  --club-csi: #f43f5e;          /* Rose / Pink */
+  --club-csi-bg: rgba(244, 63, 94, 0.15);
+  --club-csi-border: rgba(244, 63, 94, 0.4);
+
+  --club-default: #818cf8;      /* Indigo */
+  --club-default-bg: rgba(129, 140, 248, 0.15);
+  --club-default-border: rgba(129, 140, 248, 0.4);
+
+  /* 5. Distinct Budget Category Colors */
+  --cat-refreshments: #06b6d4;   /* Cyan */
+  --cat-printing: #8b5cf6;       /* Violet */
+  --cat-prizes: #f43f5e;         /* Rose */
+  --cat-logistics: #3b82f6;      /* Blue */
+  --cat-marketing: #eab308;      /* Gold */
+  --cat-misc: #94a3b8;           /* Slate */
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-navy-base);
+  color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+}
+
+/* Custom Utility Classes */
+.btn-primary-gradient {
+  background: var(--gradient-brand);
+  transition: all 0.2s ease-in-out;
+}
+.btn-primary-gradient:hover {
+  background: var(--gradient-brand-hover);
+  box-shadow: 0 4px 20px var(--glow-brand);
+}
+
+.tab-active-gradient {
+  background: var(--gradient-brand);
+  color: #ffffff;
+  box-shadow: 0 2px 12px var(--glow-brand);
+}
+
+.logo-accent-glow {
+  box-shadow: 0 0 25px var(--glow-brand);
 }

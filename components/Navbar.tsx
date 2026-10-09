@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { CalendarIcon, RupeeIcon, ShieldCheckIcon } from './Icons';
 
 export type UserRole = 'MEMBER' | 'CLUB_EXEC' | 'ACM_CORE';
@@ -71,19 +70,18 @@ export default function Navbar({
 
   return (
     <>
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 text-white shadow-xl">
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#060b18]/90 border-b border-[var(--border-navy)] text-white shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
-          {/* Brand Logo & Title with Official ACM NIT Surat Logo */}
+          {/* Brand Logo & Title with Violet-to-Cyan Accent */}
           <div className="flex items-center space-x-3.5">
             <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-xl blur opacity-50 group-hover:opacity-100 transition duration-300"></div>
-              <div className="relative w-12 h-12 bg-slate-900 rounded-xl p-1 border border-slate-800 flex items-center justify-center shadow-lg">
+              <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-cyan-500 rounded-2xl blur-md opacity-60 group-hover:opacity-100 transition duration-300"></div>
+              <div className="relative w-12 h-12 bg-[#0b1328] rounded-xl p-1.5 border border-[var(--border-navy-light)] flex items-center justify-center shadow-lg">
                 <img
                   src="/acm-logo.png"
                   alt="ACM NIT Surat Logo"
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    // Fallback to stylized text badge if image is not yet copied
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
@@ -91,27 +89,27 @@ export default function Navbar({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+                <h1 className="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-violet-200 via-indigo-100 to-cyan-200 bg-clip-text text-transparent">
                   ACM NIT Surat
                 </h1>
-                <span className="text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="text-[10px] font-semibold bg-violet-500/15 text-cyan-300 border border-violet-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Campus Manager
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">Conflict-Aware Scheduling & Fund Memory • Track 2</p>
+              <p className="text-xs text-slate-400 font-medium">Conflict-Aware Scheduling & Fund Memory</p>
             </div>
           </div>
 
           {/* Navigation Controls */}
           <div className="flex items-center gap-3">
-            {/* Navigation Tabs */}
-            <nav className="flex p-1 bg-slate-900/90 rounded-xl border border-slate-800 shadow-inner">
+            {/* Navigation Tabs with Violet-to-Cyan Gradient Active State */}
+            <nav className="flex p-1 bg-[#0b1328] rounded-xl border border-[var(--border-navy)] shadow-inner">
               <button
                 onClick={() => setActiveTab('events')}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                   activeTab === 'events'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'tab-active-gradient'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#101b37]'
                 }`}
               >
                 <CalendarIcon className="w-3.5 h-3.5" />
@@ -122,8 +120,8 @@ export default function Navbar({
                 onClick={() => setActiveTab('expenses')}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                   activeTab === 'expenses'
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'tab-active-gradient'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#101b37]'
                 }`}
               >
                 <RupeeIcon className="w-3.5 h-3.5" />
@@ -133,7 +131,7 @@ export default function Navbar({
 
             {/* User Account / Role Verification State */}
             {currentUser ? (
-              <div className="flex items-center gap-2.5 bg-slate-900/90 pl-3 pr-2 py-1 rounded-xl border border-slate-800 shadow-sm">
+              <div className="flex items-center gap-2.5 bg-[#0b1328] pl-3 pr-2 py-1 rounded-xl border border-[var(--border-navy)] shadow-sm">
                 <div className="text-right">
                   <div className="text-xs font-bold text-slate-200 leading-tight truncate max-w-[120px]">
                     {currentUser.name}
@@ -146,9 +144,9 @@ export default function Navbar({
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                     currentUser.role === 'ACM_CORE'
-                      ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
                       : currentUser.role === 'CLUB_EXEC'
-                      ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                       : 'bg-slate-800 text-slate-400 border border-slate-700'
                   }`}
                 >
@@ -162,7 +160,7 @@ export default function Navbar({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="text-xs text-slate-400 hover:text-red-400 p-1 rounded-lg hover:bg-slate-800 transition"
+                  className="text-xs text-slate-400 hover:text-rose-400 p-1 rounded-lg hover:bg-[#101b37] transition"
                   title="Switch Persona / Sign out"
                 >
                   ✕
@@ -172,7 +170,7 @@ export default function Navbar({
               <button
                 type="button"
                 onClick={() => setShowLoginModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-500/20 transition"
+                className="flex items-center gap-1.5 px-3 py-1.5 btn-primary-gradient text-white text-xs font-semibold rounded-xl shadow-md transition"
               >
                 <ShieldCheckIcon className="w-3.5 h-3.5" />
                 Verify Gmail
@@ -185,11 +183,11 @@ export default function Navbar({
       {/* Gmail Email Verification Modal */}
       {showLoginModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#0b1328] border border-[var(--border-navy)] rounded-2xl max-w-md w-full p-6 text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <ShieldCheckIcon className="w-5 h-5 text-blue-400" />
+                  <ShieldCheckIcon className="w-5 h-5 text-cyan-400" />
                   Email & Role Authentication
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
@@ -199,7 +197,7 @@ export default function Navbar({
               <button
                 type="button"
                 onClick={() => setShowLoginModal(false)}
-                className="text-slate-400 hover:text-white text-base font-bold p-1 rounded-lg hover:bg-slate-800"
+                className="text-slate-400 hover:text-white text-base font-bold p-1 rounded-lg hover:bg-[#101b37]"
               >
                 ✕
               </button>
@@ -219,7 +217,7 @@ export default function Navbar({
                   value={inputName}
                   onChange={(e) => setInputName(e.target.value)}
                   placeholder="e.g. Parth Patel"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                 />
               </div>
 
@@ -233,21 +231,20 @@ export default function Navbar({
                   value={inputEmail}
                   onChange={(e) => setInputEmail(e.target.value)}
                   placeholder="name@gmail.com"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={verifying}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/25 mt-2"
+                className="w-full btn-primary-gradient disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition shadow-lg mt-2"
               >
                 {verifying ? 'Verifying Credentials...' : 'Sign In & Verify Role'}
               </button>
             </form>
 
-            {/* Quick Demo Pre-Verified Credentials */}
-            <div className="mt-5 pt-4 border-t border-slate-800/80">
+            <div className="mt-5 pt-4 border-t border-[var(--border-navy)]">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
                 Quick Test Personas:
               </span>
@@ -255,7 +252,7 @@ export default function Navbar({
                 <button
                   type="button"
                   onClick={() => quickLoginAs('acmcore@gmail.com', 'ACM Core Lead')}
-                  className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-800/50 hover:border-purple-500 text-left transition group"
+                  className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-800/50 hover:border-purple-400 text-left transition group"
                 >
                   <div className="font-bold text-xs text-purple-300 group-hover:text-purple-200">👑 Core Admin</div>
                   <div className="text-[9px] text-slate-400 truncate mt-0.5">acmcore@gmail.com</div>
@@ -264,9 +261,9 @@ export default function Navbar({
                 <button
                   type="button"
                   onClick={() => quickLoginAs('acmexec@gmail.com', 'Club Treasurer')}
-                  className="p-2.5 rounded-xl bg-blue-950/30 border border-blue-800/50 hover:border-blue-500 text-left transition group"
+                  className="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-800/50 hover:border-cyan-400 text-left transition group"
                 >
-                  <div className="font-bold text-xs text-blue-300 group-hover:text-blue-200">🛡️ Executive</div>
+                  <div className="font-bold text-xs text-cyan-300 group-hover:text-cyan-200">🛡️ Executive</div>
                   <div className="text-[9px] text-slate-400 truncate mt-0.5">acmexec@gmail.com</div>
                 </button>
 

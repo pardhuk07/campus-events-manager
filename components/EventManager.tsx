@@ -13,6 +13,7 @@ import {
   UsersIcon,
   PlusCircleIcon,
 } from './Icons';
+import { getClubTheme } from '@/lib/colors';
 
 export default function EventManager({ currentRole }: { currentRole: string }) {
   const [events, setEvents] = useState<any[]>([]);
@@ -93,17 +94,17 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
 
   return (
     <div className="space-y-6">
-      {/* 1. Slim Top Bar: KPI Chips & Primary "+ New Event" Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur-md shadow-lg">
+      {/* 1. Slim Top Bar: KPI Chips & Primary Action with Violet-to-Cyan Gradient */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0b1328] border border-[var(--border-navy)] p-4 rounded-2xl shadow-lg">
         {/* Slim KPI Chips */}
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300">
-            <span className="text-blue-400 font-bold">📅</span>
-            <span>{events.length} Total Events</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#060b18] border border-[var(--border-navy)] text-slate-300">
+            <span className="text-cyan-400 font-bold">📅</span>
+            <span>{events.length} Events</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--status-approved-bg)] border border-[var(--status-approved-border)] text-emerald-400">
+            <span className="w-2 h-2 rounded-full bg-[var(--status-approved)]"></span>
             <span>{approvedCount} Approved</span>
           </div>
 
@@ -112,8 +113,8 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
             onClick={() => setViewMode('clashes')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition ${
               conflictCount > 0
-                ? 'bg-red-950/60 border-red-500/60 text-red-300 hover:bg-red-900/70 animate-pulse'
-                : 'bg-slate-950 border-slate-800 text-slate-400'
+                ? 'bg-[var(--status-conflict-bg)] border-[var(--status-conflict-border)] text-red-300 animate-pulse'
+                : 'bg-[#060b18] border-[var(--border-navy)] text-slate-400'
             }`}
           >
             <AlertTriangleIcon className="w-3.5 h-3.5 text-red-400" />
@@ -121,15 +122,15 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
           </button>
         </div>
 
-        {/* Action Controls & New Event Button */}
+        {/* View Mode Switcher & + New Event Button */}
         <div className="flex items-center gap-3">
           {/* View Mode Switcher Pills */}
-          <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-1 text-xs font-semibold">
+          <div className="flex bg-[#060b18] border border-[var(--border-navy)] rounded-xl p-1 text-xs font-semibold">
             <button
               type="button"
               onClick={() => setViewMode('calendar')}
               className={`px-3 py-1.5 rounded-lg transition ${
-                viewMode === 'calendar' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                viewMode === 'calendar' ? 'tab-active-gradient' : 'text-slate-400 hover:text-white'
               }`}
             >
               📅 Month
@@ -138,10 +139,10 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
               type="button"
               onClick={() => setViewMode('timeline')}
               className={`px-3 py-1.5 rounded-lg transition ${
-                viewMode === 'timeline' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                viewMode === 'timeline' ? 'tab-active-gradient' : 'text-slate-400 hover:text-white'
               }`}
             >
-              📊 Venue Timeline
+              📊 Timeline
             </button>
             <button
               type="button"
@@ -156,14 +157,14 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
               type="button"
               onClick={() => setViewMode('list')}
               className={`px-3 py-1.5 rounded-lg transition ${
-                viewMode === 'list' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                viewMode === 'list' ? 'tab-active-gradient' : 'text-slate-400 hover:text-white'
               }`}
             >
               Cards
             </button>
           </div>
 
-          {/* Hero "+ New Event" Button (Opens Slide-Over Drawer) */}
+          {/* Hero "+ New Event" Button with Violet-to-Cyan Gradient */}
           {currentRole !== 'MEMBER' && (
             <button
               type="button"
@@ -171,7 +172,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                 setDrawerInitialDate(undefined);
                 setIsDrawerOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/25 transition shrink-0"
+              className="flex items-center gap-2 px-4 py-2 btn-primary-gradient text-white text-xs font-bold rounded-xl shadow-lg transition shrink-0"
             >
               <PlusCircleIcon className="w-4 h-4" />
               <span>+ New Event</span>
@@ -180,21 +181,21 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
         </div>
       </div>
 
-      {/* 2. Search & Filter Bar (Only shown on Calendar & Cards views) */}
+      {/* 2. Search & Filter Bar */}
       {(viewMode === 'calendar' || viewMode === 'list') && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 p-3 rounded-2xl backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0b1328]/80 border border-[var(--border-navy)] p-3 rounded-2xl">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search events by title, venue, or club..."
-            className="bg-slate-950 border border-slate-800 text-xs rounded-xl px-3.5 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-full sm:w-80"
+            className="bg-[#060b18] border border-[var(--border-navy)] text-xs rounded-xl px-3.5 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-full sm:w-80"
           />
 
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-xs rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-blue-500 cursor-pointer"
+            className="bg-[#060b18] border border-[var(--border-navy)] text-xs rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
           >
             <option value="ALL">All Statuses</option>
             <option value="APPROVED">Approved Only</option>
@@ -222,7 +223,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
       )}
 
       {viewMode === 'list' && (
-        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white">
+        <div className="bg-[#0b1328] border border-[var(--border-navy)] p-6 rounded-2xl shadow-xl text-white">
           {filteredEvents.length === 0 ? (
             <div className="py-12 text-center text-slate-500 text-xs italic">
               No campus events match your query.
@@ -231,13 +232,15 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
             <div className="space-y-3">
               {filteredEvents.map((ev) => {
                 const isConflict = ev.status === 'FLAGGED_CONFLICT';
+                const clubTheme = getClubTheme(ev.club?.name);
+
                 return (
                   <div
                     key={ev.id}
                     className={`p-4 rounded-2xl border transition-all duration-200 ${
                       isConflict
-                        ? 'bg-red-950/30 border-red-800/80 hover:border-red-600 shadow-sm shadow-red-900/20'
-                        : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700/80'
+                        ? 'bg-[var(--status-conflict-bg)] border-[var(--status-conflict-border)] shadow-sm'
+                        : 'bg-[#060b18] border-[var(--border-navy)] hover:border-[var(--border-navy-light)]'
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -247,20 +250,25 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
                               isConflict
-                                ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                ? 'bg-[var(--status-conflict-bg)] text-red-300 border border-[var(--status-conflict-border)]'
                                 : ev.status === 'APPROVED'
-                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                ? 'bg-[var(--status-approved-bg)] text-emerald-300 border border-[var(--status-approved-border)]'
+                                : 'bg-[var(--status-pending-bg)] text-amber-300 border border-[var(--status-pending-border)]'
                             }`}
                           >
                             {ev.status}
                           </span>
                         </div>
-                        <span className="text-xs text-blue-400 font-semibold mt-0.5 block">{ev.club?.name}</span>
+
+                        {/* Distinct Club Tag */}
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className={`w-2 h-2 rounded-full ${clubTheme.dot}`}></span>
+                          <span className={`text-xs font-semibold ${clubTheme.text}`}>{ev.club?.name}</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-900 text-xs text-slate-300">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-[var(--border-navy)] text-xs text-slate-300">
                       <div className="flex items-center gap-1.5">
                         <MapPinIcon className="w-3.5 h-3.5 text-slate-400" />
                         <span>{ev.venue}</span>
@@ -279,11 +287,11 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                     </div>
 
                     {currentRole === 'ACM_CORE' && ev.status !== 'APPROVED' && (
-                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-800">
+                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border-navy)]">
                         <span className="text-[11px] text-slate-400 font-semibold">Core Verification:</span>
                         <button
                           onClick={() => handleUpdateStatus(ev.id, 'APPROVED')}
-                          className="px-3 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 rounded-xl text-xs font-semibold transition shadow-sm"
+                          className="px-3 py-1 btn-primary-gradient text-white rounded-xl text-xs font-semibold transition shadow-sm"
                         >
                           ✓ {ev.status === 'FLAGGED_CONFLICT' ? 'Override & Approve' : 'Approve'}
                         </button>

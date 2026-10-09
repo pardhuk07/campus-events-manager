@@ -42,7 +42,7 @@ export default function Home() {
   const effectiveRole = currentUser?.role || 'MEMBER';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--bg-navy-base)] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -59,7 +59,7 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-[var(--border-navy)] py-6 text-center text-xs text-slate-500">
         ACM Student Chapter • Campus Conflict-Aware Events & Fund Management System
       </footer>
     </div>

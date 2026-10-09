@@ -10,6 +10,7 @@ import {
   DownloadIcon,
   ShieldCheckIcon,
 } from './Icons';
+import { CATEGORY_COLORS } from '@/lib/colors';
 
 export default function ExpenseManager({ currentRole }: { currentRole: string }) {
   const [data, setData] = useState<any>(null);
@@ -173,19 +174,19 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
 
   return (
     <div className="space-y-8">
-      {/* 1. Header KPI Overview Cards */}
+      {/* 1. Header Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total Budget Card */}
-        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white relative overflow-hidden">
+        <div className="bg-[#0b1328] border border-[var(--border-navy)] p-6 rounded-2xl shadow-xl text-white relative overflow-hidden">
           <div className="flex items-center justify-between text-slate-400 text-xs">
             <span className="font-semibold uppercase tracking-wider">Total Semester Budget</span>
             <div className="flex items-center gap-2">
-              <RupeeIcon className="w-4 h-4 text-blue-400" />
+              <RupeeIcon className="w-4 h-4 text-cyan-400" />
               {currentRole === 'ACM_CORE' && (
                 <button
                   type="button"
                   onClick={() => setIsEditingBudget(!isEditingBudget)}
-                  className="text-[11px] bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white px-2 py-0.5 rounded-lg border border-blue-500/30 transition font-bold"
+                  className="text-[11px] bg-violet-600/20 hover:bg-violet-600 text-cyan-300 hover:text-white px-2 py-0.5 rounded-lg border border-violet-500/30 transition font-bold"
                 >
                   {isEditingBudget ? 'Cancel' : 'Edit Budget'}
                 </button>
@@ -202,12 +203,12 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                   required
                   value={newBudgetAmount}
                   onChange={(e) => setNewBudgetAmount(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500 font-bold"
+                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-cyan-500 font-bold"
                 />
                 <button
                   type="submit"
                   disabled={savingBudget}
-                  className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-2 rounded-xl font-bold transition shadow"
+                  className="btn-primary-gradient text-white text-xs px-3 py-2 rounded-xl font-bold transition shadow"
                 >
                   {savingBudget ? '...' : 'Save'}
                 </button>
@@ -223,15 +224,15 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
         </div>
 
         {/* Total Spent Card */}
-        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white">
+        <div className="bg-[#0b1328] border border-[var(--border-navy)] p-6 rounded-2xl shadow-xl text-white">
           <div className="flex items-center justify-between text-slate-400 text-xs">
             <span className="font-semibold uppercase tracking-wider">Total Spent</span>
-            <TrendingUpIcon className="w-4 h-4 text-amber-400" />
+            <TrendingUpIcon className="w-4 h-4 text-cyan-400" />
           </div>
-          <div className="text-3xl font-black mt-2 text-amber-400">₹{spent.toLocaleString()}</div>
-          <div className="w-full bg-slate-950 rounded-full h-2 mt-3 overflow-hidden border border-slate-800">
+          <div className="text-3xl font-black mt-2 text-cyan-300">₹{spent.toLocaleString()}</div>
+          <div className="w-full bg-[#060b18] rounded-full h-2 mt-3 overflow-hidden border border-[var(--border-navy)]">
             <div
-              className={`h-2 rounded-full transition-all duration-300 ${percent > 85 ? 'bg-red-500' : 'bg-gradient-to-r from-amber-500 to-orange-400'}`}
+              className={`h-2 rounded-full transition-all duration-300 ${percent > 85 ? 'bg-red-500' : 'btn-primary-gradient'}`}
               style={{ width: `${percent}%` }}
             ></div>
           </div>
@@ -239,7 +240,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
         </div>
 
         {/* Remaining Funds Card */}
-        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white">
+        <div className="bg-[#0b1328] border border-[var(--border-navy)] p-6 rounded-2xl shadow-xl text-white">
           <div className="flex items-center justify-between text-slate-400 text-xs">
             <span className="font-semibold uppercase tracking-wider">Remaining Balance</span>
             <RupeeIcon className="w-4 h-4 text-emerald-400" />
@@ -251,7 +252,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
         </div>
       </div>
 
-      {/* 2. Visual Charts Row (Donut & Progress Bars) */}
+      {/* 2. Visual Charts Row with Distinct Category Colors */}
       <BudgetCharts
         totalBudget={budget}
         totalSpent={spent}
@@ -262,9 +263,9 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* 3. Expense Submission or Member Read-Only Notice */}
-        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white">
+        <div className="bg-[#0b1328] border border-[var(--border-navy)] p-6 rounded-2xl shadow-xl text-white">
           <div className="flex items-center gap-2 mb-5">
-            <div className="p-2 rounded-xl bg-emerald-600/10 border border-emerald-500/20 text-emerald-400">
+            <div className="p-2 rounded-xl bg-[#101b37] border border-[var(--border-navy-light)] text-cyan-400">
               <PlusCircleIcon className="w-5 h-5" />
             </div>
             <div>
@@ -274,8 +275,8 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
           </div>
 
           {currentRole === 'MEMBER' ? (
-            <div className="bg-slate-950/60 border border-slate-800 p-6 rounded-2xl text-center space-y-3">
-              <div className="w-12 h-12 bg-slate-800/80 rounded-2xl flex items-center justify-center mx-auto text-slate-400 shadow-inner">
+            <div className="bg-[#060b18] border border-[var(--border-navy)] p-6 rounded-2xl text-center space-y-3">
+              <div className="w-12 h-12 bg-[#101b37] rounded-2xl flex items-center justify-center mx-auto text-slate-400">
                 <ShieldCheckIcon className="w-6 h-6 text-slate-400" />
               </div>
               <h4 className="text-sm font-bold text-slate-200">Read-Only Financial View</h4>
@@ -294,7 +295,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Refreshments for Tech Workshop"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
@@ -308,7 +309,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="1500"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
                   />
                 </div>
 
@@ -317,7 +318,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
                   >
                     <option value="REFRESHMENTS">Refreshments</option>
                     <option value="PRINTING">Printing</option>
@@ -336,7 +337,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                 <select
                   value={eventId}
                   onChange={(e) => setEventId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
                 >
                   <option value="">General Club Expense (Unlinked)</option>
                   {events.map((ev) => (
@@ -355,11 +356,11 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                   type="file"
                   accept="image/*,application/pdf"
                   onChange={handleFileUpload}
-                  className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-xl border border-slate-800"
+                  className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:btn-primary-gradient file:text-white cursor-pointer bg-[#060b18] rounded-xl border border-[var(--border-navy)]"
                 />
                 {uploading && <p className="text-xs text-amber-400 mt-1 font-medium">Uploading receipt...</p>}
                 {receiptUrl && (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 p-2.5 rounded-xl">
+                  <div className="mt-2 flex items-center gap-2 text-xs text-emerald-400 bg-[var(--status-approved-bg)] border border-[var(--status-approved-border)] p-2.5 rounded-xl">
                     <ReceiptIcon className="w-4 h-4 text-emerald-400" />
                     <span className="truncate flex-1 font-medium">Receipt Attached</span>
                     <a
@@ -381,14 +382,14 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Vendor details, voucher number, invoice notes..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-xs transition-all duration-200 shadow-md shadow-emerald-500/20"
+                className="w-full btn-primary-gradient disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-lg mt-2"
               >
                 {submitting ? 'Recording...' : 'Add Expense Record'}
               </button>
@@ -398,7 +399,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
 
         {/* 4. Transactions Ledger */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white">
+          <div className="bg-[#0b1328] border border-[var(--border-navy)] p-6 rounded-2xl shadow-xl text-white">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <span>Transactions Ledger</span>
@@ -408,7 +409,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
               <button
                 type="button"
                 onClick={handleDownloadReport}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/15 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 rounded-xl text-xs font-semibold transition shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#101b37] hover:bg-[#172447] text-cyan-300 hover:text-white border border-[var(--border-navy)] rounded-xl text-xs font-semibold transition shadow-sm"
               >
                 <DownloadIcon className="w-3.5 h-3.5" />
                 Export Institutional Memory (CSV)
@@ -418,36 +419,45 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
             {data?.recentExpenses?.length === 0 ? (
               <p className="text-sm text-slate-500 italic py-6 text-center">No transactions recorded yet this semester.</p>
             ) : (
-              <div className="divide-y divide-slate-800/80">
-                {data?.recentExpenses?.map((item: any) => (
-                  <div key={item.id} className="py-3.5 flex items-center justify-between text-xs">
-                    <div>
-                      <div className="font-bold text-white flex items-center gap-2">
-                        <span>{item.title}</span>
-                        {item.event && (
-                          <span className="text-[10px] bg-blue-950 text-blue-300 border border-blue-800/60 px-1.5 py-0.5 rounded-md font-semibold">
-                            {item.event.title}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-slate-400 flex items-center gap-2.5 mt-1">
-                        <span className="bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-medium">{item.category}</span>
-                        <span>{new Date(item.date).toLocaleDateString()}</span>
-                        {item.receiptUrl && (
-                          <a
-                            href={item.receiptUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-400 font-semibold hover:underline"
+              <div className="divide-y border-t border-[var(--border-navy)] border-slate-800/80">
+                {data?.recentExpenses?.map((item: any) => {
+                  const catInfo = CATEGORY_COLORS[item.category] || { hex: '#818cf8', label: item.category };
+
+                  return (
+                    <div key={item.id} className="py-3.5 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-white flex items-center gap-2">
+                          <span>{item.title}</span>
+                          {item.event && (
+                            <span className="text-[10px] bg-[#101b37] text-cyan-300 border border-[var(--border-navy)] px-1.5 py-0.5 rounded-md font-semibold">
+                              {item.event.title}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-400 flex items-center gap-2.5 mt-1">
+                          <span
+                            className="px-2 py-0.5 rounded text-white font-medium text-[10px]"
+                            style={{ backgroundColor: `${catInfo.hex}25`, border: `1px solid ${catInfo.hex}50`, color: catInfo.hex }}
                           >
-                            View Receipt
-                          </a>
-                        )}
+                            {catInfo.label}
+                          </span>
+                          <span>{new Date(item.date).toLocaleDateString()}</span>
+                          {item.receiptUrl && (
+                            <a
+                              href={item.receiptUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-cyan-400 font-semibold hover:underline"
+                            >
+                              View Receipt
+                            </a>
+                          )}
+                        </div>
                       </div>
+                      <div className="font-black text-sm text-cyan-300">₹{item.amount.toLocaleString()}</div>
                     </div>
-                    <div className="font-black text-sm text-emerald-400">₹{item.amount.toLocaleString()}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

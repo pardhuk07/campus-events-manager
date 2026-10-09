@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ClockIcon, MapPinIcon } from './Icons';
+import { getClubTheme } from '@/lib/colors';
 
 interface VenueTimelineProps {
   events: any[];
@@ -43,12 +44,12 @@ export default function VenueTimeline({ events, onSelectEvent }: VenueTimelinePr
   };
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md text-white">
+    <div className="bg-[#0b1328] border border-[var(--border-navy)] rounded-2xl p-5 shadow-xl text-white">
       {/* Header with Date Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-[var(--border-navy)]">
         <div>
           <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <ClockIcon className="w-4 h-4 text-blue-400" />
+            <ClockIcon className="w-4 h-4 text-cyan-400" />
             Venue vs. Hours Timeline
           </h3>
           <p className="text-xs text-slate-400">Visual occupancy grid across all campus facilities</p>
@@ -60,7 +61,7 @@ export default function VenueTimeline({ events, onSelectEvent }: VenueTimelinePr
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-2.5 py-1 focus:outline-none focus:border-blue-500 cursor-pointer"
+            className="bg-[#060b18] border border-[var(--border-navy)] text-xs text-white rounded-xl px-2.5 py-1 focus:outline-none focus:border-cyan-500 cursor-pointer"
           />
         </div>
       </div>
@@ -72,7 +73,7 @@ export default function VenueTimeline({ events, onSelectEvent }: VenueTimelinePr
           <div style={gridStyle} className="gap-1 mb-2 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
             <div className="text-left pl-2 font-bold text-slate-300">Venue</div>
             {HOURS.map((h) => (
-              <div key={h} className="py-1 bg-slate-950/80 rounded-md border border-slate-800">
+              <div key={h} className="py-1 bg-[#060b18] rounded-md border border-[var(--border-navy)]">
                 {formatHour(h)}
               </div>
             ))}
@@ -88,11 +89,11 @@ export default function VenueTimeline({ events, onSelectEvent }: VenueTimelinePr
               <div
                 key={venueName}
                 style={gridStyle}
-                className="gap-1 items-center bg-slate-950/40 rounded-xl p-1.5 border border-slate-800/60 min-h-[58px]"
+                className="gap-1 items-center bg-[#060b18]/80 rounded-xl p-1.5 border border-[var(--border-navy)] min-h-[58px]"
               >
                 {/* Venue Label */}
                 <div className="text-xs font-semibold text-slate-300 truncate pr-2 pl-1.5 flex items-center gap-1.5">
-                  <MapPinIcon className="w-3 h-3 text-blue-400 shrink-0" />
+                  <MapPinIcon className="w-3 h-3 text-cyan-400 shrink-0" />
                   <span className="truncate">{venueName}</span>
                 </div>
 
@@ -106,16 +107,17 @@ export default function VenueTimeline({ events, onSelectEvent }: VenueTimelinePr
 
                   const isConflict = activeInHour.some((e) => e.status === 'FLAGGED_CONFLICT');
                   const hasDoubleBooking = activeInHour.length > 1;
+                  const clubTheme = activeInHour.length > 0 ? getClubTheme(activeInHour[0].club?.name) : null;
 
                   return (
                     <div
                       key={hour}
                       className={`h-11 rounded-lg border transition flex flex-col justify-center items-center p-1 relative text-[10px] ${
                         hasDoubleBooking || isConflict
-                          ? 'bg-red-950/70 border-red-500/80 text-red-200 animate-pulse shadow-sm shadow-red-500/20'
-                          : activeInHour.length > 0
-                          ? 'bg-blue-900/40 border-blue-600/70 text-blue-200'
-                          : 'bg-slate-900/30 border-slate-800/40 hover:bg-slate-800/40'
+                          ? 'bg-[var(--status-conflict-bg)] border-[var(--status-conflict-border)] text-red-200 animate-pulse'
+                          : activeInHour.length > 0 && clubTheme
+                          ? `${clubTheme.bg} ${clubTheme.border} ${clubTheme.text}`
+                          : 'bg-[#101b37]/40 border-[var(--border-navy)]/60 hover:bg-[#101b37]'
                       }`}
                       title={
                         activeInHour.length > 0
