@@ -1,0 +1,98 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  MEMBER
+  CLUB_EXEC
+  ACM_CORE
+}
+
+enum EventStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED_CONFLICT
+}
+
+enum AudienceType {
+  TECH_UG
+  TECH_PG
+  NON_TECH_CULTURAL
+  SPORTS
+  ALL_CAMPUS
+}
+
+enum ExpenseCategory {
+  PRINTING
+  REFRESHMENTS
+  PRIZES_MEMENTOS
+  LOGISTICS_EQUIPMENT
+  MARKETING_BANNERS
+  MISCELLANEOUS
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      Role     @default(MEMBER)
+  clubId    String?
+  club      Club?    @relation(fields: [clubId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Club {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  users       User[]
+  events      Event[]
+  createdAt   DateTime @default(now())
+}
+
+model Event {
+  id               String       @id @default(cuid())
+  title            String
+  description      String?
+  startTime        DateTime
+  endTime          DateTime
+  venue            String
+  expectedAudience Int          @default(50)
+  audienceType     AudienceType
+  status           EventStatus  @default(PENDING)
+  clubId           String
+  club             Club         @relation(fields: [clubId], references: [id])
+  expenses         Expense[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([startTime, endTime])
+  @@index([venue])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  title       String
+  amount      Float
+  category    ExpenseCategory
+  date        DateTime        @default(now())
+  receiptUrl  String?
+  description String?
+  eventId     String?
+  event       Event?          @relation(fields: [eventId], references: [id])
+  createdAt   DateTime        @default(now())
+}
+
+model Budget {
+  id             String   @id @default(cuid())
+  semester       String   @unique
+  totalAllocated Float    @default(50000)
+  createdAt      DateTime @default(now())
+}
