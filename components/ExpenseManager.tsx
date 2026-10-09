@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import BudgetCharts from './BudgetCharts';
 import {
   RupeeIcon,
   TrendingUpIcon,
@@ -172,7 +173,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
 
   return (
     <div className="space-y-8">
-      {/* 1. Header Overview Cards */}
+      {/* 1. Header KPI Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total Budget Card */}
         <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white relative overflow-hidden">
@@ -250,8 +251,17 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
         </div>
       </div>
 
+      {/* 2. Visual Charts Row (Donut & Progress Bars) */}
+      <BudgetCharts
+        totalBudget={budget}
+        totalSpent={spent}
+        remainingBudget={remaining}
+        percentSpent={percent}
+        categoryBreakdown={data?.categoryBreakdown || {}}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* 2. Expense Submission or Member Read-Only Notice */}
+        {/* 3. Expense Submission or Member Read-Only Notice */}
         <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white">
           <div className="flex items-center gap-2 mb-5">
             <div className="p-2 rounded-xl bg-emerald-600/10 border border-emerald-500/20 text-emerald-400">
@@ -319,7 +329,6 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                 </div>
               </div>
 
-              {/* Associate with an Event (Institutional Memory) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
                   Linked Event (Institutional Memory)
@@ -327,7 +336,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                 <select
                   value={eventId}
                   onChange={(e) => setEventId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                 >
                   <option value="">General Club Expense (Unlinked)</option>
                   {events.map((ev) => (
@@ -338,7 +347,6 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                 </select>
               </div>
 
-              {/* File Upload for Receipts */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
                   Upload Bill / Receipt
@@ -388,24 +396,8 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
           )}
         </div>
 
-        {/* 3. Category Breakdown & Recent Transactions */}
+        {/* 4. Transactions Ledger */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Category breakdown cards */}
-          <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white">
-            <h3 className="text-xs font-bold text-slate-400 mb-4 uppercase tracking-wider">
-              Category Spending Breakdown
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {Object.entries(data?.categoryBreakdown || {}).map(([cat, total]: [string, any]) => (
-                <div key={cat} className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
-                  <div className="text-[11px] font-semibold text-slate-400 truncate">{cat.replace(/_/g, ' ')}</div>
-                  <div className="text-base font-black text-white mt-1">₹{total.toLocaleString()}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Ledger / Transactions */}
           <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md text-white">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
@@ -413,7 +405,6 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                 <ReceiptIcon className="w-4 h-4 text-slate-400" />
               </h3>
 
-              {/* One-click Institutional Memory Handover Export */}
               <button
                 type="button"
                 onClick={handleDownloadReport}
