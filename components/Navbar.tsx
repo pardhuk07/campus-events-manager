@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { CalendarIcon, RupeeIcon, ShieldCheckIcon } from './Icons';
 
 export type UserRole = 'MEMBER' | 'CLUB_EXEC' | 'ACM_CORE';
@@ -72,24 +73,32 @@ export default function Navbar({
     <>
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 text-white shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
-          {/* Brand Logo & Title */}
+          {/* Brand Logo & Title with Official ACM NIT Surat Logo */}
           <div className="flex items-center space-x-3.5">
             <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-500 rounded-xl blur opacity-60 group-hover:opacity-100 transition duration-300"></div>
-              <div className="relative w-11 h-11 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl font-extrabold flex items-center justify-center text-lg shadow-lg tracking-wider">
-                ACM
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-xl blur opacity-50 group-hover:opacity-100 transition duration-300"></div>
+              <div className="relative w-12 h-12 bg-slate-900 rounded-xl p-1 border border-slate-800 flex items-center justify-center shadow-lg">
+                <img
+                  src="/acm-logo.png"
+                  alt="ACM NIT Surat Logo"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback to stylized text badge if image is not yet copied
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
               </div>
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-                  Campus Manager
+                  ACM NIT Surat
                 </h1>
                 <span className="text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Track 2
+                  Campus Manager
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">Conflict-Aware Scheduling & Digital Fund Memory</p>
+              <p className="text-xs text-slate-400 font-medium">Conflict-Aware Scheduling & Fund Memory • Track 2</p>
             </div>
           </div>
 
