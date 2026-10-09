@@ -14,7 +14,7 @@
   --gradient-brand-hover: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #22d3ee 100%);
   --glow-brand: rgba(124, 58, 237, 0.35);
 
-  /* 3. Strict Status Colors (Used ONLY for Statuses) */
+  /* 3. Strict Status Colors */
   --status-approved: #10b981;
   --status-approved-bg: rgba(16, 185, 129, 0.15);
   --status-approved-border: rgba(16, 185, 129, 0.35);
@@ -27,53 +27,68 @@
   --status-conflict-bg: rgba(239, 68, 68, 0.2);
   --status-conflict-border: rgba(239, 68, 68, 0.5);
 
-  /* 4. Distinct Club Colors (For Event Pills & Tags) */
-  --club-acm: #38bdf8;          /* Sky Blue */
+  /* 4. Distinct Club Colors */
+  --club-acm: #38bdf8;
   --club-acm-bg: rgba(56, 189, 248, 0.15);
   --club-acm-border: rgba(56, 189, 248, 0.4);
 
-  --club-ieee: #a855f7;         /* Purple */
+  --club-ieee: #a855f7;
   --club-ieee-bg: rgba(168, 85, 247, 0.15);
   --club-ieee-border: rgba(168, 85, 247, 0.4);
 
-  --club-csi: #f43f5e;          /* Rose / Pink */
+  --club-csi: #f43f5e;
   --club-csi-bg: rgba(244, 63, 94, 0.15);
   --club-csi-border: rgba(244, 63, 94, 0.4);
 
-  --club-default: #818cf8;      /* Indigo */
+  --club-default: #818cf8;
   --club-default-bg: rgba(129, 140, 248, 0.15);
   --club-default-border: rgba(129, 140, 248, 0.4);
 
   /* 5. Distinct Budget Category Colors */
-  --cat-refreshments: #06b6d4;   /* Cyan */
-  --cat-printing: #8b5cf6;       /* Violet */
-  --cat-prizes: #f43f5e;         /* Rose */
-  --cat-logistics: #3b82f6;      /* Blue */
-  --cat-marketing: #eab308;      /* Gold */
-  --cat-misc: #94a3b8;           /* Slate */
+  --cat-refreshments: #06b6d4;
+  --cat-printing: #8b5cf6;
+  --cat-prizes: #f43f5e;
+  --cat-logistics: #3b82f6;
+  --cat-marketing: #eab308;
+  --cat-misc: #94a3b8;
 }
 
 body {
   background-color: var(--bg-navy-base);
   color: #f1f5f9;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+}
+
+/* Typography Enhancements */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-jakarta), sans-serif;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+code, kbd, samp, pre, .font-mono {
+  font-family: var(--font-mono), monospace;
 }
 
 /* Custom Utility Classes */
 .btn-primary-gradient {
   background: var(--gradient-brand);
-  transition: all 0.2s ease-in-out;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn-primary-gradient:hover {
   background: var(--gradient-brand-hover);
   box-shadow: 0 4px 20px var(--glow-brand);
+  transform: translateY(-1px);
 }
 
 .tab-active-gradient {
   background: var(--gradient-brand);
   color: #ffffff;
-  box-shadow: 0 2px 12px var(--glow-brand);
+  box-shadow: 0 2px 14px var(--glow-brand);
 }
 
 .logo-accent-glow {
