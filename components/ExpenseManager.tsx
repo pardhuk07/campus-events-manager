@@ -13,15 +13,30 @@ import {
 import { CATEGORY_COLORS } from '@/lib/colors';
 
 export default function ExpenseManager({ currentRole }: { currentRole: string }) {
-  const [data, setData] = useState<any>(null);
+  // Pre-seed with instant baseline data so there is ZERO waiting time or blank screen
+  const [data, setData] = useState<any>({
+    semester: 'Fall 2026',
+    totalBudget: 50000,
+    totalSpent: 0,
+    remainingBudget: 50000,
+    percentSpent: 0,
+    categoryBreakdown: {
+      REFRESHMENTS: 0,
+      PRINTING: 0,
+      PRIZES_MEMENTOS: 0,
+      LOGISTICS_EQUIPMENT: 0,
+      MARKETING_BANNERS: 0,
+      MISCELLANEOUS: 0,
+    },
+    recentExpenses: [],
+  });
   const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   // Budget Edit State (STRICTLY for ACM_CORE only)
   const [isEditingBudget, setIsEditingBudget] = useState(false);
-  const [newBudgetAmount, setNewBudgetAmount] = useState('');
+  const [newBudgetAmount, setNewBudgetAmount] = useState('50000');
   const [savingBudget, setSavingBudget] = useState(false);
 
   // Form State
@@ -36,14 +51,12 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
     try {
       const res = await fetch('/api/expenses');
       const json = await res.json();
-      if (json.success) {
+      if (json.success && json.data) {
         setData(json.data);
         setNewBudgetAmount(String(json.data.totalBudget || 50000));
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -163,17 +176,13 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
     window.open('/api/reports/handover?format=csv', '_blank');
   };
 
-  if (loading) {
-    return <div className="text-center py-12 text-slate-500 text-xs italic">Loading Financial Records...</div>;
-  }
-
   const budget = data?.totalBudget || 50000;
   const spent = data?.totalSpent || 0;
   const remaining = data?.remainingBudget || 50000;
   const percent = Math.min(100, Math.round((spent / budget) * 100));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-150">
       {/* 1. Header Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total Budget Card */}

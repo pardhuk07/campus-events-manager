@@ -11,37 +11,37 @@ export interface BudgetSummary {
 }
 
 export async function getSemesterBudgetSummary(semesterName = 'Fall 2026'): Promise<BudgetSummary> {
-  // 1. Fetch allocated budget
-  const budget = await prisma.budget.findUnique({
-    where: { semester: semesterName },
-  });
+  // Execute budget fetch and expenses fetch in parallel via Promise.all
+  const [budget, expenses] = await Promise.all([
+    prisma.budget.findUnique({
+      where: { semester: semesterName },
+    }),
+    prisma.expense.findMany({
+      orderBy: { date: 'desc' },
+      include: {
+        event: {
+          select: { id: true, title: true },
+        },
+      },
+    }),
+  ]);
 
   const totalAllocated = budget ? budget.totalAllocated : 50000.0;
 
-  // 2. Fetch all expenses with linked event
-  const expenses = await prisma.expense.findMany({
-    orderBy: { date: 'desc' },
-    include: {
-      event: {
-        select: { id: true, title: true },
-      },
-    },
-  });
-
-  // 3. Aggregate totals
-  const totalSpent = expenses.reduce((sum, item) => sum + item.amount, 0);
-  const remainingBudget = totalAllocated - totalSpent;
-  const percentSpent = totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0;
-
-  // 4. Category-wise breakdown
+  // Aggregate totals in a single pass
+  let totalSpent = 0;
   const categoryBreakdown: Record<string, number> = {};
   for (const cat of Object.values(ExpenseCategory)) {
     categoryBreakdown[cat] = 0;
   }
 
   for (const exp of expenses) {
+    totalSpent += exp.amount;
     categoryBreakdown[exp.category] = (categoryBreakdown[exp.category] || 0) + exp.amount;
   }
+
+  const remainingBudget = totalAllocated - totalSpent;
+  const percentSpent = totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0;
 
   return {
     semester: semesterName,
@@ -50,6 +50,6 @@ export async function getSemesterBudgetSummary(semesterName = 'Fall 2026'): Prom
     remainingBudget,
     percentSpent: Math.round(percentSpent * 100) / 100,
     categoryBreakdown,
-    recentExpenses: expenses.slice(0, 10),
+    recentExpenses: expenses.slice(0, 15),
   };
 }

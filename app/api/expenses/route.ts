@@ -2,14 +2,21 @@ import { NextResponse } from 'next/server';
 import { prisma, ExpenseCategory, Role } from '@/lib/prisma';
 import { getSemesterBudgetSummary } from '@/services/expenseService';
 
-// 1. GET /api/expenses - Get budget analytics and recent transactions (Visible to all)
+// 1. GET /api/expenses - Fast Edge & In-Memory Response
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const semester = searchParams.get('semester') || 'Fall 2026';
 
     const summary = await getSemesterBudgetSummary(semester);
-    return NextResponse.json({ success: true, data: summary });
+    return NextResponse.json(
+      { success: true, data: summary },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching budget summary:', error);
     return NextResponse.json(
@@ -19,7 +26,7 @@ export async function GET(request: Request) {
   }
 }
 
-// 2. POST /api/expenses - Record a transaction / bill (Restricted to CLUB_EXEC and ACM_CORE)
+// 2. POST /api/expenses - Record a transaction
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -30,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Forbidden: Regular members cannot record expenses. Only authorized club executives and ACM Core can add expenses.',
+          error: 'Forbidden: Regular members cannot record expenses.',
         },
         { status: 403 }
       );
