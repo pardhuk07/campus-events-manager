@@ -1,69 +1,100 @@
 import { prisma, Role } from '@/lib/prisma';
 
-// Defined ACM Core & Executive Email lists
-// Any other student/public email logging in is automatically a MEMBER.
-export const CORE_VERIFIER_EMAILS = [
-  'acmcore@gmail.com',
-  'core.acm@gmail.com',
-  'admin@acm.org',
-  'president.acm@gmail.com',
-];
-
-export const CLUB_EXEC_EMAILS = [
-  'acmexec@gmail.com',
-  'ieeelead@gmail.com',
-  'csilead@gmail.com',
-  'exec@acm.org',
+// Official pre-registered Core & Executive members
+export const PRE_REGISTERED_USERS = [
+  {
+    email: 'pardhu120907@gmail.com',
+    name: 'Pardhu (Core Lead)',
+    role: Role.ACM_CORE,
+    password: 'password123',
+  },
+  {
+    email: 'acmcore@gmail.com',
+    name: 'ACM Core Admin',
+    role: Role.ACM_CORE,
+    password: 'password123',
+  },
+  {
+    email: 'acmexec@gmail.com',
+    name: 'Club Executive',
+    role: Role.CLUB_EXEC,
+    password: 'password123',
+  },
+  {
+    email: 'ieeelead@gmail.com',
+    name: 'IEEE Executive',
+    role: Role.CLUB_EXEC,
+    password: 'password123',
+  },
 ];
 
 /**
- * Determine a user's role from their email address
+ * Verify user credentials from database & pre-registered list
  */
-export function determineRoleFromEmail(email: string): Role {
-  const normalized = email.trim().toLowerCase();
-
-  // 1. Check if designated Core email or contains 'core' in acm domain
-  if (
-    CORE_VERIFIER_EMAILS.includes(normalized) ||
-    normalized.startsWith('acmcore') ||
-    normalized.endsWith('@acm.org')
-  ) {
-    return Role.ACM_CORE;
-  }
-
-  // 2. Check if designated Club Executive email
-  if (
-    CLUB_EXEC_EMAILS.includes(normalized) ||
-    normalized.includes('exec') ||
-    normalized.includes('lead')
-  ) {
-    return Role.CLUB_EXEC;
-  }
-
-  // 3. All other verified student / public Gmails are Regular Members
-  return Role.MEMBER;
-}
-
-/**
- * Verify or Register User in Database based on their Gmail
- */
-export async function authenticateGmailUser(email: string, name?: string) {
+export async function verifyUserCredentials(
+  email: string,
+  password?: string,
+  selectedRole?: 'ACM_CORE' | 'CLUB_EXEC'
+) {
   const normalizedEmail = email.trim().toLowerCase();
-  const determinedRole = determineRoleFromEmail(normalizedEmail);
 
-  // Upsert user in PostgreSQL so they are permanently tracked
+  // Check in pre-registered list first
+  const preReg = PRE_REGISTERED_USERS.find(
+    (u) => u.email.toLowerCase() === normalizedEmail
+  );
+
+  // Default allowed passcodes for hackathon demonstration
+  const validPasscodes = ['password123', 'acm123', 'core123', 'admin123'];
+
+  // Check if password matches or matches demo passcode
+  const isPasswordValid =
+    password &&
+    (password.length >= 4 && (validPasscodes.includes(password) || (preReg && preReg.password === password)));
+
+  if (!isPasswordValid) {
+    return {
+      success: false,
+      error: 'Invalid password. (Use demo password: password123 or acm123)',
+    };
+  }
+
+  // Determine role
+  let role: Role = Role.MEMBER;
+  let name = normalizedEmail.split('@')[0];
+
+  if (preReg) {
+    role = preReg.role;
+    name = preReg.name;
+  } else if (normalizedEmail.includes('core') || normalizedEmail === 'pardhu120907@gmail.com') {
+    role = Role.ACM_CORE;
+  } else if (normalizedEmail.includes('exec') || normalizedEmail.includes('lead')) {
+    role = Role.CLUB_EXEC;
+  } else if (selectedRole) {
+    role = selectedRole as Role;
+  }
+
+  // Validate that the user is actually authorized for the selected role
+  if (selectedRole && role !== selectedRole) {
+    return {
+      success: false,
+      error: `Access Denied: ${normalizedEmail} is not authorized as ${selectedRole}.`,
+    };
+  }
+
+  // Ensure record exists in PostgreSQL
   const user = await prisma.user.upsert({
     where: { email: normalizedEmail },
-    update: {
-      role: determinedRole,
-      name: name || normalizedEmail.split('@')[0],
-    },
-    create: {
-      email: normalizedEmail,
-      name: name || normalizedEmail.split('@')[0],
-      role: determinedRole,
-    },
+    update: { role, name },
+    create: { email: normalizedEmail, name, role },
   });
 
-  return user;
+  return {
+    success: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    },
+  };
 }

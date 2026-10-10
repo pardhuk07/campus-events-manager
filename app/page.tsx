@@ -4,12 +4,14 @@ import React, { useState, useEffect } from 'react';
 import Navbar, { AuthUser } from '../components/Navbar';
 import EventManager from '../components/EventManager';
 import ExpenseManager from '../components/ExpenseManager';
+import GatekeeperModal from '../components/GatekeeperModal';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'events' | 'expenses'>('events');
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [showGatekeeper, setShowGatekeeper] = useState(false);
 
-  // Restore authenticated session from localStorage on mount
+  // Check saved session on mount
   useEffect(() => {
     const saved = localStorage.getItem('acm_auth_user');
     if (saved) {
@@ -17,42 +19,59 @@ export default function Home() {
         setCurrentUser(JSON.parse(saved));
       } catch (e) {
         console.error(e);
+        setShowGatekeeper(true);
       }
     } else {
-      // Default initial session for quick review
-      setCurrentUser({
-        id: 'default-core',
-        name: 'ACM Core Lead',
-        email: 'acmcore@gmail.com',
-        role: 'ACM_CORE',
-      });
+      // First visit: Show the Gatekeeper prompt!
+      setShowGatekeeper(true);
     }
   }, []);
 
-  const handleLogin = (user: AuthUser) => {
+  const handleSelectPublic = () => {
+    const publicUser: AuthUser = {
+      id: 'guest-public',
+      name: 'Public Guest',
+      email: 'public@student.nit.ac.in',
+      role: 'MEMBER',
+    };
+    setCurrentUser(publicUser);
+    localStorage.setItem('acm_auth_user', JSON.stringify(publicUser));
+    setShowGatekeeper(false);
+  };
+
+  const handleLoginSuccess = (user: AuthUser) => {
     setCurrentUser(user);
     localStorage.setItem('acm_auth_user', JSON.stringify(user));
+    setShowGatekeeper(false);
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('acm_auth_user');
+    setShowGatekeeper(true); // Open role selector again
   };
 
   const effectiveRole = currentUser?.role || 'MEMBER';
 
   return (
     <div className="min-h-screen bg-[var(--bg-navy-base)] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
+      {/* First-Visit Gatekeeper Modal */}
+      <GatekeeperModal
+        isOpen={showGatekeeper}
+        onSelectPublic={handleSelectPublic}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         currentUser={currentUser}
-        onLogin={handleLogin}
+        onLogin={handleLoginSuccess}
         onLogout={handleLogout}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Keep-Alive Tab Rendering for Instantaneous (<5ms) Tab Switching */}
+        {/* Keep-Alive Tab Rendering */}
         <div className={activeTab === 'events' ? 'block' : 'hidden'}>
           <EventManager currentRole={effectiveRole} />
         </div>

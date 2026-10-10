@@ -1,34 +1,36 @@
 import { NextResponse } from 'next/server';
-import { authenticateGmailUser } from '@/services/authService';
+import { verifyUserCredentials } from '@/services/authService';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, name } = body;
+    const { email, password, selectedRole } = body;
 
     if (!email || !email.includes('@')) {
       return NextResponse.json(
-        { success: false, error: 'Please provide a valid Gmail / email address.' },
+        { success: false, error: 'Please enter a valid Gmail address.' },
         { status: 400 }
       );
     }
 
-    const user = await authenticateGmailUser(email, name);
+    const result = await verifyUserCredentials(email, password, selectedRole);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 401 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Verified successfully as ${user.role}`,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      message: `Verified successfully as ${result.user?.role}`,
+      user: result.user,
     });
   } catch (error) {
     console.error('Authentication error:', error);
     return NextResponse.json(
-      { success: false, error: 'Authentication failed.' },
+      { success: false, error: 'Authentication service error.' },
       { status: 500 }
     );
   }

@@ -1,10 +1,9 @@
-
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   PrismaClient,
   AudienceType,
   EventStatus,
-  ExpenseCategory,
+  Role,
 } from "../generated/prisma/client";
 
 const adapter = new PrismaPg({
@@ -57,38 +56,55 @@ async function main() {
     console.log(`Club ready: ${result.name}`);
   }
 
-  // 3. Create a sample IEEE event without duplicates
+  // 3. Register Pardhu as official ACM Core Verifier in PostgreSQL
+  const acmClub = createdClubs.find((c) => c.name === "ACM Student Chapter");
+  const pardhuUser = await prisma.user.upsert({
+    where: { email: "pardhu120907@gmail.com" },
+    update: {
+      role: Role.ACM_CORE,
+      name: "Pardhu (Core Lead)",
+      clubId: acmClub ? acmClub.id : null,
+    },
+    create: {
+      email: "pardhu120907@gmail.com",
+      name: "Pardhu (Core Lead)",
+      role: Role.ACM_CORE,
+      clubId: acmClub ? acmClub.id : null,
+    },
+  });
+  console.log(`✅ Registered ACM Core Lead: ${pardhuUser.name} (${pardhuUser.email})`);
+
+  // 4. Create a sample IEEE event without duplicates
   const ieee = createdClubs.find(
     (club) => club.name === "IEEE Student Branch"
   );
 
-  if (!ieee) {
-    throw new Error("IEEE club was not found");
+  if (ieee) {
+    const existingEvent = await prisma.event.findFirst({
+      where: { title: "IEEE Cloud Computing Workshop" },
+    });
+
+    const event = existingEvent
+      ? existingEvent
+      : await prisma.event.create({
+          data: {
+            title: "IEEE Cloud Computing Workshop",
+            description: "Hands-on cloud architecture workshop for UG students",
+            startTime: new Date("2026-10-15T17:00:00+05:30"),
+            endTime: new Date("2026-10-15T19:00:00+05:30"),
+            venue: "Seminar Hall 1",
+            audienceType: AudienceType.TECH_UG,
+            expectedAudience: 120,
+            clubId: ieee.id,
+            status: EventStatus.APPROVED,
+          },
+        });
+    console.log(`Sample event ready: ${event.title}`);
   }
 
-
-const existingEvent = await prisma.event.findFirst({
-  where: { title: "IEEE Cloud Computing Workshop" },
-});
-
-const event = existingEvent
-  ? existingEvent
-  : await prisma.event.create({
-      data: {
-        title: "IEEE Cloud Computing Workshop",
-        description: "Hands-on cloud architecture workshop for UG students",
-        startTime: new Date("2026-10-15T17:00:00+05:30"),
-        endTime: new Date("2026-10-15T19:00:00+05:30"),
-        venue: "Seminar Hall 1",
-        audienceType: AudienceType.TECH_UG,
-        expectedAudience: 120,
-        clubId: ieee.id,
-        status: EventStatus.APPROVED,
-      },
-    });
-console.log(`Sample event ready: ${event.title}`);
   console.log("Seeding completed successfully!");
 }
+
 main()
   .catch((error) => {
     console.error("Seeding failed:", error);
