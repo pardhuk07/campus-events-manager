@@ -44,25 +44,26 @@ export default function VenueTimeline({ events, onSelectEvent }: VenueTimelinePr
   };
 
   return (
-    <div className="bg-[#0b1328] border border-[var(--border-navy)] rounded-2xl p-5 shadow-xl text-white">
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm text-slate-900">
       {/* Header with Date Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-[var(--border-navy)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
         <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <ClockIcon className="w-4 h-4 text-cyan-400" />
+          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <ClockIcon className="w-4 h-4 text-indigo-600" />
             Venue vs. Hours Timeline
           </h3>
-          <p className="text-xs text-slate-400">Visual occupancy grid across all campus facilities</p>
+          <p className="text-xs text-slate-500">Visual occupancy grid across all campus facilities</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium">Timeline Date:</span>
+          <span className="text-xs text-slate-600 font-medium">Timeline Date:</span>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-[#060b18] border border-[var(--border-navy)] text-xs text-white rounded-xl px-2.5 py-1 focus:outline-none focus:border-cyan-500 cursor-pointer"
-          />
+            className="bg-slate-50 border border-slate-300 text-xs text-slate-800 rounded-xl px-2.5 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer font-medium"
+          >
+          </input>
         </div>
       </div>
 
@@ -71,9 +72,9 @@ export default function VenueTimeline({ events, onSelectEvent }: VenueTimelinePr
         <div className="min-w-[750px] space-y-2">
           {/* Hour Headers */}
           <div style={gridStyle} className="gap-1 mb-2 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            <div className="text-left pl-2 font-bold text-slate-300">Venue</div>
+            <div className="text-left pl-2 font-bold text-slate-700">Venue</div>
             {HOURS.map((h) => (
-              <div key={h} className="py-1 bg-[#060b18] rounded-md border border-[var(--border-navy)]">
+              <div key={h} className="py-1 bg-slate-100 rounded-md border border-slate-200 text-slate-600">
                 {formatHour(h)}
               </div>
             ))}
@@ -89,52 +90,53 @@ export default function VenueTimeline({ events, onSelectEvent }: VenueTimelinePr
               <div
                 key={venueName}
                 style={gridStyle}
-                className="gap-1 items-center bg-[#060b18]/80 rounded-xl p-1.5 border border-[var(--border-navy)] min-h-[58px]"
+                className="gap-1 items-center bg-slate-50/70 rounded-xl p-1.5 border border-slate-200 min-h-[58px]"
               >
                 {/* Venue Label */}
-                <div className="text-xs font-semibold text-slate-300 truncate pr-2 pl-1.5 flex items-center gap-1.5">
-                  <MapPinIcon className="w-3 h-3 text-cyan-400 shrink-0" />
+                <div className="text-xs font-semibold text-slate-700 truncate pr-2 pl-1.5 flex items-center gap-1.5">
+                  <MapPinIcon className="w-3 h-3 text-indigo-500 shrink-0" />
                   <span className="truncate">{venueName}</span>
                 </div>
 
                 {/* 12 Hour Slot Cells */}
-                {HOURS.map((hour) => {
-                  const activeInHour = venueEvents.filter((ev) => {
-                    const s = new Date(ev.startTime).getHours();
-                    const e = new Date(ev.endTime).getHours();
-                    return hour >= s && hour < (e === s ? s + 1 : e);
+                {HOURS.map((h) => {
+                  const activeEvents = venueEvents.filter((ev) => {
+                    const sH = new Date(ev.startTime).getHours();
+                    const eH = new Date(ev.endTime).getHours();
+                    return h >= sH && h < eH;
                   });
 
-                  const isConflict = activeInHour.some((e) => e.status === 'FLAGGED_CONFLICT');
-                  const hasDoubleBooking = activeInHour.length > 1;
-                  const clubTheme = activeInHour.length > 0 ? getClubTheme(activeInHour[0].club?.name) : null;
+                  const isOccupied = activeEvents.length > 0;
+                  const isConflict = activeEvents.length > 1;
+                  const firstEv = activeEvents[0];
+                  const clubTheme = firstEv ? getClubTheme(firstEv.club?.name) : null;
 
                   return (
                     <div
-                      key={hour}
-                      className={`h-11 rounded-lg border transition flex flex-col justify-center items-center p-1 relative text-[10px] ${
-                        hasDoubleBooking || isConflict
-                          ? 'bg-[var(--status-conflict-bg)] border-[var(--status-conflict-border)] text-red-200 animate-pulse'
-                          : activeInHour.length > 0 && clubTheme
-                          ? `${clubTheme.bg} ${clubTheme.border} ${clubTheme.text}`
-                          : 'bg-[#101b37]/40 border-[var(--border-navy)]/60 hover:bg-[#101b37]'
+                      key={h}
+                      className={`h-11 rounded-lg border flex flex-col justify-center items-center text-[10px] p-0.5 transition ${
+                        isConflict
+                          ? 'bg-rose-100 border-rose-300 text-rose-800 font-extrabold animate-pulse'
+                          : isOccupied
+                          ? `${clubTheme?.bg} ${clubTheme?.border} ${clubTheme?.text} font-bold shadow-xs`
+                          : 'bg-white border-slate-200/80 text-slate-300'
                       }`}
                       title={
-                        activeInHour.length > 0
-                          ? activeInHour.map((e) => `${e.title} (${e.club?.name})`).join('\n')
-                          : 'Free Slot'
+                        isConflict
+                          ? `DOUBLE BOOKED: ${activeEvents.map((e) => e.title).join(' & ')}`
+                          : isOccupied
+                          ? `${firstEv.title} (${firstEv.club?.name || 'Club'})`
+                          : 'Free slot'
                       }
                     >
-                      {activeInHour.length > 0 ? (
-                        <div className="w-full text-center truncate font-bold text-[9px]">
-                          {hasDoubleBooking ? (
-                            <span className="text-red-300 font-bold">⚠️ Clash!</span>
-                          ) : (
-                            activeInHour[0].title
-                          )}
+                      {isConflict ? (
+                        <span className="text-[9px] text-rose-700">CLASH!</span>
+                      ) : isOccupied ? (
+                        <div className="w-full text-center truncate px-0.5">
+                          <span className="truncate block">{firstEv.title}</span>
                         </div>
                       ) : (
-                        <span className="text-slate-700 text-[9px]">•</span>
+                        <span className="text-[8px] opacity-40">Free</span>
                       )}
                     </div>
                   );

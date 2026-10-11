@@ -46,19 +46,19 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
   };
 
   return (
-    <div className="bg-[#0b1328] border border-[var(--border-navy)] rounded-2xl p-5 sm:p-6 shadow-xl text-white">
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm text-slate-900">
       {/* 1. Month Navigation Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-[var(--border-navy)]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-[#101b37] border border-[var(--border-navy-light)] text-cyan-400">
+            <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600">
               <CalendarIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold tracking-tight text-white">
+              <h3 className="text-lg font-bold tracking-tight text-slate-900">
                 {monthNames[month]} {year}
               </h3>
-              <p className="text-xs text-slate-400 font-medium">Campus Activities Matrix</p>
+              <p className="text-xs text-slate-500 font-medium">Campus Activities Matrix</p>
             </div>
           </div>
         </div>
@@ -68,15 +68,15 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
           <button
             type="button"
             onClick={today}
-            className="px-3 py-1.5 text-xs font-semibold bg-[#101b37] hover:bg-[#172447] text-slate-300 rounded-xl border border-[var(--border-navy)] transition shadow-sm"
+            className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 transition shadow-sm"
           >
             Today
           </button>
-          <div className="flex items-center rounded-xl bg-[#101b37] border border-[var(--border-navy)] p-0.5 shadow-sm">
+          <div className="flex items-center rounded-xl bg-slate-100 border border-slate-200 p-0.5 shadow-sm">
             <button
               type="button"
               onClick={prevMonth}
-              className="px-3 py-1 text-xs font-semibold hover:bg-[#172447] rounded-lg text-slate-300 transition"
+              className="px-3 py-1 text-xs font-semibold hover:bg-white rounded-lg text-slate-700 transition"
               title="Previous Month"
             >
               ← Prev
@@ -84,7 +84,7 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
             <button
               type="button"
               onClick={nextMonth}
-              className="px-3 py-1 text-xs font-semibold hover:bg-[#172447] rounded-lg text-slate-300 transition"
+              className="px-3 py-1 text-xs font-semibold hover:bg-white rounded-lg text-slate-700 transition"
               title="Next Month"
             >
               Next →
@@ -94,38 +94,38 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
       </div>
 
       {/* 2. Status & Club Color Legend */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-[#060b18] p-3 rounded-xl border border-[var(--border-navy)] text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
         {/* Status Indicators */}
         <div className="flex flex-wrap items-center gap-3">
-          <span className="font-semibold text-slate-400">Status:</span>
+          <span className="font-semibold text-slate-500">Status:</span>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--status-approved)] shadow-sm"></span>
-            <span className="text-slate-300 font-medium">Approved</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></span>
+            <span className="text-slate-700 font-medium">Approved</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--status-pending)] shadow-sm"></span>
-            <span className="text-slate-300 font-medium">Pending</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm"></span>
+            <span className="text-slate-700 font-medium">Pending</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--status-conflict)] animate-pulse shadow-sm"></span>
-            <span className="text-red-400 font-bold">Conflict</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shadow-sm"></span>
+            <span className="text-rose-700 font-bold">Conflict</span>
           </div>
         </div>
 
         {/* Club Color Indicators */}
         <div className="flex flex-wrap items-center gap-3">
-          <span className="font-semibold text-slate-400">Club Colors:</span>
+          <span className="font-semibold text-slate-500">Club Colors:</span>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--club-acm)]"></span>
-            <span className="text-slate-300">ACM</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+            <span className="text-slate-700 font-medium">ACM</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--club-ieee)]"></span>
-            <span className="text-slate-300">IEEE</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+            <span className="text-slate-700 font-medium">IEEE</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--club-csi)]"></span>
-            <span className="text-slate-300">CSI</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+            <span className="text-slate-700 font-medium">CSI</span>
           </div>
         </div>
       </div>
@@ -144,7 +144,7 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
       {/* 4. Calendar Grid */}
       <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
         {Array.from({ length: firstDayIndex }).map((_, i) => (
-          <div key={`empty-${i}`} className="min-h-[92px] bg-[#060b18]/40 rounded-xl border border-[var(--border-navy)]/30 p-1 opacity-25"></div>
+          <div key={`empty-${i}`} className="min-h-[96px] bg-slate-50/50 rounded-xl border border-slate-100 p-1 opacity-40"></div>
         ))}
 
         {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -159,29 +159,29 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
           return (
             <div
               key={`day-${day}`}
-              className={`min-h-[92px] p-2 rounded-xl border transition-all duration-150 flex flex-col justify-between ${
+              className={`min-h-[96px] p-2 rounded-xl border transition-all duration-150 flex flex-col justify-between ${
                 isToday
-                  ? 'bg-[#101b37] border-cyan-500/60 shadow-lg shadow-cyan-500/10'
-                  : 'bg-[#060b18]/70 border-[var(--border-navy)] hover:border-[var(--border-navy-light)]'
+                  ? 'bg-indigo-50/40 border-indigo-400 shadow-sm'
+                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
               }`}
             >
               <div className="flex items-center justify-between">
                 <span
                   className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${
-                    isToday ? 'btn-primary-gradient text-white' : 'text-slate-400'
+                    isToday ? 'btn-primary-gradient text-white' : 'text-slate-600'
                   }`}
                 >
                   {day}
                 </span>
                 {dayEvents.length > 0 && (
-                  <span className="text-[10px] font-mono text-slate-500 font-bold">
+                  <span className="text-[10px] font-mono text-slate-400 font-bold">
                     {dayEvents.length}
                   </span>
                 )}
               </div>
 
               {/* Event Chips (Color-coded by Club, Status shown via indicator) */}
-              <div className="space-y-1.5 mt-1.5 overflow-hidden">
+              <div className="space-y-1 mt-1.5 overflow-hidden">
                 {dayEvents.slice(0, 2).map((ev) => {
                   const clubTheme = getClubTheme(ev.club?.name);
                   const isConflict = ev.status === 'FLAGGED_CONFLICT';
@@ -191,9 +191,9 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
                       key={ev.id}
                       type="button"
                       onClick={() => setSelectedEventModal(ev)}
-                      className={`w-full text-left truncate text-[11px] px-2 py-1 rounded-lg font-semibold border transition-all duration-150 shadow-sm flex items-center gap-1.5 ${
+                      className={`w-full text-left truncate text-[11px] px-2 py-1 rounded-lg font-semibold border transition-all duration-150 shadow-xs flex items-center gap-1.5 ${
                         isConflict
-                          ? 'bg-[var(--status-conflict-bg)] text-red-200 border-[var(--status-conflict-border)] animate-pulse'
+                          ? 'bg-rose-50 text-rose-800 border-rose-200 animate-pulse'
                           : `${clubTheme.bg} ${clubTheme.text} ${clubTheme.border} hover:scale-[1.02]`
                       }`}
                       title={`${ev.title} (${ev.venue})`}
@@ -201,7 +201,7 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
                       {/* Distinct Club Color Dot */}
                       <span
                         className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                          isConflict ? 'bg-[var(--status-conflict)]' : clubTheme.dot
+                          isConflict ? 'bg-rose-500' : clubTheme.dot
                         }`}
                       ></span>
                       <span className="truncate">{ev.title}</span>
@@ -209,7 +209,7 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
                   );
                 })}
                 {dayEvents.length > 2 && (
-                  <div className="text-[10px] text-cyan-400 font-bold pl-1">
+                  <div className="text-[10px] text-indigo-600 font-bold pl-1">
                     +{dayEvents.length - 2} more
                   </div>
                 )}
@@ -221,22 +221,22 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
 
       {/* 5. Event Detail Inspection Modal */}
       {selectedEventModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0b1328] border border-[var(--border-navy)] rounded-2xl max-w-md w-full p-6 text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-slate-900 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between">
               <div>
                 <span
                   className={`text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full tracking-wider ${
                     selectedEventModal.status === 'FLAGGED_CONFLICT'
-                      ? 'bg-[var(--status-conflict-bg)] text-red-300 border border-[var(--status-conflict-border)]'
+                      ? 'bg-rose-100 text-rose-800 border border-rose-200'
                       : selectedEventModal.status === 'APPROVED'
-                      ? 'bg-[var(--status-approved-bg)] text-emerald-300 border border-[var(--status-approved-border)]'
-                      : 'bg-[var(--status-pending-bg)] text-amber-300 border border-[var(--status-pending-border)]'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : 'bg-amber-100 text-amber-800 border border-amber-200'
                   }`}
                 >
                   {selectedEventModal.status}
                 </span>
-                <h4 className="text-lg font-bold mt-2 text-white">{selectedEventModal.title}</h4>
+                <h4 className="text-lg font-bold mt-2 text-slate-900">{selectedEventModal.title}</h4>
                 <p className={`text-xs font-semibold ${getClubTheme(selectedEventModal.club?.name).text}`}>
                   {selectedEventModal.club?.name}
                 </p>
@@ -244,20 +244,20 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
               <button
                 type="button"
                 onClick={() => setSelectedEventModal(null)}
-                className="text-slate-400 hover:text-white text-base font-bold p-1 rounded-lg hover:bg-[#101b37]"
+                className="text-slate-400 hover:text-slate-700 text-base font-bold p-1 rounded-lg hover:bg-slate-100"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 mt-3 leading-relaxed bg-[#060b18] p-3 rounded-xl border border-[var(--border-navy)]">
+            <p className="text-xs text-slate-600 mt-3 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
               {selectedEventModal.description || 'No additional description provided.'}
             </p>
 
-            <div className="space-y-2.5 mt-4 pt-3 border-t border-[var(--border-navy)] text-xs text-slate-300">
+            <div className="space-y-2.5 mt-4 pt-3 border-t border-slate-200 text-xs text-slate-600">
               <div className="flex items-center gap-2">
                 <MapPinIcon className="w-4 h-4 text-slate-400" />
-                <span>Venue: <strong className="text-white">{selectedEventModal.venue}</strong></span>
+                <span>Venue: <strong className="text-slate-900">{selectedEventModal.venue}</strong></span>
               </div>
               <div className="flex items-center gap-2">
                 <ClockIcon className="w-4 h-4 text-slate-400" />
@@ -268,13 +268,13 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
               </div>
               <div className="flex items-center gap-2">
                 <UsersIcon className="w-4 h-4 text-slate-400" />
-                <span>Target: <strong className="text-white">{selectedEventModal.audienceType}</strong> ({selectedEventModal.expectedAudience} cap)</span>
+                <span>Target: <strong className="text-slate-900">{selectedEventModal.audienceType}</strong> ({selectedEventModal.expectedAudience} cap)</span>
               </div>
             </div>
 
             {selectedEventModal.status === 'FLAGGED_CONFLICT' && (
-              <div className="mt-4 p-3 bg-[var(--status-conflict-bg)] border border-[var(--status-conflict-border)] rounded-xl text-xs text-red-200 flex items-start gap-2">
-                <AlertTriangleIcon className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
+                <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <span>This event has flagged scheduling clashes. Verification from ACM Core is required.</span>
               </div>
             )}
@@ -282,7 +282,7 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
             <button
               type="button"
               onClick={() => setSelectedEventModal(null)}
-              className="mt-5 w-full bg-[#101b37] hover:bg-[#172447] text-white text-xs font-semibold py-2.5 rounded-xl transition border border-[var(--border-navy)]"
+              className="mt-5 w-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold py-2.5 rounded-xl transition border border-slate-200 shadow-sm"
             >
               Close Details
             </button>

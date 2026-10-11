@@ -22,7 +22,6 @@ export default function Home() {
         setShowGatekeeper(true);
       }
     } else {
-      // First visit: Show the Gatekeeper prompt!
       setShowGatekeeper(true);
     }
   }, []);
@@ -48,13 +47,13 @@ export default function Home() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('acm_auth_user');
-    setShowGatekeeper(true); // Open role selector again
+    setShowGatekeeper(true);
   };
 
   const effectiveRole = currentUser?.role || 'MEMBER';
 
   return (
-    <div className="min-h-screen bg-[var(--bg-navy-base)] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-cyan-100 selection:text-cyan-900">
       {/* First-Visit Gatekeeper Modal */}
       <GatekeeperModal
         isOpen={showGatekeeper}
@@ -71,7 +70,7 @@ export default function Home() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Keep-Alive Tab Rendering */}
+        {/* Keep-Alive Tab Rendering for Instantaneous (<5ms) Tab Switching */}
         <div className={activeTab === 'events' ? 'block' : 'hidden'}>
           <EventManager currentRole={effectiveRole} />
         </div>
@@ -81,7 +80,7 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="border-t border-[var(--border-navy)] py-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500 font-medium">
         ACM Student Chapter • Campus Conflict-Aware Events & Fund Management System
       </footer>
     </div>

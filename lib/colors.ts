@@ -1,48 +1,48 @@
-// Helper functions mapping dynamic clubs and categories to our unified CSS variables
+// Helper functions mapping dynamic clubs and categories to clean light-theme styles
 
 export function getClubTheme(clubName?: string) {
   const name = (clubName || '').toLowerCase();
   if (name.includes('acm')) {
     return {
-      text: 'text-sky-300',
-      bg: 'bg-[var(--club-acm-bg)]',
-      border: 'border-[var(--club-acm-border)]',
-      dot: 'bg-[var(--club-acm)]',
-      hex: '#38bdf8',
+      text: 'text-sky-700 font-semibold',
+      bg: 'bg-sky-50',
+      border: 'border-sky-200',
+      dot: 'bg-sky-600',
+      hex: '#0284c7',
     };
   }
   if (name.includes('ieee')) {
     return {
-      text: 'text-purple-300',
-      bg: 'bg-[var(--club-ieee-bg)]',
-      border: 'border-[var(--club-ieee-border)]',
-      dot: 'bg-[var(--club-ieee)]',
-      hex: '#a855f7',
+      text: 'text-purple-700 font-semibold',
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
+      dot: 'bg-purple-600',
+      hex: '#7c3aed',
     };
   }
   if (name.includes('csi')) {
     return {
-      text: 'text-rose-300',
-      bg: 'bg-[var(--club-csi-bg)]',
-      border: 'border-[var(--club-csi-border)]',
-      dot: 'bg-[var(--club-csi)]',
-      hex: '#f43f5e',
+      text: 'text-rose-700 font-semibold',
+      bg: 'bg-rose-50',
+      border: 'border-rose-200',
+      dot: 'bg-rose-600',
+      hex: '#e11d48',
     };
   }
   return {
-    text: 'text-indigo-300',
-    bg: 'bg-[var(--club-default-bg)]',
-    border: 'border-[var(--club-default-border)]',
-    dot: 'bg-[var(--club-default)]',
-    hex: '#818cf8',
+    text: 'text-indigo-700 font-semibold',
+    bg: 'bg-indigo-50',
+    border: 'border-indigo-200',
+    dot: 'bg-indigo-600',
+    hex: '#4f46e5',
   };
 }
 
-export const CATEGORY_COLORS: Record<string, { hex: string; varName: string; label: string }> = {
-  REFRESHMENTS: { hex: '#06b6d4', varName: 'var(--cat-refreshments)', label: 'Refreshments' },
-  PRINTING: { hex: '#8b5cf6', varName: 'var(--cat-printing)', label: 'Printing' },
-  PRIZES_MEMENTOS: { hex: '#f43f5e', varName: 'var(--cat-prizes)', label: 'Prizes & Mementos' },
-  LOGISTICS_EQUIPMENT: { hex: '#3b82f6', varName: 'var(--cat-logistics)', label: 'Logistics' },
-  MARKETING_BANNERS: { hex: '#eab308', varName: 'var(--cat-marketing)', label: 'Marketing Banners' },
-  MISCELLANEOUS: { hex: '#94a3b8', varName: 'var(--cat-misc)', label: 'Miscellaneous' },
+export const CATEGORY_COLORS: Record<string, { hex: string; label: string; bg: string }> = {
+  REFRESHMENTS: { hex: '#0891b2', label: 'Refreshments', bg: 'bg-cyan-50' },
+  PRINTING: { hex: '#7c3aed', label: 'Printing', bg: 'bg-purple-50' },
+  PRIZES_MEMENTOS: { hex: '#e11d48', label: 'Prizes & Mementos', bg: 'bg-rose-50' },
+  LOGISTICS_EQUIPMENT: { hex: '#2563eb', label: 'Logistics', bg: 'bg-blue-50' },
+  MARKETING_BANNERS: { hex: '#d97706', label: 'Marketing Banners', bg: 'bg-amber-50' },
+  MISCELLANEOUS: { hex: '#475569', label: 'Miscellaneous', bg: 'bg-slate-50' },
 };

@@ -19,12 +19,12 @@ export default function ClashesPanel({
 
   if (conflictEvents.length === 0) {
     return (
-      <div className="bg-[#0b1328] border border-[var(--border-navy)] rounded-2xl p-8 text-center text-white">
-        <div className="w-12 h-12 bg-[var(--status-approved-bg)] border border-[var(--status-approved-border)] text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+      <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-900 shadow-sm">
+        <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-3 text-lg font-bold">
           ✓
         </div>
-        <h4 className="text-base font-bold text-white">All Schedules Clear!</h4>
-        <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+        <h4 className="text-base font-bold text-slate-900">All Schedules Clear!</h4>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
           No active venue clashes or audience overlaps detected across any campus clubs.
         </p>
       </div>
@@ -32,14 +32,14 @@ export default function ClashesPanel({
   }
 
   return (
-    <div className="bg-[#0b1328] border border-[var(--border-navy)] rounded-2xl p-6 shadow-xl text-white space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[var(--border-navy)]">
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm text-slate-900 space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
         <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <AlertTriangleIcon className="w-5 h-5 text-red-400 animate-pulse" />
+          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <AlertTriangleIcon className="w-5 h-5 text-rose-600 animate-pulse" />
             Detected Scheduling Clashes ({conflictEvents.length})
           </h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Conflicting proposals flagged by the conflict detection engine
           </p>
         </div>
@@ -52,20 +52,20 @@ export default function ClashesPanel({
           return (
             <div
               key={ev.id}
-              className="p-4 rounded-xl border border-[var(--status-conflict-border)] bg-[var(--status-conflict-bg)] shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className="p-4 rounded-xl border border-rose-200 bg-rose-50/70 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-white text-sm">{ev.title}</span>
-                  <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/40 px-2 py-0.5 rounded-full font-bold uppercase">
+                  <span className="font-bold text-slate-900 text-sm">{ev.title}</span>
+                  <span className="text-[10px] bg-rose-100 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-full font-bold uppercase">
                     Flagged Clash
                   </span>
                 </div>
                 <p className={`text-xs font-semibold mt-0.5 ${clubTheme.text}`}>{ev.club?.name}</p>
 
-                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-300">
-                  <div className="flex items-center gap-1 text-red-300 font-semibold">
-                    <MapPinIcon className="w-3.5 h-3.5 text-red-400" />
+                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-600">
+                  <div className="flex items-center gap-1 text-rose-700 font-semibold">
+                    <MapPinIcon className="w-3.5 h-3.5 text-rose-600" />
                     <span>{ev.venue}</span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -95,7 +95,7 @@ export default function ClashesPanel({
                   <button
                     type="button"
                     onClick={() => onUpdateStatus(ev.id, 'REJECTED')}
-                    className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 rounded-xl text-xs font-bold transition shadow-sm"
+                    className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 rounded-xl text-xs font-bold transition shadow-xs"
                   >
                     Reject
                   </button>

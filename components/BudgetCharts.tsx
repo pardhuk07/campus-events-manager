@@ -31,7 +31,7 @@ export default function BudgetCharts({
       const strokeOffset = circumference - (accumulatedPercent / 100) * circumference;
       accumulatedPercent += slicePercent;
 
-      const catInfo = CATEGORY_COLORS[cat] || { hex: '#818cf8', label: cat };
+      const catInfo = CATEGORY_COLORS[cat] || { hex: '#6366f1', label: cat };
 
       return {
         cat,
@@ -45,10 +45,10 @@ export default function BudgetCharts({
     });
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#0b1328] border border-[var(--border-navy)] rounded-2xl p-6 shadow-xl text-white">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm text-slate-900">
       {/* 1. Multi-Color Category Donut Chart */}
-      <div className="flex flex-col items-center justify-center p-4 bg-[#060b18] rounded-xl border border-[var(--border-navy)]">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
+      <div className="flex flex-col items-center justify-center p-4 bg-slate-50/60 rounded-xl border border-slate-200">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
           Fund Distribution Matrix
         </h4>
 
@@ -59,7 +59,7 @@ export default function BudgetCharts({
               cx="80"
               cy="80"
               r={radius}
-              stroke="#172447"
+              stroke="#e2e8f0"
               strokeWidth="14"
               fill="transparent"
             />
@@ -84,65 +84,54 @@ export default function BudgetCharts({
 
           {/* Center Text */}
           <div className="absolute flex flex-col items-center text-center">
-            <span className="text-2xl font-black bg-gradient-to-r from-violet-200 to-cyan-300 bg-clip-text text-transparent">
+            <span className="text-2xl font-black bg-gradient-to-r from-violet-600 to-cyan-600 bg-clip-text text-transparent">
               {percentSpent}%
             </span>
-            <span className="text-[10px] text-slate-400 font-semibold uppercase">Utilized</span>
+            <span className="text-[10px] text-slate-500 font-semibold uppercase">Utilized</span>
           </div>
         </div>
 
         {/* Legend */}
         <div className="flex items-center gap-6 mt-4 text-xs font-semibold">
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-cyan-400"></span>
-            <span className="text-slate-300">Spent: ₹{totalSpent.toLocaleString()}</span>
+            <span className="w-3 h-3 rounded-full bg-cyan-600"></span>
+            <span className="text-slate-700">Spent: ₹{totalSpent.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-[#172447] border border-slate-700"></span>
-            <span className="text-slate-400">Available: ₹{remainingBudget.toLocaleString()}</span>
+            <span className="w-3 h-3 rounded-full bg-slate-300"></span>
+            <span className="text-slate-500">Remaining: ₹{remainingBudget.toLocaleString()}</span>
           </div>
         </div>
       </div>
 
-      {/* 2. Distinct Category Progress Bars */}
-      <div className="flex flex-col justify-between p-4 bg-[#060b18] rounded-xl border border-[var(--border-navy)]">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-          Distinct Category Breakdown
+      {/* 2. Category Breakdown Bars */}
+      <div className="flex flex-col justify-center space-y-3">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          Spending Breakdown by Category
         </h4>
 
-        <div className="space-y-3">
-          {Object.entries(CATEGORY_COLORS).map(([catKey, info]) => {
-            const amount = categoryBreakdown[catKey] || 0;
-            const catPercent = totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0;
+        {Object.entries(categoryBreakdown).map(([cat, amt]) => {
+          const catInfo = CATEGORY_COLORS[cat] || { hex: '#6366f1', label: cat };
+          const p = totalBudget > 0 ? Math.round((amt / totalBudget) * 100) : 0;
 
-            return (
-              <div key={catKey} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: info.hex }}
-                    ></span>
-                    <span className="font-semibold text-slate-300">{info.label}</span>
-                  </div>
-                  <span className="font-bold text-white">
-                    ₹{amount.toLocaleString()}{' '}
-                    <span className="text-[10px] text-slate-400 font-normal">({catPercent}%)</span>
-                  </span>
-                </div>
-                <div className="w-full bg-[#101b37] rounded-full h-2 overflow-hidden border border-[var(--border-navy)]">
-                  <div
-                    className="h-2 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${catPercent}%`,
-                      backgroundColor: info.hex,
-                    }}
-                  ></div>
-                </div>
+          return (
+            <div key={cat} className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-700">{catInfo.label}</span>
+                <span className="text-slate-500">
+                  ₹{amt.toLocaleString()}{' '}
+                  <span className="text-[10px] text-slate-400">({p}%)</span>
+                </span>
               </div>
-            );
-          })}
-        </div>
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+                <div
+                  className="h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, p)}%`, backgroundColor: catInfo.hex }}
+                ></div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

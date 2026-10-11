@@ -95,16 +95,16 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
   return (
     <div className="space-y-6">
       {/* 1. Slim Top Bar: KPI Chips & Primary Action with Violet-to-Cyan Gradient */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0b1328] border border-[var(--border-navy)] p-4 rounded-2xl shadow-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
         {/* Slim KPI Chips */}
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#060b18] border border-[var(--border-navy)] text-slate-300">
-            <span className="text-cyan-400 font-bold">📅</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">
+            <span className="text-indigo-600 font-bold">📅</span>
             <span>{events.length} Events</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--status-approved-bg)] border border-[var(--status-approved-border)] text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-[var(--status-approved)]"></span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
             <span>{approvedCount} Approved</span>
           </div>
 
@@ -113,24 +113,24 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
             onClick={() => setViewMode('clashes')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition ${
               conflictCount > 0
-                ? 'bg-[var(--status-conflict-bg)] border-[var(--status-conflict-border)] text-red-300 animate-pulse'
-                : 'bg-[#060b18] border-[var(--border-navy)] text-slate-400'
+                ? 'bg-rose-50 border-rose-200 text-rose-800 animate-pulse font-bold'
+                : 'bg-slate-50 border-slate-200 text-slate-600'
             }`}
           >
-            <AlertTriangleIcon className="w-3.5 h-3.5 text-red-400" />
-            <span className="font-bold">{conflictCount} Clashes</span>
+            <AlertTriangleIcon className="w-3.5 h-3.5 text-rose-600" />
+            <span>{conflictCount} Clashes</span>
           </button>
         </div>
 
         {/* View Mode Switcher & + New Event Button */}
         <div className="flex items-center gap-3">
           {/* View Mode Switcher Pills */}
-          <div className="flex bg-[#060b18] border border-[var(--border-navy)] rounded-xl p-1 text-xs font-semibold">
+          <div className="flex bg-slate-100 border border-slate-200 rounded-xl p-1 text-xs font-semibold">
             <button
               type="button"
               onClick={() => setViewMode('calendar')}
               className={`px-3 py-1.5 rounded-lg transition ${
-                viewMode === 'calendar' ? 'tab-active-gradient' : 'text-slate-400 hover:text-white'
+                viewMode === 'calendar' ? 'tab-active-gradient' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
               }`}
             >
               📅 Month
@@ -139,7 +139,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
               type="button"
               onClick={() => setViewMode('timeline')}
               className={`px-3 py-1.5 rounded-lg transition ${
-                viewMode === 'timeline' ? 'tab-active-gradient' : 'text-slate-400 hover:text-white'
+                viewMode === 'timeline' ? 'tab-active-gradient' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
               }`}
             >
               📊 Timeline
@@ -148,7 +148,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
               type="button"
               onClick={() => setViewMode('clashes')}
               className={`px-3 py-1.5 rounded-lg transition ${
-                viewMode === 'clashes' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                viewMode === 'clashes' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
               }`}
             >
               ⚠️ Clashes ({conflictCount})
@@ -157,7 +157,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
               type="button"
               onClick={() => setViewMode('list')}
               className={`px-3 py-1.5 rounded-lg transition ${
-                viewMode === 'list' ? 'tab-active-gradient' : 'text-slate-400 hover:text-white'
+                viewMode === 'list' ? 'tab-active-gradient' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
               }`}
             >
               Cards
@@ -172,7 +172,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                 setDrawerInitialDate(undefined);
                 setIsDrawerOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 btn-primary-gradient text-white text-xs font-bold rounded-xl shadow-lg transition shrink-0"
+              className="flex items-center gap-2 px-4 py-2 btn-primary-gradient text-white text-xs font-bold rounded-xl shadow-md transition shrink-0"
             >
               <PlusCircleIcon className="w-4 h-4" />
               <span>+ New Event</span>
@@ -183,19 +183,19 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
 
       {/* 2. Search & Filter Bar */}
       {(viewMode === 'calendar' || viewMode === 'list') && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0b1328]/80 border border-[var(--border-navy)] p-3 rounded-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 p-3 rounded-2xl shadow-sm">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search events by title, venue, or club..."
-            className="bg-[#060b18] border border-[var(--border-navy)] text-xs rounded-xl px-3.5 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-full sm:w-80"
+            className="bg-slate-50 border border-slate-300 text-xs rounded-xl px-3.5 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full sm:w-80"
           />
 
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-[#060b18] border border-[var(--border-navy)] text-xs rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+            className="bg-slate-50 border border-slate-300 text-xs rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer font-medium"
           >
             <option value="ALL">All Statuses</option>
             <option value="APPROVED">Approved Only</option>
@@ -223,9 +223,9 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
       )}
 
       {viewMode === 'list' && (
-        <div className="bg-[#0b1328] border border-[var(--border-navy)] p-6 rounded-2xl shadow-xl text-white">
+        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-slate-900">
           {filteredEvents.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 text-xs italic">
+            <div className="py-12 text-center text-slate-400 text-xs italic">
               No campus events match your query.
             </div>
           ) : (
@@ -239,70 +239,73 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                     key={ev.id}
                     className={`p-4 rounded-2xl border transition-all duration-200 ${
                       isConflict
-                        ? 'bg-[var(--status-conflict-bg)] border-[var(--status-conflict-border)] shadow-sm'
-                        : 'bg-[#060b18] border-[var(--border-navy)] hover:border-[var(--border-navy-light)]'
+                        ? 'bg-rose-50/70 border-rose-200 shadow-sm'
+                        : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
                     }`}
                   >
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">{ev.title}</span>
+                          <span className="font-bold text-slate-900 text-sm">{ev.title}</span>
                           <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                              isConflict
-                                ? 'bg-[var(--status-conflict-bg)] text-red-300 border border-[var(--status-conflict-border)]'
-                                : ev.status === 'APPROVED'
-                                ? 'bg-[var(--status-approved-bg)] text-emerald-300 border border-[var(--status-approved-border)]'
-                                : 'bg-[var(--status-pending-bg)] text-amber-300 border border-[var(--status-pending-border)]'
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                              ev.status === 'APPROVED'
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                : ev.status === 'FLAGGED_CONFLICT'
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
+                                : 'bg-amber-100 text-amber-800 border border-amber-200'
                             }`}
                           >
                             {ev.status}
                           </span>
                         </div>
-
-                        {/* Distinct Club Tag */}
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className={`w-2 h-2 rounded-full ${clubTheme.dot}`}></span>
-                          <span className={`text-xs font-semibold ${clubTheme.text}`}>{ev.club?.name}</span>
-                        </div>
+                        <p className={`text-xs font-semibold mt-0.5 ${clubTheme.text}`}>{ev.club?.name}</p>
                       </div>
+
+                      {currentRole === 'ACM_CORE' && (
+                        <div className="flex items-center gap-2">
+                          {ev.status !== 'APPROVED' && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(ev.id, 'APPROVED')}
+                              className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {ev.status !== 'REJECTED' && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(ev.id, 'REJECTED')}
+                              className="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition"
+                            >
+                              Reject
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-[var(--border-navy)] text-xs text-slate-300">
+                    <p className="text-xs text-slate-600 mt-2 line-clamp-2">
+                      {ev.description || 'No description provided.'}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
                       <div className="flex items-center gap-1.5">
                         <MapPinIcon className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{ev.venue}</span>
+                        <span className="font-medium text-slate-700">{ev.venue}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <ClockIcon className="w-3.5 h-3.5 text-slate-400" />
                         <span>
-                          {new Date(ev.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
-                          {new Date(ev.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(ev.startTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <UsersIcon className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{ev.audienceType} ({ev.expectedAudience} cap)</span>
+                        <span>{ev.audienceType}</span>
                       </div>
                     </div>
-
-                    {currentRole === 'ACM_CORE' && ev.status !== 'APPROVED' && (
-                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border-navy)]">
-                        <span className="text-[11px] text-slate-400 font-semibold">Core Verification:</span>
-                        <button
-                          onClick={() => handleUpdateStatus(ev.id, 'APPROVED')}
-                          className="px-3 py-1 btn-primary-gradient text-white rounded-xl text-xs font-semibold transition shadow-sm"
-                        >
-                          ✓ {ev.status === 'FLAGGED_CONFLICT' ? 'Override & Approve' : 'Approve'}
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStatus(ev.id, 'REJECTED')}
-                          className="px-3 py-1 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl text-xs font-semibold transition shadow-sm"
-                        >
-                          ✕ Reject
-                        </button>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -311,7 +314,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
         </div>
       )}
 
-      {/* 4. SLIDE-OVER EVENT PROPOSAL DRAWER */}
+      {/* Slide-Over Drawer for New Event Proposals */}
       <EventDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}

@@ -130,24 +130,24 @@ export default function EventDrawer({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-sm flex justify-end animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-[#0b1328] border-l border-[var(--border-navy)] h-full overflow-y-auto p-6 sm:p-7 shadow-2xl flex flex-col justify-between text-white animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-sm flex justify-end animate-in fade-in duration-200">
+      <div className="w-full max-w-lg bg-white border-l border-slate-200 h-full overflow-y-auto p-6 sm:p-7 shadow-2xl flex flex-col justify-between text-slate-900 animate-in slide-in-from-right duration-300">
         <div>
           {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-[var(--border-navy)]">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-[#101b37] border border-[var(--border-navy-light)] text-cyan-400">
+              <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600">
                 <PlusCircleIcon className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Submit Event Proposal</h3>
-                <p className="text-xs text-slate-400 font-medium">Automatic conflict verification & scheduling</p>
+                <h3 className="text-base font-bold text-slate-900">Submit Event Proposal</h3>
+                <p className="text-xs text-slate-500 font-medium">Automatic conflict verification & scheduling</p>
               </div>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-[#101b37] text-base font-bold"
+              className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 text-base font-bold"
             >
               ✕
             </button>
@@ -156,11 +156,11 @@ export default function EventDrawer({
           {/* Form */}
           <form onSubmit={handleSubmit} className="mt-5 space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Organizing Club</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Organizing Club</label>
               <select
                 value={clubId}
                 onChange={(e) => setClubId(e.target.value)}
-                className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
               >
                 {clubs.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -171,23 +171,23 @@ export default function EventDrawer({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Event Title</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Event Title</label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. ACM TechFest Inauguration"
-                className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Venue</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Venue</label>
               <select
                 value={venue}
                 onChange={(e) => setVenue(e.target.value)}
-                className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
               >
                 <option value="Seminar Hall 1">Seminar Hall 1</option>
                 <option value="Seminar Hall 2">Seminar Hall 2</option>
@@ -199,32 +199,32 @@ export default function EventDrawer({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Start Time</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Start Time</label>
                 <input
                   type="datetime-local"
                   required
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">End Time</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">End Time</label>
                 <input
                   type="datetime-local"
                   required
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
 
             {/* LIVE CONFLICT FEEDBACK & FREE SLOT SUGGESTIONS */}
             {checkingConflict && (
-              <div className="text-[11px] text-cyan-400 bg-cyan-950/30 border border-cyan-800/40 p-2.5 rounded-xl flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+              <div className="text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200 p-2.5 rounded-xl flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping"></span>
                 <span>Checking venue availability and potential clashes in real time...</span>
               </div>
             )}
@@ -233,104 +233,110 @@ export default function EventDrawer({
               <div
                 className={`p-3.5 rounded-xl border transition text-xs ${
                   liveConflictResult.hasConflict
-                    ? 'bg-[var(--status-conflict-bg)] border-[var(--status-conflict-border)] text-red-200'
-                    : 'bg-[var(--status-approved-bg)] border-[var(--status-approved-border)] text-emerald-200'
+                    ? 'bg-rose-50 border-rose-200 text-rose-800'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-800'
                 }`}
               >
                 <div className="flex items-center gap-2 font-bold mb-1">
                   {liveConflictResult.hasConflict ? (
                     <>
-                      <AlertTriangleIcon className="w-4 h-4 text-red-400 shrink-0" />
+                      <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0" />
                       <span>Scheduling Clash Detected!</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-emerald-400 font-bold">✓</span>
+                      <span className="text-emerald-600 font-bold">✓</span>
                       <span>Slot Available! No conflicts detected for this venue & time.</span>
                     </>
                   )}
                 </div>
 
-                {liveConflictResult.hardConflicts?.map((c: any, idx: number) => (
-                  <p key={idx} className="text-[11px] text-red-300 mt-1">
-                    • {c.reason}
-                  </p>
-                ))}
+                {liveConflictResult.hasConflict && (
+                  <div className="space-y-1.5 mt-2">
+                    <p className="text-[11px] text-rose-700 font-medium">
+                      {liveConflictResult.conflicts?.[0]?.reason || 'Clashes with another booked campus event.'}
+                    </p>
 
-                {liveConflictResult.hasConflict &&
-                  liveConflictResult.suggestedSlots?.length > 0 && (
-                    <div className="mt-3 pt-2.5 border-t border-red-800/60">
-                      <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider block mb-1.5">
-                        Suggested Free Slots at {venue}:
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {liveConflictResult.suggestedSlots.map((slot: any, idx: number) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => applySuggestedSlot(slot)}
-                            className="px-2 py-1 bg-[#101b37] hover:bg-[#172447] border border-[var(--border-navy-light)] text-cyan-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1"
-                          >
-                            <span>🕒 {slot.label}</span>
-                            <span className="underline ml-1">Apply</span>
-                          </button>
-                        ))}
+                    {/* Suggested alternative free slots */}
+                    {liveConflictResult.suggestedSlots?.length > 0 && (
+                      <div className="mt-2.5 pt-2 border-t border-rose-200">
+                        <span className="text-[11px] font-bold text-rose-900 block mb-1">
+                          Suggested Free Slots on this Day:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {liveConflictResult.suggestedSlots.map((slot: any, idx: number) => {
+                            const s = new Date(slot.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const e = new Date(slot.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => applySuggestedSlot(slot)}
+                                className="px-2 py-1 rounded-lg bg-white border border-rose-300 text-rose-900 text-[10px] font-bold hover:bg-rose-100 transition shadow-xs"
+                              >
+                                {s} - {e} (Apply)
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Group</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Audience Type</label>
                 <select
                   value={audienceType}
                   onChange={(e) => setAudienceType(e.target.value)}
-                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
                 >
-                  <option value="TECH_UG">Tech Undergrads</option>
-                  <option value="TECH_PG">Tech Postgrads</option>
-                  <option value="NON_TECH_CULTURAL">Cultural / Non-Tech</option>
-                  <option value="SPORTS">Sports</option>
-                  <option value="ALL_CAMPUS">All Campus</option>
+                  <option value="TECH_UG">Tech Undergraduates</option>
+                  <option value="ALL_CAMPUS">All Campus Students</option>
+                  <option value="FIRST_YEAR">First Year Students</option>
+                  <option value="POSTGRAD">Postgraduates</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Capacity</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Capacity</label>
                 <input
                   type="number"
+                  min="1"
+                  required
                   value={expectedAudience}
-                  onChange={(e) => setExpectedAudience(parseInt(e.target.value))}
-                  className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  onChange={(e) => setExpectedAudience(parseInt(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Description / Notes</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Proposal Brief</label>
               <textarea
-                rows={2}
+                rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Objectives, speaker details, requirements..."
-                className="w-full bg-[#060b18] border border-[var(--border-navy)] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                placeholder="Briefly state objectives, speakers, and campus relevance..."
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full btn-primary-gradient disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg mt-2"
+              className="w-full btn-primary-gradient disabled:opacity-50 text-white font-bold py-3 rounded-xl text-xs transition shadow-md mt-4"
             >
-              {submitting ? 'Submitting Proposal...' : 'Submit Event Proposal'}
+              {submitting ? 'Submitting Proposal...' : 'Submit Event for Review'}
             </button>
           </form>
         </div>
 
-        <div className="pt-4 border-t border-[var(--border-navy)] text-[11px] text-slate-500 text-center">
-          ACM Conflict-Aware Scheduling Engine
+        <div className="pt-4 border-t border-slate-200 text-center text-[11px] text-slate-400">
+          Proposals are reviewed under ACM conflict-resolution guidelines.
         </div>
       </div>
     </div>

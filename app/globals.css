@@ -1,61 +1,66 @@
 @import "tailwindcss";
 
 :root {
-  /* 1. Base Dark Navy Theme */
-  --bg-navy-base: #060b18;
-  --bg-navy-surface: #0b1328;
-  --bg-navy-card: #101b37;
-  --bg-navy-subtle: #172447;
-  --border-navy: #1e2d4f;
-  --border-navy-light: #2b3d68;
+  /* 1. Crisp Light Theme Surfaces */
+  --bg-app-base: #f8fafc;        /* Soft modern light gray */
+  --bg-surface: #ffffff;         /* Pure crisp white card surface */
+  --bg-surface-subtle: #f1f5f9;  /* Secondary subtle background */
+  --bg-surface-hover: #e2e8f0;   /* Hover state */
+  --border-app: #e2e8f0;         /* Refined card border */
+  --border-app-light: #cbd5e1;   /* Input & interactive border */
 
-  /* 2. Signature Violet-to-Cyan Gradient */
-  --gradient-brand: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #06b6d4 100%);
-  --gradient-brand-hover: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #22d3ee 100%);
-  --glow-brand: rgba(124, 58, 237, 0.35);
+  /* 2. Text Hierarchy (Deep Slate for maximum contrast) */
+  --text-primary: #0f172a;       /* Dark slate heading */
+  --text-secondary: #475569;     /* Body text */
+  --text-muted: #64748b;         /* Muted subtext */
 
-  /* 3. Strict Status Colors */
-  --status-approved: #10b981;
-  --status-approved-bg: rgba(16, 185, 129, 0.15);
-  --status-approved-border: rgba(16, 185, 129, 0.35);
+  /* 3. Signature Violet-to-Cyan Gradient */
+  --gradient-brand: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #06b6d4 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #4f46e5 0%, #4338ca 50%, #0891b2 100%);
+  --glow-brand: rgba(99, 102, 241, 0.25);
 
-  --status-pending: #f59e0b;
-  --status-pending-bg: rgba(245, 158, 11, 0.15);
-  --status-pending-border: rgba(245, 158, 11, 0.35);
+  /* 4. Status Colors (Refined Light Theme Badges) */
+  --status-approved: #059669;
+  --status-approved-bg: #ecfdf5;
+  --status-approved-border: #a7f3d0;
 
-  --status-conflict: #ef4444;
-  --status-conflict-bg: rgba(239, 68, 68, 0.2);
-  --status-conflict-border: rgba(239, 68, 68, 0.5);
+  --status-pending: #d97706;
+  --status-pending-bg: #fffbeb;
+  --status-pending-border: #fde68a;
 
-  /* 4. Distinct Club Colors */
-  --club-acm: #38bdf8;
-  --club-acm-bg: rgba(56, 189, 248, 0.15);
-  --club-acm-border: rgba(56, 189, 248, 0.4);
+  --status-conflict: #dc2626;
+  --status-conflict-bg: #fef2f2;
+  --status-conflict-border: #fecaca;
 
-  --club-ieee: #a855f7;
-  --club-ieee-bg: rgba(168, 85, 247, 0.15);
-  --club-ieee-border: rgba(168, 85, 247, 0.4);
+  /* 5. Distinct Club Colors */
+  --club-acm: #0284c7;           /* Sky Blue */
+  --club-acm-bg: #f0f9ff;
+  --club-acm-border: #bae6fd;
 
-  --club-csi: #f43f5e;
-  --club-csi-bg: rgba(244, 63, 94, 0.15);
-  --club-csi-border: rgba(244, 63, 94, 0.4);
+  --club-ieee: #7c3aed;          /* Purple */
+  --club-ieee-bg: #f5f3ff;
+  --club-ieee-border: #ddd6fe;
 
-  --club-default: #818cf8;
-  --club-default-bg: rgba(129, 140, 248, 0.15);
-  --club-default-border: rgba(129, 140, 248, 0.4);
+  --club-csi: #e11d48;           /* Rose */
+  --club-csi-bg: #fff1f2;
+  --club-csi-border: #fecdd3;
 
-  /* 5. Distinct Budget Category Colors */
-  --cat-refreshments: #06b6d4;
-  --cat-printing: #8b5cf6;
-  --cat-prizes: #f43f5e;
-  --cat-logistics: #3b82f6;
-  --cat-marketing: #eab308;
-  --cat-misc: #94a3b8;
+  --club-default: #4f46e5;       /* Indigo */
+  --club-default-bg: #eef2ff;
+  --club-default-border: #c7d2fe;
+
+  /* 6. Distinct Budget Category Colors */
+  --cat-refreshments: #0891b2;
+  --cat-printing: #7c3aed;
+  --cat-prizes: #e11d48;
+  --cat-logistics: #2563eb;
+  --cat-marketing: #d97706;
+  --cat-misc: #475569;
 }
 
 body {
-  background-color: var(--bg-navy-base);
-  color: #f1f5f9;
+  background-color: var(--bg-app-base);
+  color: var(--text-primary);
   font-family: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
@@ -63,10 +68,11 @@ body {
   min-height: 100vh;
 }
 
-/* Typography Enhancements */
+/* Typography */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-jakarta), sans-serif;
   letter-spacing: -0.025em;
+  color: var(--text-primary);
   font-weight: 700;
 }
 
@@ -74,23 +80,26 @@ code, kbd, samp, pre, .font-mono {
   font-family: var(--font-mono), monospace;
 }
 
-/* Custom Utility Classes */
+/* Buttons and Interactive Elements */
 .btn-primary-gradient {
   background: var(--gradient-brand);
+  color: #ffffff;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn-primary-gradient:hover {
   background: var(--gradient-brand-hover);
-  box-shadow: 0 4px 20px var(--glow-brand);
+  box-shadow: 0 4px 14px var(--glow-brand);
   transform: translateY(-1px);
 }
 
 .tab-active-gradient {
   background: var(--gradient-brand);
-  color: #ffffff;
-  box-shadow: 0 2px 14px var(--glow-brand);
+  color: #ffffff !important;
+  box-shadow: 0 2px 10px var(--glow-brand);
 }
 
-.logo-accent-glow {
-  box-shadow: 0 0 25px var(--glow-brand);
+.card-white {
+  background-color: #ffffff;
+  border: 1px solid var(--border-app);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
 }
