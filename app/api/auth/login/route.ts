@@ -9,28 +9,28 @@ export const PRE_REGISTERED_USERS = [
     name: 'Pardhu (Core Lead)',
     role: UserRole.CORE_VERIFIER,
     password: 'password123',
-    clubId: 'club-acm',
+    clubId: null,
   },
   {
     email: 'acmcore@gmail.com',
     name: 'ACM Core Admin',
     role: UserRole.CORE_VERIFIER,
     password: 'password123',
-    clubId: 'club-acm',
+    clubId: null,
   },
   {
     email: 'acmexec@gmail.com',
     name: 'Club Executive',
     role: UserRole.CLUB_EXEC,
     password: 'password123',
-    clubId: 'club-acm',
+    clubId: null,
   },
   {
     email: 'ieeelead@gmail.com',
     name: 'IEEE Executive',
     role: UserRole.CLUB_EXEC,
     password: 'password123',
-    clubId: 'club-ieee',
+    clubId: null,
   },
   {
     email: 'student@gmail.com',
@@ -72,12 +72,10 @@ export async function POST(request: NextRequest) {
 
     let role: UserRole = UserRole.MEMBER;
     let name = normalizedEmail.split('@')[0];
-    let clubId: string | null = null;
 
     if (preReg) {
       role = preReg.role;
       name = preReg.name;
-      clubId = preReg.clubId;
     } else if (normalizedEmail.includes('core') || normalizedEmail === 'pardhu120907@gmail.com') {
       role = UserRole.CORE_VERIFIER;
     } else if (normalizedEmail.includes('exec') || normalizedEmail.includes('lead')) {
@@ -95,14 +93,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Dynamically lookup the actual Club ID from the database
+    // Dynamically lookup the actual Club ID from the database for Club Executives only
     let resolvedClubId: string | null = null;
-    try {
-      const clubs = await dbService.getClubs();
-      const acmClub = clubs.find((c: any) => c.name.toLowerCase().includes('acm'));
-      resolvedClubId = acmClub ? acmClub.id : (clubs[0]?.id || null);
-    } catch (e) {
-      console.warn('Could not query clubs for user assignment:', e);
+    if (role === UserRole.CLUB_EXEC) {
+      try {
+        const clubs = await dbService.getClubs();
+        if (normalizedEmail.includes('ieee')) {
+          const ieeeClub = clubs.find((c: any) => c.name.toLowerCase().includes('ieee'));
+          resolvedClubId = ieeeClub ? ieeeClub.id : (clubs[0]?.id || null);
+        } else {
+          const acmClub = clubs.find((c: any) => c.name.toLowerCase().includes('acm'));
+          resolvedClubId = acmClub ? acmClub.id : (clubs[0]?.id || null);
+        }
+      } catch (e) {
+        console.warn('Could not query clubs for user assignment:', e);
+      }
     }
 
     // Upsert user into database

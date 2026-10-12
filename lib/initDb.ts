@@ -57,7 +57,7 @@ export async function ensureDatabaseTables() {
         "email" TEXT UNIQUE NOT NULL,
         "passwordHash" TEXT,
         "role" "UserRole" NOT NULL DEFAULT 'MEMBER',
-        "clubId" TEXT REFERENCES "Club"("id") ON DELETE SET NULL,
+        "clubId" TEXT,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -70,11 +70,24 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Club" ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::text;
       ALTER TABLE "Club" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
-      -- If User_clubId_fkey is causing invalid references on legacy seed data, drop it or ensure it's safe
+      -- Permanently drop any foreign key constraints on User.clubId so it NEVER causes login errors
       ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_clubId_fkey";
-      -- Fix any invalid clubId in User before re-adding constraint
+      ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "user_clubid_fkey";
+      DO $$
+      DECLARE
+        r RECORD;
+      BEGIN
+        FOR r IN (
+          SELECT constraint_name
+          FROM information_schema.table_constraints
+          WHERE table_name = 'User' AND constraint_type = 'FOREIGN KEY' AND constraint_name ILIKE '%club%'
+        ) LOOP
+          EXECUTE 'ALTER TABLE "User" DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
+        END LOOP;
+      END $$;
+
+      -- Nullify invalid clubIds
       UPDATE "User" SET "clubId" = NULL WHERE "clubId" IS NOT NULL AND "clubId" NOT IN (SELECT "id" FROM "Club");
-      ALTER TABLE "User" ADD CONSTRAINT "User_clubId_fkey" FOREIGN KEY ("clubId") REFERENCES "Club"("id") ON DELETE SET NULL;
 
       -- Event Table
       CREATE TABLE IF NOT EXISTS "Event" (
@@ -165,6 +178,7 @@ export async function ensureDatabaseTables() {
 
     // Pre-seed Core clubs if not present
     await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "Club_name_key" ON "Club"("name");
       INSERT INTO "Club" ("id", "name", "description")
       VALUES
         ('club-acm', 'ACM Student Chapter', 'Association for Computing Machinery student chapter NIT Surat'),
@@ -177,8 +191,8 @@ export async function ensureDatabaseTables() {
     await client.query(`
       INSERT INTO "User" ("id", "name", "email", "role", "clubId")
       VALUES
-        ('user-pardhu', 'Pardhu (Core Lead)', 'pardhu120907@gmail.com', 'CORE_VERIFIER', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1)),
-        ('user-core-admin', 'ACM Core Admin', 'acmcore@gmail.com', 'CORE_VERIFIER', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1)),
+        ('user-pardhu', 'Pardhu (Core Lead)', 'pardhu120907@gmail.com', 'CORE_VERIFIER', NULL),
+        ('user-core-admin', 'ACM Core Admin', 'acmcore@gmail.com', 'CORE_VERIFIER', NULL),
         ('user-club-exec', 'Club Executive', 'acmexec@gmail.com', 'CLUB_EXEC', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1)),
         ('user-ieee-exec', 'IEEE Executive', 'ieeelead@gmail.com', 'CLUB_EXEC', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%IEEE%' LIMIT 1)),
         ('user-member', 'General Student', 'student@gmail.com', 'MEMBER', NULL)

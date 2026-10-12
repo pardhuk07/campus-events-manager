@@ -32,16 +32,17 @@ export const dbService = {
     await checkInit();
     const email = user.email.toLowerCase().trim();
     const id = user.id || randomUUID();
+    const clubId = user.clubId !== undefined ? user.clubId : null;
     const rows = await query(
       `INSERT INTO "User" ("id", "name", "email", "role", "clubId", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, NOW())
        ON CONFLICT ("email") DO UPDATE
        SET "name" = EXCLUDED."name", 
            "role" = EXCLUDED."role", 
-           "clubId" = COALESCE(EXCLUDED."clubId", "User"."clubId"),
+           "clubId" = EXCLUDED."clubId",
            "updatedAt" = NOW()
        RETURNING *`,
-      [id, user.name, email, user.role, user.clubId || null]
+      [id, user.name, email, user.role, clubId]
     );
     return rows[0];
   },
