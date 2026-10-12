@@ -112,10 +112,15 @@ export default function EventDrawer({
         setTitle('');
         setDescription('');
       } else {
-        alert(result.error?.message || result.error || 'Failed to submit proposal');
+        const errorMsg =
+          typeof result.error === 'string'
+            ? result.error
+            : result.error?.message || JSON.stringify(result.error) || 'Failed to submit proposal';
+        alert(errorMsg);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.message || 'Failed to connect to events service.');
     } finally {
       setSubmitting(false);
     }

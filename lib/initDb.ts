@@ -80,6 +80,13 @@ export async function ensureDatabaseTables() {
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Add missing columns to Event if existing table had previous schema
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "audienceTags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "expectedAttendance" INTEGER;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "category" TEXT;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
+      ALTER TABLE "Event" ALTER COLUMN "status" TYPE TEXT;
+
       -- EventConflict Table
       CREATE TABLE IF NOT EXISTS "EventConflict" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -106,10 +113,15 @@ export async function ensureDatabaseTables() {
         "expenseDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "receiptUrl" TEXT,
         "receiptPublicId" TEXT,
-        "submittedById" TEXT NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+        "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- Add missing columns to Expense if table existed
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "receiptPublicId" TEXT;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "expenseDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
       -- Budget Table
       CREATE TABLE IF NOT EXISTS "Budget" (
@@ -122,6 +134,12 @@ export async function ensureDatabaseTables() {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- Add missing columns to Budget if table existed
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "name" TEXT DEFAULT 'Semester Budget';
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "amount" NUMERIC(10, 2) DEFAULT 50000.00;
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP(3) DEFAULT '2026-08-01 00:00:00';
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP(3) DEFAULT '2026-12-31 23:59:59';
 
       CREATE INDEX IF NOT EXISTS "Event_startTime_endTime_idx" ON "Event"("startTime", "endTime");
       CREATE INDEX IF NOT EXISTS "Event_venue_idx" ON "Event"("venue");

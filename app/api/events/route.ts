@@ -122,22 +122,27 @@ export async function POST(request: NextRequest) {
     });
 
     // 2. Trigger Person 2 Conflict Detection Engine
-    const conflictResult = await checkEventConflicts({
-      startTime: start,
-      endTime: end,
-      venue: venue.trim(),
-      audienceTags: tags,
-      excludeEventId: createdEvent.id,
-      createRecordsIfEventId: createdEvent.id,
-    });
+    let conflictResult: any = { hasConflict: false, conflicts: [] };
+    try {
+      conflictResult = await checkEventConflicts({
+        startTime: start,
+        endTime: end,
+        venue: venue.trim(),
+        audienceTags: tags,
+        excludeEventId: createdEvent.id,
+        createRecordsIfEventId: createdEvent.id,
+      });
+    } catch (conflictErr) {
+      console.error('Non-blocking conflict detection error:', conflictErr);
+    }
 
     // Rule 1: A conflict is a WARNING, not an automatic rejection. Event stays PENDING, conflicts are flagged for review.
     return apiSuccess(
       {
         event: createdEvent,
         hasConflict: conflictResult.hasConflict,
-        conflictsCount: conflictResult.conflicts.length,
-        conflicts: conflictResult.conflicts,
+        conflictsCount: conflictResult.conflicts?.length || 0,
+        conflicts: conflictResult.conflicts || [],
       },
       201
     );
