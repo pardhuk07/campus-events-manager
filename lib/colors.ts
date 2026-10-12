@@ -1,4 +1,5 @@
 // Helper functions mapping dynamic clubs and categories to clean light-theme styles
+import { ExpenseCategory } from './constants';
 
 export function getClubTheme(clubName?: string) {
   const name = (clubName || '').toLowerCase();
@@ -38,11 +39,15 @@ export function getClubTheme(clubName?: string) {
   };
 }
 
+// 8 Official Expense Categories from Single Source of Truth:
+// FOOD, VENUE, PRIZES, MARKETING, PRINTING, EQUIPMENT, TRAVEL, MISCELLANEOUS
 export const CATEGORY_COLORS: Record<string, { hex: string; label: string; bg: string }> = {
-  REFRESHMENTS: { hex: '#0891b2', label: 'Refreshments', bg: 'bg-cyan-50' },
-  PRINTING: { hex: '#7c3aed', label: 'Printing', bg: 'bg-purple-50' },
-  PRIZES_MEMENTOS: { hex: '#e11d48', label: 'Prizes & Mementos', bg: 'bg-rose-50' },
-  LOGISTICS_EQUIPMENT: { hex: '#2563eb', label: 'Logistics', bg: 'bg-blue-50' },
-  MARKETING_BANNERS: { hex: '#d97706', label: 'Marketing Banners', bg: 'bg-amber-50' },
+  FOOD: { hex: '#0891b2', label: 'Food & Refreshments', bg: 'bg-cyan-50' },
+  VENUE: { hex: '#2563eb', label: 'Venue & Facilities', bg: 'bg-blue-50' },
+  PRIZES: { hex: '#e11d48', label: 'Prizes & Mementos', bg: 'bg-rose-50' },
+  MARKETING: { hex: '#d97706', label: 'Marketing & Banners', bg: 'bg-amber-50' },
+  PRINTING: { hex: '#7c3aed', label: 'Printing & Certificates', bg: 'bg-purple-50' },
+  EQUIPMENT: { hex: '#4f46e5', label: 'Equipment & AV', bg: 'bg-indigo-50' },
+  TRAVEL: { hex: '#059669', label: 'Travel & Honorarium', bg: 'bg-emerald-50' },
   MISCELLANEOUS: { hex: '#475569', label: 'Miscellaneous', bg: 'bg-slate-50' },
 };

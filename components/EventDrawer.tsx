@@ -5,6 +5,7 @@ import {
   PlusCircleIcon,
   AlertTriangleIcon,
 } from './Icons';
+import { UserRole } from '@/lib/constants';
 
 interface EventDrawerProps {
   isOpen: boolean;
@@ -28,8 +29,9 @@ export default function EventDrawer({
   const [venue, setVenue] = useState('Seminar Hall 1');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [audienceType, setAudienceType] = useState('TECH_UG');
-  const [expectedAudience, setExpectedAudience] = useState(100);
+  const [audienceTag, setAudienceTag] = useState('TECH_UG');
+  const [expectedAttendance, setExpectedAttendance] = useState(100);
+  const [category, setCategory] = useState('Technical Workshop');
   const [clubId, setClubId] = useState('');
 
   // Live as-you-type conflict state
@@ -56,18 +58,20 @@ export default function EventDrawer({
     const timer = setTimeout(async () => {
       setCheckingConflict(true);
       try {
-        const res = await fetch('/api/conflicts', {
+        const res = await fetch('/api/conflicts/check', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             startTime: new Date(startTime).toISOString(),
             endTime: new Date(endTime).toISOString(),
             venue,
-            audienceType,
+            audienceTags: [audienceTag],
           }),
         });
-        const data = await res.json();
-        setLiveConflictResult(data);
+        const json = await res.json();
+        if (json.success && json.data) {
+          setLiveConflictResult(json.data);
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -76,11 +80,11 @@ export default function EventDrawer({
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [venue, startTime, endTime, audienceType]);
+  }, [venue, startTime, endTime, audienceTag]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentRole === 'MEMBER') return;
+    if (currentRole === UserRole.MEMBER) return;
 
     setSubmitting(true);
     try {
@@ -93,8 +97,9 @@ export default function EventDrawer({
           venue,
           startTime: new Date(startTime).toISOString(),
           endTime: new Date(endTime).toISOString(),
-          audienceType,
-          expectedAudience,
+          audienceTags: [audienceTag],
+          expectedAttendance,
+          category,
           clubId,
           userRole: currentRole,
         }),
@@ -107,7 +112,7 @@ export default function EventDrawer({
         setTitle('');
         setDescription('');
       } else {
-        alert(result.error);
+        alert(result.error?.message || result.error || 'Failed to submit proposal');
       }
     } catch (err) {
       console.error(err);
@@ -265,8 +270,6 @@ export default function EventDrawer({
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {liveConflictResult.suggestedSlots.map((slot: any, idx: number) => {
-                            const s = new Date(slot.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            const e = new Date(slot.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                             return (
                               <button
                                 key={idx}
@@ -274,7 +277,7 @@ export default function EventDrawer({
                                 onClick={() => applySuggestedSlot(slot)}
                                 className="px-2 py-1 rounded-lg bg-white border border-rose-300 text-rose-900 text-[10px] font-bold hover:bg-rose-100 transition shadow-xs"
                               >
-                                {s} - {e} (Apply)
+                                {slot.label} (Apply)
                               </button>
                             );
                           })}
@@ -288,16 +291,16 @@ export default function EventDrawer({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Audience Type</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Audience Target</label>
                 <select
-                  value={audienceType}
-                  onChange={(e) => setAudienceType(e.target.value)}
+                  value={audienceTag}
+                  onChange={(e) => setAudienceTag(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
                 >
+                  <option value="ALL_STUDENTS">All Campus Students</option>
                   <option value="TECH_UG">Tech Undergraduates</option>
-                  <option value="ALL_CAMPUS">All Campus Students</option>
+                  <option value="TECH_PG">Postgraduate Students</option>
                   <option value="FIRST_YEAR">First Year Students</option>
-                  <option value="POSTGRAD">Postgraduates</option>
                 </select>
               </div>
 
@@ -307,8 +310,8 @@ export default function EventDrawer({
                   type="number"
                   min="1"
                   required
-                  value={expectedAudience}
-                  onChange={(e) => setExpectedAudience(parseInt(e.target.value) || 0)}
+                  value={expectedAttendance}
+                  onChange={(e) => setExpectedAttendance(parseInt(e.target.value) || 0)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>

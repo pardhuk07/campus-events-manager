@@ -1,128 +1,148 @@
-import { NextResponse } from 'next/server';
-import { prisma, AudienceType, EventStatus, Role } from '@/lib/prisma';
-import { detectEventConflicts } from '@/services/conflictDetector';
+import { NextRequest } from 'next/server';
+import { dbService } from '@/lib/dbService';
+import { checkEventConflicts } from '@/services/conflictEngine';
+import {
+  apiSuccess,
+  apiError,
+  ErrorCodes,
+  EventStatus,
+  UserRole,
+} from '@/lib/constants';
 
-// 1. GET /api/events - Anyone can view campus events (Members, Execs, Core)
-export async function GET() {
+// GET /api/events - List and search/filter events
+export async function GET(request: NextRequest) {
   try {
-    const events = await prisma.event.findMany({
-      include: {
-        club: { select: { id: true, name: true } },
-        expenses: true,
-      },
-      orderBy: { startTime: 'asc' },
-    });
+    const { searchParams } = new URL(request.url);
+    const clubId = searchParams.get('clubId');
+    const status = searchParams.get('status');
+    const venue = searchParams.get('venue');
+    const query = searchParams.get('query');
 
-    return NextResponse.json({ success: true, data: events });
-  } catch (error) {
-    console.error('Failed to fetch events:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch events' },
-      { status: 500 }
-    );
+    let events = await dbService.getEvents();
+
+    if (clubId) {
+      events = events.filter((e: any) => e.clubId === clubId);
+    }
+    if (status && status !== 'ALL') {
+      events = events.filter((e: any) => e.status === status);
+    }
+    if (venue) {
+      events = events.filter((e: any) => e.venue.toLowerCase().includes(venue.toLowerCase()));
+    }
+    if (query) {
+      const q = query.toLowerCase();
+      events = events.filter(
+        (e: any) =>
+          e.title.toLowerCase().includes(q) ||
+          e.venue.toLowerCase().includes(q) ||
+          (e.club?.name && e.club.name.toLowerCase().includes(q))
+      );
+    }
+
+    return apiSuccess(events);
+  } catch (error: any) {
+    console.error('GET /api/events error:', error);
+    return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Failed to fetch events', 500);
   }
 }
 
-// 2. POST /api/events - Only CLUB_EXEC and ACM_CORE can submit proposals
-export async function POST(request: Request) {
+// POST /api/events - Create new event proposal & trigger conflict detection
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
       title,
       description,
+      clubId,
       startTime,
       endTime,
       venue,
-      expectedAudience,
-      audienceType,
-      clubId,
+      audienceTags,
+      expectedAttendance,
+      category,
+      submittedById,
       userRole,
     } = body;
 
-    // RBAC Security Check: Regular Members cannot schedule events
-    if (userRole === Role.MEMBER) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Forbidden: Regular members cannot schedule events. Only Club Executives and ACM Core are authorized.',
-        },
-        { status: 403 }
+    // RBAC: Only CLUB_EXEC and CORE_VERIFIER can submit events
+    if (userRole === UserRole.MEMBER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Regular members cannot submit events. Only Club Executives and Core Verifiers are permitted.',
+        403
       );
     }
 
-    // Validate required fields
-    if (!title || !startTime || !endTime || !venue || !audienceType || !clubId) {
-      return NextResponse.json(
-        { success: false, error: 'Title, startTime, endTime, venue, audienceType, and clubId are required.' },
-        { status: 400 }
-      );
+    // Required field validation according to Section 21
+    if (!title || !title.trim()) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Event title is required.');
+    }
+    if (!clubId) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Organizing club is required.');
+    }
+    if (!venue || !venue.trim()) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Venue is required.');
+    }
+    if (!startTime || !endTime) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Start time and end time are required.');
     }
 
     const start = new Date(startTime);
     const end = new Date(endTime);
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
-      return NextResponse.json(
-        { success: false, error: 'Please provide valid dates. End time must be after start time.' },
-        { status: 400 }
-      );
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return apiError(ErrorCodes.INVALID_EVENT_TIME, 'Invalid date or time format.');
+    }
+    if (end <= start) {
+      return apiError(ErrorCodes.INVALID_EVENT_TIME, 'End time must be strictly after start time.');
     }
 
-    if (!Object.values(AudienceType).includes(audienceType)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid audienceType.' },
-        { status: 400 }
-      );
+    const tags = Array.isArray(audienceTags) && audienceTags.length > 0 ? audienceTags : ['ALL_STUDENTS'];
+
+    // Resolve submitting user id
+    let finalSubmitterId = submittedById;
+    if (!finalSubmitterId) {
+      const defaultUser = await dbService.getUserByEmail('pardhu120907@gmail.com');
+      finalSubmitterId = defaultUser ? defaultUser.id : 'user-pardhu';
     }
 
-    // Run the Conflict Detection Engine
-    const conflictReport = await detectEventConflicts({
+    // 1. Create the event initially with PENDING status
+    const createdEvent = await dbService.createEvent({
+      title: title.trim(),
+      description: description || null,
+      clubId,
       startTime: start,
       endTime: end,
       venue: venue.trim(),
-      audienceType: audienceType as AudienceType,
+      audienceTags: tags,
+      expectedAttendance: expectedAttendance ? parseInt(expectedAttendance) : 50,
+      category: category || 'General',
+      status: EventStatus.PENDING,
+      submittedById: finalSubmitterId,
     });
 
-    // Auto-flag status if hard or soft conflict is detected
-    let initialStatus: EventStatus = EventStatus.PENDING;
-    if (conflictReport.hardConflicts.length > 0) {
-      initialStatus = EventStatus.FLAGGED_CONFLICT;
-    }
-
-    // Save event in PostgreSQL
-    const newEvent = await prisma.event.create({
-      data: {
-        title,
-        description: description || null,
-        startTime: start,
-        endTime: end,
-        venue: venue.trim(),
-        expectedAudience: Number(expectedAudience) || 50,
-        audienceType: audienceType as AudienceType,
-        status: initialStatus,
-        clubId,
-      },
-      include: {
-        club: { select: { name: true } },
-      },
+    // 2. Trigger Person 2 Conflict Detection Engine
+    const conflictResult = await checkEventConflicts({
+      startTime: start,
+      endTime: end,
+      venue: venue.trim(),
+      audienceTags: tags,
+      excludeEventId: createdEvent.id,
+      createRecordsIfEventId: createdEvent.id,
     });
 
-    return NextResponse.json(
+    // Rule 1: A conflict is a WARNING, not an automatic rejection. Event stays PENDING, conflicts are flagged for review.
+    return apiSuccess(
       {
-        success: true,
-        message: conflictReport.hasConflict
-          ? 'Event submitted with detected conflicts!'
-          : 'Event submitted successfully with no conflicts.',
-        event: newEvent,
-        conflictReport,
+        event: createdEvent,
+        hasConflict: conflictResult.hasConflict,
+        conflictsCount: conflictResult.conflicts.length,
+        conflicts: conflictResult.conflicts,
       },
-      { status: 201 }
+      201
     );
-  } catch (error) {
-    console.error('Error creating event:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error('POST /api/events error:', error);
+    return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Failed to create event', 500);
   }
 }

@@ -8,97 +8,95 @@ import {
   PlusCircleIcon,
   ReceiptIcon,
   DownloadIcon,
-  ShieldCheckIcon,
 } from './Icons';
 import { CATEGORY_COLORS } from '@/lib/colors';
+import { UserRole, ExpenseCategory } from '@/lib/constants';
 
 export default function ExpenseManager({ currentRole }: { currentRole: string }) {
-  // Pre-seed with instant baseline data so there is ZERO waiting time or blank screen
-  const [data, setData] = useState<any>({
-    semester: 'Fall 2026',
-    totalBudget: 50000,
-    totalSpent: 0,
-    remainingBudget: 50000,
-    percentSpent: 0,
-    categoryBreakdown: {
-      REFRESHMENTS: 0,
-      PRINTING: 0,
-      PRIZES_MEMENTOS: 0,
-      LOGISTICS_EQUIPMENT: 0,
-      MARKETING_BANNERS: 0,
-      MISCELLANEOUS: 0,
-    },
-    recentExpenses: [],
-  });
+  const [budgets, setBudgets] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Budget Edit State (STRICTLY for ACM_CORE only)
+  // Budget Edit State (STRICTLY for CORE_VERIFIER)
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [newBudgetAmount, setNewBudgetAmount] = useState('50000');
   const [savingBudget, setSavingBudget] = useState(false);
 
   // Form State
-  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState<string>(ExpenseCategory.FOOD);
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('REFRESHMENTS');
   const [eventId, setEventId] = useState('');
   const [receiptUrl, setReceiptUrl] = useState('');
   const [description, setDescription] = useState('');
 
-  const fetchBudget = async () => {
-    try {
-      const res = await fetch('/api/expenses');
-      const json = await res.json();
-      if (json.success && json.data) {
-        setData(json.data);
-        setNewBudgetAmount(String(json.data.totalBudget || 50000));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const isCoreVerifier = currentRole === UserRole.CORE_VERIFIER || currentRole === 'ACM_CORE';
+  const isMember = currentRole === UserRole.MEMBER;
 
-  const fetchEvents = async () => {
+  const fetchBudgetData = async () => {
     try {
-      const res = await fetch('/api/events');
-      const json = await res.json();
-      if (json.success && json.data) {
-        setEvents(json.data);
+      const [budgetsRes, expensesRes, eventsRes] = await Promise.all([
+        fetch('/api/budgets'),
+        fetch('/api/expenses'),
+        fetch('/api/events'),
+      ]);
+
+      const budgetsJson = await budgetsRes.json();
+      const expensesJson = await expensesRes.json();
+      const eventsJson = await eventsRes.json();
+
+      if (budgetsJson.success && budgetsJson.data) {
+        setBudgets(budgetsJson.data);
+        if (budgetsJson.data.length > 0) {
+          setNewBudgetAmount(String(budgetsJson.data[0].amount));
+        }
+      }
+      if (expensesJson.success && expensesJson.data) {
+        setExpenses(expensesJson.data);
+      }
+      if (eventsJson.success && eventsJson.data) {
+        setEvents(eventsJson.data);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load expenses/budget data:', err);
     }
   };
 
   useEffect(() => {
-    fetchBudget();
-    fetchEvents();
+    fetchBudgetData();
   }, []);
+
+  const activeBudget = budgets[0] || {
+    id: 'budget-fall-2026',
+    name: 'Fall 2026 Semester Budget',
+    amount: 50000,
+    totalSpent: 0,
+    remainingBudget: 50000,
+    percentSpent: 0,
+  };
 
   const handleUpdateBudget = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBudgetAmount || currentRole !== 'ACM_CORE') return;
+    if (!newBudgetAmount || !isCoreVerifier) return;
 
     setSavingBudget(true);
     try {
-      const res = await fetch('/api/budget', {
+      const res = await fetch(`/api/budgets/${activeBudget.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          semester: data?.semester || 'Fall 2026',
-          totalAllocated: parseFloat(newBudgetAmount),
-          userRole: currentRole,
+          amount: parseFloat(newBudgetAmount),
+          userRole: UserRole.CORE_VERIFIER,
         }),
       });
 
       const result = await res.json();
       if (result.success) {
         setIsEditingBudget(false);
-        fetchBudget();
+        fetchBudgetData();
       } else {
-        alert(result.error);
+        alert(result.error?.message || result.error || 'Failed to update budget');
       }
     } catch (err) {
       console.error('Error updating budget:', err);
@@ -122,10 +120,10 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
       });
 
       const json = await res.json();
-      if (json.success) {
-        setReceiptUrl(json.url);
+      if (json.success && json.data?.url) {
+        setReceiptUrl(json.data.url);
       } else {
-        alert('Upload failed: ' + json.error);
+        alert('Upload failed: ' + (json.error?.message || 'Error'));
       }
     } catch (err) {
       console.error('Upload error:', err);
@@ -137,7 +135,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !amount || currentRole === 'MEMBER') return;
+    if (!amount || isMember) return;
 
     setSubmitting(true);
     try {
@@ -145,7 +143,6 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title,
           amount: parseFloat(amount),
           category,
           eventId: eventId || null,
@@ -156,14 +153,13 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
       });
       const result = await res.json();
       if (result.success) {
-        setTitle('');
         setAmount('');
         setReceiptUrl('');
         setDescription('');
         setEventId('');
-        fetchBudget();
+        fetchBudgetData();
       } else {
-        alert(result.error);
+        alert(result.error?.message || result.error);
       }
     } catch (err) {
       console.error(err);
@@ -176,10 +172,21 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
     window.open('/api/reports/handover?format=csv', '_blank');
   };
 
-  const budget = data?.totalBudget || 50000;
-  const spent = data?.totalSpent || 0;
-  const remaining = data?.remainingBudget || 50000;
-  const percent = Math.min(100, Math.round((spent / budget) * 100));
+  // Compute category breakdown from expenses array
+  const categoryBreakdown: Record<string, number> = {};
+  for (const cat of Object.values(ExpenseCategory)) {
+    categoryBreakdown[cat] = 0;
+  }
+  for (const ex of expenses) {
+    if (categoryBreakdown[ex.category] !== undefined) {
+      categoryBreakdown[ex.category] += parseFloat(ex.amount);
+    }
+  }
+
+  const budget = parseFloat(activeBudget.amount) || 50000;
+  const spent = parseFloat(activeBudget.totalSpent) || expenses.reduce((s, e) => s + parseFloat(e.amount), 0);
+  const remaining = budget - spent;
+  const percent = budget > 0 ? Math.min(100, Math.round((spent / budget) * 100)) : 0;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-150">
@@ -191,7 +198,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
             <span className="font-semibold uppercase tracking-wider">Total Semester Budget</span>
             <div className="flex items-center gap-2">
               <RupeeIcon className="w-4 h-4 text-indigo-600" />
-              {currentRole === 'ACM_CORE' && (
+              {isCoreVerifier && (
                 <button
                   type="button"
                   onClick={() => setIsEditingBudget(!isEditingBudget)}
@@ -203,7 +210,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
             </div>
           </div>
 
-          {isEditingBudget && currentRole === 'ACM_CORE' ? (
+          {isEditingBudget && isCoreVerifier ? (
             <form onSubmit={handleUpdateBudget} className="mt-3 space-y-2">
               <div className="flex items-center gap-2">
                 <input
@@ -222,12 +229,12 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                   {savingBudget ? '...' : 'Save'}
                 </button>
               </div>
-              <p className="text-[10px] text-amber-700 font-medium">Authorized: ACM Core Verifier override privilege</p>
+              <p className="text-[10px] text-amber-700 font-medium">Authorized: CORE_VERIFIER override privilege</p>
             </form>
           ) : (
             <>
               <div className="text-3xl font-black mt-2 text-slate-900">₹{budget.toLocaleString()}</div>
-              <p className="text-xs text-slate-500 mt-1 font-medium">Allocated for {data?.semester || 'Semester'}</p>
+              <p className="text-xs text-slate-500 mt-1 font-medium">{activeBudget.name || 'Semester Budget'}</p>
             </>
           )}
         </div>
@@ -248,7 +255,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
           <p className="text-xs text-slate-500 mt-1.5 font-medium">{percent}% of budget utilized</p>
         </div>
 
-        {/* Remaining Budget Card */}
+        {/* Remaining Budget Card (Calculated Rule 4) */}
         <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-slate-900">
           <div className="flex items-center justify-between text-slate-500 text-xs">
             <span className="font-semibold uppercase tracking-wider">Remaining Balance</span>
@@ -256,7 +263,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
           </div>
           <div className="text-3xl font-black mt-2 text-emerald-600">₹{remaining.toLocaleString()}</div>
           <p className="text-xs text-slate-500 mt-1 font-medium">
-            Available for remaining approved proposals
+            Available for upcoming approved club proposals
           </p>
         </div>
       </div>
@@ -267,32 +274,20 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
         totalSpent={spent}
         remainingBudget={remaining}
         percentSpent={percent}
-        categoryBreakdown={data?.categoryBreakdown || {}}
+        categoryBreakdown={categoryBreakdown}
       />
 
       {/* 3. Action Section: Add Expense & CSV Export */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Record Expense Form (Restricted to Exec & Core) */}
-        {currentRole !== 'MEMBER' ? (
+        {!isMember ? (
           <div className="lg:col-span-1 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-slate-900">
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-4">
               <PlusCircleIcon className="w-4 h-4 text-indigo-600" />
-              Record Reimbursable Expense
+              Record Club Expense
             </h3>
 
             <form onSubmit={handleAddExpense} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Expense Title</label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Refreshments for TechTalk"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 font-medium"
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Amount (₹)</label>
@@ -324,7 +319,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Related Event (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Linked Event (Optional)</label>
                 <select
                   value={eventId}
                   onChange={(e) => setEventId(e.target.value)}
@@ -339,10 +334,10 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                 </select>
               </div>
 
-              {/* Receipt File Upload */}
+              {/* Receipt File Upload via Cloudinary */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Receipt Bill Proof (PDF/JPG)
+                  Receipt Upload (Cloudinary)
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -359,12 +354,12 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Vendor / Description</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Description / Bill Notes</label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Notes, GST bill number, vendor details..."
+                  placeholder="Items purchased, invoice number, vendor details..."
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                 />
               </div>
@@ -409,16 +404,16 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
               </button>
             </div>
 
-            {data?.recentExpenses?.length === 0 ? (
+            {expenses.length === 0 ? (
               <div className="py-16 text-center text-slate-400 text-xs italic">
-                No expenses logged yet this semester.
+                No expenses logged yet this period.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="text-slate-400 border-b border-slate-100 uppercase tracking-wider text-[10px]">
-                      <th className="pb-2">Expense / Item</th>
+                      <th className="pb-2">Description</th>
                       <th className="pb-2">Category</th>
                       <th className="pb-2">Event</th>
                       <th className="pb-2">Receipt</th>
@@ -426,18 +421,16 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {data?.recentExpenses?.map((item: any) => {
+                    {expenses.map((item: any) => {
                       const catInfo = CATEGORY_COLORS[item.category] || { label: item.category, hex: '#6366f1' };
 
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/60 transition">
                           <td className="py-2.5 font-medium text-slate-800">
-                            <div>{item.title}</div>
-                            {item.description && (
-                              <div className="text-[10px] text-slate-400 truncate max-w-[180px]">
-                                {item.description}
-                              </div>
-                            )}
+                            <div>{item.description || item.category}</div>
+                            <div className="text-[10px] text-slate-400">
+                              {new Date(item.expenseDate).toLocaleDateString()}
+                            </div>
                           </td>
                           <td className="py-2.5">
                             <span
@@ -466,7 +459,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
                             )}
                           </td>
                           <td className="py-2.5 text-right font-bold text-slate-900">
-                            ₹{item.amount?.toLocaleString()}
+                            ₹{parseFloat(item.amount).toLocaleString()}
                           </td>
                         </tr>
                       );
@@ -479,7 +472,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
 
           <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between">
             <span>Fund Ledger audited under ACM Core Financial Policy</span>
-            <span className="font-semibold text-slate-600">Total items: {data?.recentExpenses?.length || 0}</span>
+            <span className="font-semibold text-slate-600">Total items: {expenses.length}</span>
           </div>
         </div>
       </div>

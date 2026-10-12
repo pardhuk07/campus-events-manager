@@ -1,94 +1,101 @@
-import { NextResponse } from 'next/server';
-import { prisma, ExpenseCategory, Role } from '@/lib/prisma';
-import { getSemesterBudgetSummary } from '@/services/expenseService';
+import { NextRequest } from 'next/server';
+import { dbService } from '@/lib/dbService';
+import {
+  apiSuccess,
+  apiError,
+  ErrorCodes,
+  ExpenseCategory,
+  UserRole,
+} from '@/lib/constants';
 
-// 1. GET /api/expenses - Fast Edge & In-Memory Response
-export async function GET(request: Request) {
+// GET /api/expenses - List expenses, with event, category, and date filtering
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const semester = searchParams.get('semester') || 'Fall 2026';
+    const eventId = searchParams.get('eventId');
+    const category = searchParams.get('category');
 
-    const summary = await getSemesterBudgetSummary(semester);
-    return NextResponse.json(
-      { success: true, data: summary },
-      {
-        headers: {
-          'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30',
-        },
-      }
-    );
-  } catch (error) {
-    console.error('Error fetching budget summary:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch expenses' },
-      { status: 500 }
-    );
+    let expenses = await dbService.getExpenses();
+
+    if (eventId) {
+      expenses = expenses.filter((e: any) => e.eventId === eventId);
+    }
+    if (category) {
+      expenses = expenses.filter((e: any) => e.category === category);
+    }
+
+    return apiSuccess(expenses);
+  } catch (error: any) {
+    console.error('GET /api/expenses error:', error);
+    return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Failed to fetch expenses', 500);
   }
 }
 
-// 2. POST /api/expenses - Record a transaction
-export async function POST(request: Request) {
+// POST /api/expenses - Add an expense linked to an event, category, and receipt
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, amount, category, date, receiptUrl, description, eventId, userRole } = body;
+    const {
+      eventId,
+      amount,
+      category,
+      description,
+      expenseDate,
+      receiptUrl,
+      receiptPublicId,
+      submittedById,
+      userRole,
+    } = body;
 
-    // RBAC Security Check: Regular Members cannot add expenses
-    if (userRole === Role.MEMBER) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Forbidden: Regular members cannot record expenses.',
-        },
-        { status: 403 }
+    // RBAC: Members cannot record club/event expenses
+    if (userRole === UserRole.MEMBER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Regular members cannot submit expenses. Only Club Executives and Core Verifiers are permitted.',
+        403
       );
     }
 
-    if (!title || amount === undefined || !category) {
-      return NextResponse.json(
-        { success: false, error: 'Title, amount, and category are required' },
-        { status: 400 }
+    // Validation rules per Section 21:
+    // - amount must be > 0
+    // - category required
+    // - expenseDate required
+    if (amount === undefined || amount === null) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Expense amount is required.');
+    }
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return apiError(ErrorCodes.INVALID_EXPENSE_AMOUNT, 'Expense amount must be greater than zero.');
+    }
+
+    if (!category || !Object.values(ExpenseCategory).includes(category)) {
+      return apiError(
+        ErrorCodes.VALIDATION_ERROR,
+        `Valid expense category is required. Valid categories: ${Object.values(ExpenseCategory).join(', ')}.`
       );
     }
 
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Amount must be a positive number' },
-        { status: 400 }
-      );
+    let finalSubmitterId = submittedById;
+    if (!finalSubmitterId) {
+      const defaultUser = await dbService.getUserByEmail('pardhu120907@gmail.com');
+      finalSubmitterId = defaultUser ? defaultUser.id : 'user-pardhu';
     }
 
-    if (!Object.values(ExpenseCategory).includes(category)) {
-      return NextResponse.json(
-        { success: false, error: `Invalid category: ${category}` },
-        { status: 400 }
-      );
-    }
-
-    const newExpense = await prisma.expense.create({
-      data: {
-        title,
-        amount: parsedAmount,
-        category,
-        date: date ? new Date(date) : new Date(),
-        receiptUrl: receiptUrl || null,
-        description: description || null,
-        eventId: eventId || null,
-      },
-      include: {
-        event: { select: { title: true } },
-      },
+    const createdExpense = await dbService.createExpense({
+      eventId: eventId || null,
+      amount: numAmount,
+      category,
+      description: description || null,
+      expenseDate: expenseDate ? new Date(expenseDate) : new Date(),
+      receiptUrl: receiptUrl || null,
+      receiptPublicId: receiptPublicId || null,
+      submittedById: finalSubmitterId,
     });
 
-    return NextResponse.json(
-      { success: true, message: 'Expense recorded successfully', expense: newExpense },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error('Error recording expense:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return apiSuccess(createdExpense, 201);
+  } catch (error: any) {
+    console.error('POST /api/expenses error:', error);
+    return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Failed to record expense', 500);
   }
 }

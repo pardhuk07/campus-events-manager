@@ -14,10 +14,12 @@ import {
   PlusCircleIcon,
 } from './Icons';
 import { getClubTheme } from '@/lib/colors';
+import { UserRole } from '@/lib/constants';
 
 export default function EventManager({ currentRole }: { currentRole: string }) {
   const [events, setEvents] = useState<any[]>([]);
   const [clubs, setClubs] = useState<any[]>([]);
+  const [conflicts, setConflicts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // View state: 'calendar' | 'timeline' | 'clashes' | 'list'
@@ -28,6 +30,9 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerInitialDate, setDrawerInitialDate] = useState<string | undefined>();
+
+  const isCoreVerifier = currentRole === UserRole.CORE_VERIFIER || currentRole === 'ACM_CORE';
+  const isMember = currentRole === UserRole.MEMBER;
 
   const fetchEvents = async () => {
     try {
@@ -47,8 +52,20 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
     try {
       const res = await fetch('/api/clubs');
       const json = await res.json();
-      if (json.success && json.clubs) {
-        setClubs(json.clubs);
+      if (json.success && (json.data || json.clubs)) {
+        setClubs(json.data || json.clubs);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchConflicts = async () => {
+    try {
+      const res = await fetch('/api/conflicts');
+      const json = await res.json();
+      if (json.success && json.data) {
+        setConflicts(json.data);
       }
     } catch (err) {
       console.error(err);
@@ -58,22 +75,49 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
   useEffect(() => {
     fetchEvents();
     fetchClubs();
+    fetchConflicts();
   }, []);
 
   const handleUpdateStatus = async (eventId: string, newStatus: string) => {
-    if (currentRole !== 'ACM_CORE') return;
+    if (!isCoreVerifier) return;
 
     try {
       const res = await fetch(`/api/events/${eventId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, userRole: currentRole }),
+        body: JSON.stringify({ status: newStatus, userRole: UserRole.CORE_VERIFIER }),
       });
       const data = await res.json();
       if (data.success) {
         fetchEvents();
+        fetchConflicts();
       } else {
-        alert(data.error);
+        alert(data.error?.message || data.error);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleResolveConflict = async (conflictId: string, status: string, note?: string) => {
+    if (!isCoreVerifier) return;
+
+    try {
+      const res = await fetch(`/api/conflicts/${conflictId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status,
+          resolutionNote: note || 'Resolved by ACM Core Verifier.',
+          userRole: UserRole.CORE_VERIFIER,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchConflicts();
+        fetchEvents();
+      } else {
+        alert(data.error?.message || data.error);
       }
     } catch (err) {
       console.error(err);
@@ -89,7 +133,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
     return matchesStatus && matchesSearch;
   });
 
-  const conflictCount = events.filter((e) => e.status === 'FLAGGED_CONFLICT').length;
+  const conflictCount = conflicts.filter((c) => c.status === 'FLAGGED').length;
   const approvedCount = events.filter((e) => e.status === 'APPROVED').length;
 
   return (
@@ -165,7 +209,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
           </div>
 
           {/* Hero "+ New Event" Button with Violet-to-Cyan Gradient */}
-          {currentRole !== 'MEMBER' && (
+          {!isMember && (
             <button
               type="button"
               onClick={() => {
@@ -199,8 +243,9 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
           >
             <option value="ALL">All Statuses</option>
             <option value="APPROVED">Approved Only</option>
-            <option value="FLAGGED_CONFLICT">Conflicts Only</option>
             <option value="PENDING">Pending Only</option>
+            <option value="REJECTED">Rejected Only</option>
+            <option value="COMPLETED">Completed Only</option>
           </select>
         </div>
       )}
@@ -216,9 +261,9 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
 
       {viewMode === 'clashes' && (
         <ClashesPanel
-          events={events}
-          currentRole={currentRole}
-          onUpdateStatus={handleUpdateStatus}
+          conflicts={conflicts}
+          isCoreVerifier={isCoreVerifier}
+          onResolve={handleResolveConflict}
         />
       )}
 
@@ -231,17 +276,12 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
           ) : (
             <div className="space-y-3">
               {filteredEvents.map((ev) => {
-                const isConflict = ev.status === 'FLAGGED_CONFLICT';
                 const clubTheme = getClubTheme(ev.club?.name);
 
                 return (
                   <div
                     key={ev.id}
-                    className={`p-4 rounded-2xl border transition-all duration-200 ${
-                      isConflict
-                        ? 'bg-rose-50/70 border-rose-200 shadow-sm'
-                        : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
-                    }`}
+                    className="p-4 rounded-2xl border transition-all duration-200 bg-white border-slate-200 hover:border-slate-300 shadow-sm"
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -251,8 +291,8 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                               ev.status === 'APPROVED'
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                : ev.status === 'FLAGGED_CONFLICT'
-                                ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
+                                : ev.status === 'REJECTED'
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
                                 : 'bg-amber-100 text-amber-800 border border-amber-200'
                             }`}
                           >
@@ -262,7 +302,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                         <p className={`text-xs font-semibold mt-0.5 ${clubTheme.text}`}>{ev.club?.name}</p>
                       </div>
 
-                      {currentRole === 'ACM_CORE' && (
+                      {isCoreVerifier && (
                         <div className="flex items-center gap-2">
                           {ev.status !== 'APPROVED' && (
                             <button
@@ -303,7 +343,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <UsersIcon className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{ev.audienceType}</span>
+                        <span>{ev.audienceTags?.join(', ') || 'General Students'}</span>
                       </div>
                     </div>
                   </div>
@@ -320,7 +360,10 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
         onClose={() => setIsDrawerOpen(false)}
         clubs={clubs}
         currentRole={currentRole}
-        onEventCreated={fetchEvents}
+        onEventCreated={() => {
+          fetchEvents();
+          fetchConflicts();
+        }}
         initialDate={drawerInitialDate}
       />
     </div>

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ShieldCheckIcon } from './Icons';
 import { AuthUser } from './Navbar';
+import { UserRole } from '@/lib/constants';
 
 interface GatekeeperModalProps {
   isOpen: boolean;
@@ -15,28 +16,27 @@ export default function GatekeeperModal({
   onSelectPublic,
   onLoginSuccess,
 }: GatekeeperModalProps) {
-  // Step: 'select_role' | 'enter_credentials'
   const [step, setStep] = useState<'select_role' | 'enter_credentials'>('select_role');
-  const [selectedRole, setSelectedRole] = useState<'ACM_CORE' | 'CLUB_EXEC'>('ACM_CORE');
+  const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.CORE_VERIFIER);
 
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState('password123');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   if (!isOpen) return null;
 
-  const handleRoleChosen = (role: 'ACM_CORE' | 'CLUB_EXEC' | 'PUBLIC') => {
+  const handleRoleChosen = (role: 'CORE_VERIFIER' | 'CLUB_EXEC' | 'PUBLIC') => {
     if (role === 'PUBLIC') {
       onSelectPublic();
       return;
     }
-    setSelectedRole(role);
+    const mappedRole = role === 'CORE_VERIFIER' ? UserRole.CORE_VERIFIER : UserRole.CLUB_EXEC;
+    setSelectedRole(mappedRole);
     setErrorMessage('');
     setSuccessMessage('');
-    // Auto-fill Pardhu's email if core selected for fast access
-    if (role === 'ACM_CORE') {
+    if (role === 'CORE_VERIFIER') {
       setEmail('pardhu120907@gmail.com');
       setPassword('password123');
     } else {
@@ -58,15 +58,15 @@ export default function GatekeeperModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, selectedRole }),
       });
-      const data = await res.json();
+      const json = await res.json();
 
-      if (data.success && data.user) {
-        setSuccessMessage(`✓ Verified! Welcome, ${data.user.name} (${data.user.role})`);
+      if (json.success && json.data?.user) {
+        setSuccessMessage(`✓ Verified! Welcome, ${json.data.user.name} (${json.data.user.role})`);
         setTimeout(() => {
-          onLoginSuccess(data.user);
+          onLoginSuccess(json.data.user);
         }, 600);
       } else {
-        setErrorMessage(data.error || 'Authentication failed. Please verify credentials.');
+        setErrorMessage(json.error?.message || 'Authentication failed. Please verify credentials.');
       }
     } catch (err) {
       console.error(err);
@@ -107,7 +107,7 @@ export default function GatekeeperModal({
               {/* Option 1: ACM Core Member */}
               <button
                 type="button"
-                onClick={() => handleRoleChosen('ACM_CORE')}
+                onClick={() => handleRoleChosen('CORE_VERIFIER')}
                 className="group p-4 rounded-2xl bg-slate-50/80 border border-slate-200 hover:border-violet-500 hover:bg-violet-50/30 transition-all text-left flex items-center justify-between shadow-sm"
               >
                 <div className="flex items-center gap-3.5">
@@ -116,7 +116,7 @@ export default function GatekeeperModal({
                   </div>
                   <div>
                     <div className="font-bold text-sm text-slate-900 group-hover:text-violet-700 transition">
-                      ACM Core Member
+                      ACM Core Member (CORE_VERIFIER)
                     </div>
                     <div className="text-[11px] text-slate-500">
                       Super Admin • Budget override & clash approvals
@@ -138,7 +138,7 @@ export default function GatekeeperModal({
                   </div>
                   <div>
                     <div className="font-bold text-sm text-slate-900 group-hover:text-cyan-800 transition">
-                      Club Executive
+                      Club Executive (CLUB_EXEC)
                     </div>
                     <div className="text-[11px] text-slate-500">
                       Club Lead / Treasurer • Submit events & upload receipts
@@ -160,7 +160,7 @@ export default function GatekeeperModal({
                   </div>
                   <div>
                     <div className="font-bold text-sm text-slate-900 group-hover:text-slate-800 transition flex items-center gap-2">
-                      <span>Public Person / Student</span>
+                      <span>Public Person / Student (MEMBER)</span>
                       <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
                         No Login Required
                       </span>
@@ -180,10 +180,10 @@ export default function GatekeeperModal({
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <span className="text-lg">
-                  {selectedRole === 'ACM_CORE' ? '👑' : '🛡️'}
+                  {selectedRole === UserRole.CORE_VERIFIER ? '👑' : '🛡️'}
                 </span>
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  {selectedRole === 'ACM_CORE' ? 'ACM Core Sign In' : 'Club Executive Sign In'}
+                  {selectedRole === UserRole.CORE_VERIFIER ? 'ACM Core Sign In' : 'Club Executive Sign In'}
                 </span>
               </div>
               <button

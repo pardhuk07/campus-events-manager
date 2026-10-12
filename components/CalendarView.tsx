@@ -268,7 +268,7 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
               </div>
               <div className="flex items-center gap-2">
                 <UsersIcon className="w-4 h-4 text-slate-400" />
-                <span>Target: <strong className="text-slate-900">{selectedEventModal.audienceType}</strong> ({selectedEventModal.expectedAudience} cap)</span>
+                <span>Target: <strong className="text-slate-900">{Array.isArray(selectedEventModal.audienceTags) ? selectedEventModal.audienceTags.join(', ') : (selectedEventModal.audienceType || 'Campus Students')}</strong> ({selectedEventModal.expectedAttendance || selectedEventModal.expectedAudience || 50} cap)</span>
               </div>
             </div>
 

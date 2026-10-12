@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import { CalendarIcon, RupeeIcon, ShieldCheckIcon } from './Icons';
-
-export type UserRole = 'MEMBER' | 'CLUB_EXEC' | 'ACM_CORE';
+import { UserRole } from '@/lib/constants';
 
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  clubId?: string | null;
 }
 
 interface NavbarProps {
@@ -29,7 +29,7 @@ export default function Navbar({
 }: NavbarProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [inputEmail, setInputEmail] = useState('');
-  const [inputName, setInputName] = useState('');
+  const [inputPassword, setInputPassword] = useState('password123');
   const [verifying, setVerifying] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -44,16 +44,15 @@ export default function Navbar({
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inputEmail, name: inputName }),
+        body: JSON.stringify({ email: inputEmail, password: inputPassword }),
       });
       const data = await res.json();
-      if (data.success && data.user) {
-        onLogin(data.user);
+      if (data.success && data.data?.user) {
+        onLogin(data.data.user);
         setShowLoginModal(false);
         setInputEmail('');
-        setInputName('');
       } else {
-        setErrorMessage(data.error || 'Verification failed');
+        setErrorMessage(data.error?.message || 'Verification failed');
       }
     } catch (err) {
       console.error(err);
@@ -63,9 +62,9 @@ export default function Navbar({
     }
   };
 
-  const quickLoginAs = (email: string, name: string) => {
+  const quickLoginAs = (email: string) => {
     setInputEmail(email);
-    setInputName(name);
+    setInputPassword('password123');
   };
 
   return (
@@ -143,16 +142,16 @@ export default function Navbar({
 
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                    currentUser.role === 'ACM_CORE'
+                    currentUser.role === UserRole.CORE_VERIFIER
                       ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                      : currentUser.role === 'CLUB_EXEC'
+                      : currentUser.role === UserRole.CLUB_EXEC
                       ? 'bg-cyan-100 text-cyan-800 border border-cyan-200'
                       : 'bg-slate-100 text-slate-700 border border-slate-200'
                   }`}
                 >
-                  {currentUser.role === 'ACM_CORE'
+                  {currentUser.role === UserRole.CORE_VERIFIER
                     ? '👑 Core'
-                    : currentUser.role === 'CLUB_EXEC'
+                    : currentUser.role === UserRole.CLUB_EXEC
                     ? '🛡️ Exec'
                     : '👤 Member'}
                 </span>
@@ -211,17 +210,6 @@ export default function Navbar({
 
             <form onSubmit={handleVerifyEmail} className="mt-4 space-y-3">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={inputName}
-                  onChange={(e) => setInputName(e.target.value)}
-                  placeholder="e.g. Parth Patel"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
                   Gmail / Student Email ID
                 </label>
@@ -231,6 +219,20 @@ export default function Navbar({
                   value={inputEmail}
                   onChange={(e) => setInputEmail(e.target.value)}
                   placeholder="name@gmail.com"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={inputPassword}
+                  onChange={(e) => setInputPassword(e.target.value)}
+                  placeholder="password123"
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
@@ -251,7 +253,7 @@ export default function Navbar({
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => quickLoginAs('pardhu120907@gmail.com', 'ACM Core Lead')}
+                  onClick={() => quickLoginAs('pardhu120907@gmail.com')}
                   className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 hover:border-purple-400 text-left transition group shadow-sm"
                 >
                   <div className="font-bold text-xs text-purple-700 group-hover:text-purple-900">👑 Core Admin</div>
@@ -260,7 +262,7 @@ export default function Navbar({
 
                 <button
                   type="button"
-                  onClick={() => quickLoginAs('acmexec@gmail.com', 'Club Treasurer')}
+                  onClick={() => quickLoginAs('acmexec@gmail.com')}
                   className="p-2.5 rounded-xl bg-cyan-50 border border-cyan-200 hover:border-cyan-400 text-left transition group shadow-sm"
                 >
                   <div className="font-bold text-xs text-cyan-800 group-hover:text-cyan-900">🛡️ Executive</div>
@@ -269,7 +271,7 @@ export default function Navbar({
 
                 <button
                   type="button"
-                  onClick={() => quickLoginAs('student@gmail.com', 'Campus Student')}
+                  onClick={() => quickLoginAs('student@gmail.com')}
                   className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-400 text-left transition group shadow-sm"
                 >
                   <div className="font-bold text-xs text-slate-700 group-hover:text-slate-900">👤 Member</div>

@@ -1,98 +1,158 @@
+datasource db {
+  provider = "postgresql"
+}
 
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
 }
 
-datasource db {
-  provider = "postgresql"
-}
+// ==========================================
+// 10. SHARED ENUMS (SINGLE SOURCE OF TRUTH)
+// ==========================================
 
-enum Role {
+enum UserRole {
   MEMBER
   CLUB_EXEC
-  ACM_CORE
+  CORE_VERIFIER
 }
 
 enum EventStatus {
   PENDING
   APPROVED
   REJECTED
-  FLAGGED_CONFLICT
+  CANCELLED
+  COMPLETED
 }
 
-enum AudienceType {
-  TECH_UG
-  TECH_PG
-  NON_TECH_CULTURAL
-  SPORTS
-  ALL_CAMPUS
+enum ConflictStatus {
+  FLAGGED
+  REVIEWED
+  DISMISSED
+  RESOLVED
 }
 
 enum ExpenseCategory {
+  FOOD
+  VENUE
+  PRIZES
+  MARKETING
   PRINTING
-  REFRESHMENTS
-  PRIZES_MEMENTOS
-  LOGISTICS_EQUIPMENT
-  MARKETING_BANNERS
+  EQUIPMENT
+  TRAVEL
   MISCELLANEOUS
 }
 
+enum BudgetPeriod {
+  MONTHLY
+  SEMESTER
+}
+
+// ==========================================
+// 9. SHARED DATABASE SCHEMA MODELS
+// ==========================================
+
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  role      Role     @default(MEMBER)
-  clubId    String?
-  club      Club?    @relation(fields: [clubId], references: [id])
-  createdAt DateTime @default(now())
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  passwordHash String?
+  role         UserRole   @default(MEMBER)
+  clubId       String?
+  club         Club?      @relation(fields: [clubId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  submittedEvents    Event[]         @relation("EventSubmittedBy")
+  reviewedConflicts  EventConflict[] @relation("ConflictReviewedBy")
+  submittedExpenses  Expense[]       @relation("ExpenseSubmittedBy")
 }
 
 model Club {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String    @id @default(uuid())
+  name        String    @unique
   description String?
-  users       User[]
-  events      Event[]
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  users  User[]
+  events Event[]
 }
 
 model Event {
-  id               String       @id @default(cuid())
-  title            String
-  description      String?
-  startTime        DateTime
-  endTime          DateTime
-  venue            String
-  expectedAudience Int          @default(50)
-  audienceType     AudienceType
-  status           EventStatus  @default(PENDING)
-  clubId           String
-  club             Club         @relation(fields: [clubId], references: [id])
-  expenses         Expense[]
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  id                 String       @id @default(uuid())
+  title              String
+  description        String?
+  clubId             String
+  club               Club         @relation(fields: [clubId], references: [id])
+  startTime          DateTime
+  endTime            DateTime
+  venue              String
+  audienceTags       String[]
+  expectedAttendance Int?
+  category           String?
+  status             EventStatus  @default(PENDING)
+  submittedById      String
+  submittedBy        User         @relation("EventSubmittedBy", fields: [submittedById], references: [id])
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  expenses           Expense[]
+  conflictsAsEvent   EventConflict[] @relation("EventPrimaryConflicts")
+  conflictsAsTarget  EventConflict[] @relation("EventTargetConflicts")
 
   @@index([startTime, endTime])
   @@index([venue])
 }
 
+model EventConflict {
+  id                 String         @id @default(uuid())
+  eventId            String
+  event              Event          @relation("EventPrimaryConflicts", fields: [eventId], references: [id], onDelete: Cascade)
+  conflictingEventId String
+  conflictingEvent   Event          @relation("EventTargetConflicts", fields: [conflictingEventId], references: [id], onDelete: Cascade)
+  reason             String
+  overlapStart       DateTime?
+  overlapEnd         DateTime?
+  status             ConflictStatus @default(FLAGGED)
+  reviewedById       String?
+  reviewedBy         User?          @relation("ConflictReviewedBy", fields: [reviewedById], references: [id])
+  resolutionNote     String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@unique([eventId, conflictingEventId])
+  @@index([status])
+}
+
 model Expense {
-  id          String          @id @default(cuid())
-  title       String
-  amount      Float
-  category    ExpenseCategory
-  date        DateTime        @default(now())
-  receiptUrl  String?
-  description String?
-  eventId     String?
-  event       Event?          @relation(fields: [eventId], references: [id])
-  createdAt   DateTime        @default(now())
+  id              String          @id @default(uuid())
+  eventId         String?
+  event           Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  amount          Decimal         @db.Decimal(10, 2)
+  category        ExpenseCategory
+  description     String?
+  expenseDate     DateTime        @default(now())
+  receiptUrl      String?
+  receiptPublicId String?
+  submittedById   String
+  submittedBy     User            @relation("ExpenseSubmittedBy", fields: [submittedById], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([eventId])
+  @@index([expenseDate])
 }
 
 model Budget {
-  id             String   @id @default(cuid())
-  semester       String   @unique
-  totalAllocated Float    @default(50000)
-  createdAt      DateTime @default(now())
+  id         String       @id @default(uuid())
+  name       String
+  amount     Decimal      @db.Decimal(10, 2)
+  periodType BudgetPeriod @default(SEMESTER)
+  startDate  DateTime
+  endDate    DateTime
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([startDate, endDate])
 }
