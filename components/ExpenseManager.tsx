@@ -39,7 +39,7 @@ export default function ExpenseManager({ currentRole }: { currentRole: string })
       const [budgetsRes, expensesRes, eventsRes] = await Promise.all([
         fetch('/api/budgets'),
         fetch('/api/expenses'),
-        fetch('/api/events'),
+        fetch(isMember ? `/api/events?userRole=${UserRole.MEMBER}` : '/api/events'),
       ]);
 
       const budgetsJson = await budgetsRes.json();

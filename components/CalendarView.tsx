@@ -7,9 +7,10 @@ import { getClubTheme } from '@/lib/colors';
 interface CalendarViewProps {
   events: any[];
   onSelectEvent?: (event: any) => void;
+  isMember?: boolean;
 }
 
-export default function CalendarView({ events, onSelectEvent }: CalendarViewProps) {
+export default function CalendarView({ events, onSelectEvent, isMember }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date('2026-10-01T00:00:00Z'));
   const [mounted, setMounted] = useState(false);
   const [selectedEventModal, setSelectedEventModal] = useState<any | null>(null);
@@ -102,14 +103,18 @@ export default function CalendarView({ events, onSelectEvent }: CalendarViewProp
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></span>
             <span className="text-slate-700 font-medium">Approved</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm"></span>
-            <span className="text-slate-700 font-medium">Pending</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shadow-sm"></span>
-            <span className="text-rose-700 font-bold">Conflict</span>
-          </div>
+          {!isMember && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm"></span>
+                <span className="text-slate-700 font-medium">Pending</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shadow-sm"></span>
+                <span className="text-rose-700 font-bold">Conflict</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Club Color Indicators */}

@@ -17,14 +17,18 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const venue = searchParams.get('venue');
     const query = searchParams.get('query');
+    const userRole = searchParams.get('userRole');
 
     let events = await dbService.getEvents();
 
+    // Public users and general members can ONLY see APPROVED events
+    if (userRole === UserRole.MEMBER || userRole === 'PUBLIC') {
+      events = events.filter((e: any) => e.status === EventStatus.APPROVED);
+    } else if (status && status !== 'ALL') {
+      events = events.filter((e: any) => e.status === status);
+    }
     if (clubId) {
       events = events.filter((e: any) => e.clubId === clubId);
-    }
-    if (status && status !== 'ALL') {
-      events = events.filter((e: any) => e.status === status);
     }
     if (venue) {
       events = events.filter((e: any) => e.venue.toLowerCase().includes(venue.toLowerCase()));

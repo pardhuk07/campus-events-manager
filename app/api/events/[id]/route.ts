@@ -15,10 +15,17 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const userRole = searchParams.get('userRole');
     const event = await dbService.getEventById(id);
 
     if (!event) {
       return apiError(ErrorCodes.EVENT_NOT_FOUND, 'Event not found with provided ID.', 404);
+    }
+
+    // Public users cannot view pending or rejected events
+    if ((userRole === UserRole.MEMBER || userRole === 'PUBLIC') && event.status !== EventStatus.APPROVED) {
+      return apiError(ErrorCodes.EVENT_NOT_FOUND, 'Event is not approved for public viewing.', 404);
     }
 
     return apiSuccess(event);

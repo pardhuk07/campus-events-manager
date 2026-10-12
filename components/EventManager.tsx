@@ -36,7 +36,8 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
 
   const fetchEvents = async () => {
     try {
-      const res = await fetch('/api/events');
+      const url = isMember ? `/api/events?userRole=${UserRole.MEMBER}` : '/api/events';
+      const res = await fetch(url);
       const json = await res.json();
       if (json.success && json.data) {
         setEvents(json.data);
@@ -61,6 +62,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
   };
 
   const fetchConflicts = async () => {
+    if (isMember) return;
     try {
       const res = await fetch('/api/conflicts');
       const json = await res.json();
@@ -75,8 +77,10 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
   useEffect(() => {
     fetchEvents();
     fetchClubs();
-    fetchConflicts();
-  }, []);
+    if (!isMember) {
+      fetchConflicts();
+    }
+  }, [currentRole]);
 
   const handleUpdateStatus = async (eventId: string, newStatus: string) => {
     if (!isCoreVerifier) return;
@@ -124,7 +128,13 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
     }
   };
 
-  const filteredEvents = events.filter((ev) => {
+  // For public users / students, ALWAYS strictly show only APPROVED events!
+  // If an event is rejected or pending, it is automatically omitted from public view.
+  const visibleEvents = isMember
+    ? events.filter((ev) => ev.status === 'APPROVED')
+    : events;
+
+  const filteredEvents = visibleEvents.filter((ev) => {
     const matchesStatus = filterStatus === 'ALL' || ev.status === filterStatus;
     const matchesSearch =
       ev.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -144,26 +154,30 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">
             <span className="text-indigo-600 font-bold">📅</span>
-            <span>{events.length} Events</span>
+            <span>{visibleEvents.length} {isMember ? 'Approved Events' : 'Events'}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-            <span>{approvedCount} Approved</span>
-          </div>
+          {!isMember && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+              <span>{approvedCount} Approved</span>
+            </div>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setViewMode('clashes')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition ${
-              conflictCount > 0
-                ? 'bg-rose-50 border-rose-200 text-rose-800 animate-pulse font-bold'
-                : 'bg-slate-50 border-slate-200 text-slate-600'
-            }`}
-          >
-            <AlertTriangleIcon className="w-3.5 h-3.5 text-rose-600" />
-            <span>{conflictCount} Clashes</span>
-          </button>
+          {!isMember && (
+            <button
+              type="button"
+              onClick={() => setViewMode('clashes')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition ${
+                conflictCount > 0
+                  ? 'bg-rose-50 border-rose-200 text-rose-800 animate-pulse font-bold'
+                  : 'bg-slate-50 border-slate-200 text-slate-600'
+              }`}
+            >
+              <AlertTriangleIcon className="w-3.5 h-3.5 text-rose-600" />
+              <span>{conflictCount} Clashes</span>
+            </button>
+          )}
         </div>
 
         {/* View Mode Switcher & + New Event Button */}
@@ -188,15 +202,17 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
             >
               📊 Timeline
             </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('clashes')}
-              className={`px-3 py-1.5 rounded-lg transition ${
-                viewMode === 'clashes' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-              }`}
-            >
-              ⚠️ Clashes ({conflictCount})
-            </button>
+            {!isMember && (
+              <button
+                type="button"
+                onClick={() => setViewMode('clashes')}
+                className={`px-3 py-1.5 rounded-lg transition ${
+                  viewMode === 'clashes' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                }`}
+              >
+                ⚠️ Clashes ({conflictCount})
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setViewMode('list')}
@@ -236,27 +252,34 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
             className="bg-slate-50 border border-slate-300 text-xs rounded-xl px-3.5 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full sm:w-80"
           />
 
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-slate-50 border border-slate-300 text-xs rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer font-medium"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="APPROVED">Approved Only</option>
-            <option value="PENDING">Pending Only</option>
-            <option value="REJECTED">Rejected Only</option>
-            <option value="COMPLETED">Completed Only</option>
-          </select>
+          {!isMember ? (
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="bg-slate-50 border border-slate-300 text-xs rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer font-medium"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="APPROVED">Approved Only</option>
+              <option value="PENDING">Pending Only</option>
+              <option value="REJECTED">Rejected Only</option>
+              <option value="COMPLETED">Completed Only</option>
+            </select>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+              <span>Official Approved Campus Events</span>
+            </div>
+          )}
         </div>
       )}
 
       {/* 3. HERO CONTENT VIEW */}
       {viewMode === 'calendar' && (
-        <CalendarView events={filteredEvents} />
+        <CalendarView events={filteredEvents} isMember={isMember} />
       )}
 
       {viewMode === 'timeline' && (
-        <VenueTimeline events={events} />
+        <VenueTimeline events={visibleEvents} />
       )}
 
       {viewMode === 'clashes' && (
