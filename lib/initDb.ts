@@ -62,6 +62,14 @@ export async function ensureDatabaseTables() {
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Add missing columns to User & Club if created by prior migration
+      ALTER TABLE "User" ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::text;
+      ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT;
+      ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE "User" ALTER COLUMN "role" TYPE TEXT;
+      ALTER TABLE "Club" ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::text;
+      ALTER TABLE "Club" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
       -- Event Table
       CREATE TABLE IF NOT EXISTS "Event" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

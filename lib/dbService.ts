@@ -13,12 +13,8 @@ let isInitialized = false;
 
 async function checkInit() {
   if (!isInitialized) {
-    try {
-      await ensureDatabaseTables();
-      isInitialized = true;
-    } catch (e) {
-      console.error('Failed to auto-init tables:', e);
-    }
+    await ensureDatabaseTables();
+    isInitialized = true;
   }
 }
 
