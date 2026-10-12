@@ -248,7 +248,9 @@ export default function GatekeeperModal({
 
             <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
               <span>Database Pre-configured:</span>
-              <span className="font-mono text-indigo-600 font-semibold">pardhu120907@gmail.com</span>
+              <span className="font-mono text-indigo-600 font-semibold">
+                {selectedRole === UserRole.CORE_VERIFIER ? 'pardhu120907@gmail.com' : 'acmexec@gmail.com'}
+              </span>
             </div>
           </div>
         )}
