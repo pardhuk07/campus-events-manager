@@ -81,6 +81,7 @@ export async function ensureDatabaseTables() {
       );
 
       -- Add missing columns to Event if existing table had previous schema
+      ALTER TABLE "Event" ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::text;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "audienceTags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "expectedAttendance" INTEGER;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "category" TEXT;

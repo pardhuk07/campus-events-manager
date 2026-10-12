@@ -1,5 +1,6 @@
 import { ensureDatabaseTables } from './initDb';
 import { query } from './db';
+import { randomUUID } from 'crypto';
 import {
   UserRole,
   EventStatus,
@@ -34,13 +35,14 @@ export const dbService = {
   async upsertUser(user: { id?: string; name: string; email: string; role: string; clubId?: string | null }) {
     await checkInit();
     const email = user.email.toLowerCase().trim();
+    const id = user.id || randomUUID();
     const rows = await query(
-      `INSERT INTO "User" ("name", "email", "role", "clubId", "updatedAt")
-       VALUES ($1, $2, $3, $4, NOW())
+      `INSERT INTO "User" ("id", "name", "email", "role", "clubId", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, NOW())
        ON CONFLICT ("email") DO UPDATE
        SET "name" = EXCLUDED."name", "role" = EXCLUDED."role", "updatedAt" = NOW()
        RETURNING *`,
-      [user.name, email, user.role, user.clubId || null]
+      [id, user.name, email, user.role, user.clubId || null]
     );
     return rows[0];
   },
@@ -70,7 +72,7 @@ export const dbService = {
         ) as expenses
       FROM "Event" e
       JOIN "Club" c ON e."clubId" = c.id
-      JOIN "User" u ON e."submittedById" = u.id
+      LEFT JOIN "User" u ON e."submittedById" = u.id
       ORDER BY e."startTime" ASC
     `);
   },
@@ -92,7 +94,7 @@ export const dbService = {
         ) as conflicts
       FROM "Event" e
       JOIN "Club" c ON e."clubId" = c.id
-      JOIN "User" u ON e."submittedById" = u.id
+      LEFT JOIN "User" u ON e."submittedById" = u.id
       WHERE e.id = $1
       LIMIT 1
     `,
@@ -115,17 +117,19 @@ export const dbService = {
     submittedById: string;
   }) {
     await checkInit();
+    const eventId = randomUUID();
     const rows = await query(
       `
       INSERT INTO "Event" (
-        "title", "description", "clubId", "startTime", "endTime",
+        "id", "title", "description", "clubId", "startTime", "endTime",
         "venue", "audienceTags", "expectedAttendance", "category",
         "status", "submittedById", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
       RETURNING *
     `,
       [
+        eventId,
         data.title,
         data.description || null,
         data.clubId,
@@ -232,13 +236,13 @@ export const dbService = {
     status?: string;
   }) {
     await checkInit();
-    // Rule: Never create duplicate conflict records for the same pair of events
+    const conflictId = randomUUID();
     const rows = await query(
       `
       INSERT INTO "EventConflict" (
-        "eventId", "conflictingEventId", "reason", "overlapStart", "overlapEnd", "status", "updatedAt"
+        "id", "eventId", "conflictingEventId", "reason", "overlapStart", "overlapEnd", "status", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
       ON CONFLICT ("eventId", "conflictingEventId") DO UPDATE
       SET "reason" = EXCLUDED."reason",
           "overlapStart" = EXCLUDED."overlapStart",
@@ -247,6 +251,7 @@ export const dbService = {
       RETURNING *
     `,
       [
+        conflictId,
         conflict.eventId,
         conflict.conflictingEventId,
         conflict.reason,
@@ -288,7 +293,7 @@ export const dbService = {
         json_build_object('id', u.id, 'name', u.name) as "submittedBy"
       FROM "Expense" ex
       LEFT JOIN "Event" ev ON ex."eventId" = ev.id
-      JOIN "User" u ON ex."submittedById" = u.id
+      LEFT JOIN "User" u ON ex."submittedById" = u.id
       ORDER BY ex."expenseDate" DESC
     `);
   },
@@ -302,7 +307,7 @@ export const dbService = {
         json_build_object('id', u.id, 'name', u.name) as "submittedBy"
       FROM "Expense" ex
       LEFT JOIN "Event" ev ON ex."eventId" = ev.id
-      JOIN "User" u ON ex."submittedById" = u.id
+      LEFT JOIN "User" u ON ex."submittedById" = u.id
       WHERE ex.id = $1
       LIMIT 1
     `,
@@ -322,16 +327,18 @@ export const dbService = {
     submittedById: string;
   }) {
     await checkInit();
+    const expenseId = randomUUID();
     const rows = await query(
       `
       INSERT INTO "Expense" (
-        "eventId", "amount", "category", "description", "expenseDate",
+        "id", "eventId", "amount", "category", "description", "expenseDate",
         "receiptUrl", "receiptPublicId", "submittedById", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
       RETURNING *
     `,
       [
+        expenseId,
         data.eventId || null,
         data.amount,
         data.category,
@@ -404,13 +411,15 @@ export const dbService = {
     endDate: Date;
   }) {
     await checkInit();
+    const budgetId = randomUUID();
     const rows = await query(
       `
-      INSERT INTO "Budget" ("name", "amount", "periodType", "startDate", "endDate", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      INSERT INTO "Budget" ("id", "name", "amount", "periodType", "startDate", "endDate", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
       RETURNING *
     `,
       [
+        budgetId,
         data.name,
         data.amount,
         data.periodType || BudgetPeriod.SEMESTER,
