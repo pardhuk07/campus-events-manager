@@ -95,12 +95,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Dynamically lookup the actual Club ID from the database
+    let resolvedClubId: string | null = null;
+    try {
+      const clubs = await dbService.getClubs();
+      const acmClub = clubs.find((c: any) => c.name.toLowerCase().includes('acm'));
+      resolvedClubId = acmClub ? acmClub.id : (clubs[0]?.id || null);
+    } catch (e) {
+      console.warn('Could not query clubs for user assignment:', e);
+    }
+
     // Upsert user into database
     const user = await dbService.upsertUser({
       name,
       email: normalizedEmail,
       role,
-      clubId,
+      clubId: resolvedClubId,
     });
 
     return apiSuccess({

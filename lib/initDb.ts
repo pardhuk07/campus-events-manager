@@ -171,12 +171,12 @@ export async function ensureDatabaseTables() {
     await client.query(`
       INSERT INTO "User" ("id", "name", "email", "role", "clubId")
       VALUES
-        ('user-pardhu', 'Pardhu (Core Lead)', 'pardhu120907@gmail.com', 'CORE_VERIFIER', 'club-acm'),
-        ('user-core-admin', 'ACM Core Admin', 'acmcore@gmail.com', 'CORE_VERIFIER', 'club-acm'),
-        ('user-club-exec', 'Club Executive', 'acmexec@gmail.com', 'CLUB_EXEC', 'club-acm'),
-        ('user-ieee-exec', 'IEEE Executive', 'ieeelead@gmail.com', 'CLUB_EXEC', 'club-ieee'),
+        ('user-pardhu', 'Pardhu (Core Lead)', 'pardhu120907@gmail.com', 'CORE_VERIFIER', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1)),
+        ('user-core-admin', 'ACM Core Admin', 'acmcore@gmail.com', 'CORE_VERIFIER', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1)),
+        ('user-club-exec', 'Club Executive', 'acmexec@gmail.com', 'CLUB_EXEC', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1)),
+        ('user-ieee-exec', 'IEEE Executive', 'ieeelead@gmail.com', 'CLUB_EXEC', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%IEEE%' LIMIT 1)),
         ('user-member', 'General Student', 'student@gmail.com', 'MEMBER', NULL)
-      ON CONFLICT ("email") DO UPDATE SET "role" = EXCLUDED."role";
+      ON CONFLICT ("email") DO UPDATE SET "role" = EXCLUDED."role", "clubId" = EXCLUDED."clubId";
     `);
 
     // Pre-seed current semester Budget

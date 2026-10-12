@@ -36,7 +36,10 @@ export const dbService = {
       `INSERT INTO "User" ("id", "name", "email", "role", "clubId", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, NOW())
        ON CONFLICT ("email") DO UPDATE
-       SET "name" = EXCLUDED."name", "role" = EXCLUDED."role", "updatedAt" = NOW()
+       SET "name" = EXCLUDED."name", 
+           "role" = EXCLUDED."role", 
+           "clubId" = COALESCE(EXCLUDED."clubId", "User"."clubId"),
+           "updatedAt" = NOW()
        RETURNING *`,
       [id, user.name, email, user.role, user.clubId || null]
     );
