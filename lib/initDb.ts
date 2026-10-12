@@ -114,6 +114,7 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "category" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
       ALTER TABLE "Event" ALTER COLUMN "status" TYPE TEXT;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
       -- EventConflict Table
       CREATE TABLE IF NOT EXISTS "EventConflict" (
@@ -130,6 +131,14 @@ export async function ensureDatabaseTables() {
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "unique_event_conflict_pair" UNIQUE ("eventId", "conflictingEventId")
       );
+
+      -- Add missing columns to EventConflict if table existed
+      ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "overlapStart" TIMESTAMP(3);
+      ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "overlapEnd" TIMESTAMP(3);
+      ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'FLAGGED';
+      ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "reviewedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
+      ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "resolutionNote" TEXT;
+      ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
       -- Expense Table
       CREATE TABLE IF NOT EXISTS "Expense" (
@@ -166,8 +175,10 @@ export async function ensureDatabaseTables() {
       -- Add missing columns to Budget if table existed
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "name" TEXT DEFAULT 'Semester Budget';
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "amount" NUMERIC(10, 2) DEFAULT 50000.00;
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "periodType" TEXT DEFAULT 'SEMESTER';
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP(3) DEFAULT '2026-08-01 00:00:00';
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP(3) DEFAULT '2026-12-31 23:59:59';
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
       CREATE INDEX IF NOT EXISTS "Event_startTime_endTime_idx" ON "Event"("startTime", "endTime");
       CREATE INDEX IF NOT EXISTS "Event_venue_idx" ON "Event"("venue");

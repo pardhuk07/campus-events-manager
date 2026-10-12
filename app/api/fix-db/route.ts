@@ -33,7 +33,17 @@ export async function GET() {
       ON CONFLICT ("name") DO NOTHING;
     `);
 
-    // 3. Clean up invalid clubIds on User table
+    // 3. Ensure Budget table has all columns
+    await client.query(`
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "name" TEXT DEFAULT 'Semester Budget';
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "amount" NUMERIC(10, 2) DEFAULT 50000.00;
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "periodType" TEXT DEFAULT 'SEMESTER';
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP(3) DEFAULT '2026-08-01 00:00:00';
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP(3) DEFAULT '2026-12-31 23:59:59';
+      ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+    `);
+
+    // 4. Clean up invalid clubIds on User table
     await client.query(`
       UPDATE "User" SET "clubId" = NULL 
       WHERE "role" IN ('CORE_VERIFIER', 'MEMBER') 
