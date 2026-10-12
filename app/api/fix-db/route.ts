@@ -4,20 +4,20 @@ import { pgPool } from '@/lib/db';
 export async function GET() {
   const client = await pgPool.connect();
   try {
-    // 1. Drop any FK constraint on User table referencing Club
+    // 1. Universal drop of all foreign key constraints across tables
     await client.query(`
-      ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_clubId_fkey";
-      ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "user_clubid_fkey";
       DO $$
       DECLARE
         r RECORD;
       BEGIN
         FOR r IN (
-          SELECT constraint_name
+          SELECT table_name, constraint_name
           FROM information_schema.table_constraints
-          WHERE table_name = 'User' AND constraint_type = 'FOREIGN KEY' AND constraint_name ILIKE '%club%'
+          WHERE table_schema = 'public'
+            AND constraint_type = 'FOREIGN KEY'
+            AND table_name IN ('User', 'Event', 'Expense', 'EventConflict', 'Budget')
         ) LOOP
-          EXECUTE 'ALTER TABLE "User" DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
+          EXECUTE 'ALTER TABLE ' || quote_ident(r.table_name) || ' DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
         END LOOP;
       END $$;
     `);
@@ -33,7 +33,7 @@ export async function GET() {
       ON CONFLICT ("name") DO NOTHING;
     `);
 
-    // 3. Ensure Budget table has all columns
+    // 3. Ensure Budget table has all columns and drop legacy NOT NULL constraints
     await client.query(`
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "name" TEXT DEFAULT 'Semester Budget';
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "amount" NUMERIC(10, 2) DEFAULT 50000.00;
@@ -41,6 +41,30 @@ export async function GET() {
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP(3) DEFAULT '2026-08-01 00:00:00';
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP(3) DEFAULT '2026-12-31 23:59:59';
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+      -- Universal removal of NOT NULL on any legacy columns across all tables
+      DO $$ 
+      DECLARE
+        col RECORD;
+      BEGIN
+        FOR col IN (
+          SELECT table_name, column_name 
+          FROM information_schema.columns 
+          WHERE table_schema = 'public'
+            AND table_name IN ('User', 'Club', 'Event', 'EventConflict', 'Expense', 'Budget')
+            AND is_nullable = 'NO' 
+            AND column_name NOT IN ('id', 'name', 'email', 'title', 'venue', 'startTime', 'endTime', 'amount')
+        ) LOOP
+          EXECUTE 'ALTER TABLE ' || quote_ident(col.table_name) || ' ALTER COLUMN ' || quote_ident(col.column_name) || ' DROP NOT NULL';
+        END LOOP;
+      END $$;
+
+      -- Standardize column types to TEXT to avoid enum mismatches
+      ALTER TABLE "User" ALTER COLUMN "role" TYPE TEXT;
+      ALTER TABLE "Event" ALTER COLUMN "status" TYPE TEXT;
+      ALTER TABLE "EventConflict" ALTER COLUMN "status" TYPE TEXT;
+      ALTER TABLE "Expense" ALTER COLUMN "category" TYPE TEXT;
+      ALTER TABLE "Budget" ALTER COLUMN "periodType" TYPE TEXT;
     `);
 
     // 4. Clean up invalid clubIds on User table

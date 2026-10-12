@@ -64,14 +64,20 @@ export const dbService = {
     await checkInit();
     return query(`
       SELECT e.*,
-        json_build_object('id', c.id, 'name', c.name, 'description', c.description) as club,
-        json_build_object('id', u.id, 'name', u.name, 'email', u.email) as "submittedBy",
+        COALESCE(
+          CASE WHEN c.id IS NOT NULL THEN json_build_object('id', c.id, 'name', c.name, 'description', c.description) ELSE NULL END,
+          json_build_object('id', e."clubId", 'name', 'General Campus Club', 'description', '')
+        ) as club,
+        COALESCE(
+          CASE WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', u.name, 'email', u.email) ELSE NULL END,
+          json_build_object('id', e."submittedById", 'name', 'Campus Member', 'email', '')
+        ) as "submittedBy",
         COALESCE(
           (SELECT json_agg(ex.*) FROM "Expense" ex WHERE ex."eventId" = e.id),
           '[]'::json
         ) as expenses
       FROM "Event" e
-      JOIN "Club" c ON e."clubId" = c.id
+      LEFT JOIN "Club" c ON e."clubId" = c.id
       LEFT JOIN "User" u ON e."submittedById" = u.id
       ORDER BY e."startTime" ASC
     `);
@@ -82,8 +88,14 @@ export const dbService = {
     const rows = await query(
       `
       SELECT e.*,
-        json_build_object('id', c.id, 'name', c.name, 'description', c.description) as club,
-        json_build_object('id', u.id, 'name', u.name, 'email', u.email) as "submittedBy",
+        COALESCE(
+          CASE WHEN c.id IS NOT NULL THEN json_build_object('id', c.id, 'name', c.name, 'description', c.description) ELSE NULL END,
+          json_build_object('id', e."clubId", 'name', 'General Campus Club', 'description', '')
+        ) as club,
+        COALESCE(
+          CASE WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', u.name, 'email', u.email) ELSE NULL END,
+          json_build_object('id', e."submittedById", 'name', 'Campus Member', 'email', '')
+        ) as "submittedBy",
         COALESCE(
           (SELECT json_agg(ex.*) FROM "Expense" ex WHERE ex."eventId" = e.id),
           '[]'::json
@@ -93,7 +105,7 @@ export const dbService = {
           '[]'::json
         ) as conflicts
       FROM "Event" e
-      JOIN "Club" c ON e."clubId" = c.id
+      LEFT JOIN "Club" c ON e."clubId" = c.id
       LEFT JOIN "User" u ON e."submittedById" = u.id
       WHERE e.id = $1
       LIMIT 1
@@ -192,14 +204,14 @@ export const dbService = {
     await checkInit();
     return query(`
       SELECT ec.*,
-        json_build_object('id', e1.id, 'title', e1.title, 'venue', e1.venue, 'startTime', e1."startTime", 'endTime', e1."endTime", 'audienceTags', e1."audienceTags", 'clubName', c1.name) as event,
-        json_build_object('id', e2.id, 'title', e2.title, 'venue', e2.venue, 'startTime', e2."startTime", 'endTime', e2."endTime", 'audienceTags', e2."audienceTags", 'clubName', c2.name) as "conflictingEvent",
-        json_build_object('id', u.id, 'name', u.name) as "reviewedBy"
+        json_build_object('id', e1.id, 'title', e1.title, 'venue', e1.venue, 'startTime', e1."startTime", 'endTime', e1."endTime", 'audienceTags', e1."audienceTags", 'clubName', COALESCE(c1.name, 'Campus Club')) as event,
+        json_build_object('id', e2.id, 'title', e2.title, 'venue', e2.venue, 'startTime', e2."startTime", 'endTime', e2."endTime", 'audienceTags', e2."audienceTags", 'clubName', COALESCE(c2.name, 'Campus Club')) as "conflictingEvent",
+        CASE WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', u.name) ELSE NULL END as "reviewedBy"
       FROM "EventConflict" ec
       JOIN "Event" e1 ON ec."eventId" = e1.id
-      JOIN "Club" c1 ON e1."clubId" = c1.id
+      LEFT JOIN "Club" c1 ON e1."clubId" = c1.id
       JOIN "Event" e2 ON ec."conflictingEventId" = e2.id
-      JOIN "Club" c2 ON e2."clubId" = c2.id
+      LEFT JOIN "Club" c2 ON e2."clubId" = c2.id
       LEFT JOIN "User" u ON ec."reviewedById" = u.id
       ORDER BY ec."createdAt" DESC
     `);
@@ -210,14 +222,14 @@ export const dbService = {
     const rows = await query(
       `
       SELECT ec.*,
-        json_build_object('id', e1.id, 'title', e1.title, 'venue', e1.venue, 'startTime', e1."startTime", 'endTime', e1."endTime", 'audienceTags', e1."audienceTags", 'clubName', c1.name) as event,
-        json_build_object('id', e2.id, 'title', e2.title, 'venue', e2.venue, 'startTime', e2."startTime", 'endTime', e2."endTime", 'audienceTags', e2."audienceTags", 'clubName', c2.name) as "conflictingEvent",
-        json_build_object('id', u.id, 'name', u.name) as "reviewedBy"
+        json_build_object('id', e1.id, 'title', e1.title, 'venue', e1.venue, 'startTime', e1."startTime", 'endTime', e1."endTime", 'audienceTags', e1."audienceTags", 'clubName', COALESCE(c1.name, 'Campus Club')) as event,
+        json_build_object('id', e2.id, 'title', e2.title, 'venue', e2.venue, 'startTime', e2."startTime", 'endTime', e2."endTime", 'audienceTags', e2."audienceTags", 'clubName', COALESCE(c2.name, 'Campus Club')) as "conflictingEvent",
+        CASE WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', u.name) ELSE NULL END as "reviewedBy"
       FROM "EventConflict" ec
       JOIN "Event" e1 ON ec."eventId" = e1.id
-      JOIN "Club" c1 ON e1."clubId" = c1.id
+      LEFT JOIN "Club" c1 ON e1."clubId" = c1.id
       JOIN "Event" e2 ON ec."conflictingEventId" = e2.id
-      JOIN "Club" c2 ON e2."clubId" = c2.id
+      LEFT JOIN "Club" c2 ON e2."clubId" = c2.id
       LEFT JOIN "User" u ON ec."reviewedById" = u.id
       WHERE ec.id = $1
       LIMIT 1

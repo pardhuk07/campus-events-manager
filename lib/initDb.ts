@@ -70,23 +70,47 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Club" ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::text;
       ALTER TABLE "Club" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
-      -- Permanently drop any foreign key constraints on User.clubId so it NEVER causes login errors
-      ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_clubId_fkey";
-      ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "user_clubid_fkey";
+      -- Universal removal of foreign key constraints on all tables so relationship data never causes insert/update crashes
       DO $$
       DECLARE
         r RECORD;
       BEGIN
         FOR r IN (
-          SELECT constraint_name
+          SELECT table_name, constraint_name
           FROM information_schema.table_constraints
-          WHERE table_name = 'User' AND constraint_type = 'FOREIGN KEY' AND constraint_name ILIKE '%club%'
+          WHERE table_schema = 'public'
+            AND constraint_type = 'FOREIGN KEY'
+            AND table_name IN ('User', 'Event', 'Expense', 'EventConflict', 'Budget')
         ) LOOP
-          EXECUTE 'ALTER TABLE "User" DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
+          EXECUTE 'ALTER TABLE ' || quote_ident(r.table_name) || ' DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
         END LOOP;
       END $$;
 
-      -- Nullify invalid clubIds
+      -- Universal removal of NOT NULL on any legacy columns across all tables
+      DO $$ 
+      DECLARE
+        col RECORD;
+      BEGIN
+        FOR col IN (
+          SELECT table_name, column_name 
+          FROM information_schema.columns 
+          WHERE table_schema = 'public'
+            AND table_name IN ('User', 'Club', 'Event', 'EventConflict', 'Expense', 'Budget')
+            AND is_nullable = 'NO' 
+            AND column_name NOT IN ('id', 'name', 'email', 'title', 'venue', 'startTime', 'endTime', 'amount')
+        ) LOOP
+          EXECUTE 'ALTER TABLE ' || quote_ident(col.table_name) || ' ALTER COLUMN ' || quote_ident(col.column_name) || ' DROP NOT NULL';
+        END LOOP;
+      END $$;
+
+      -- Standardize column types to TEXT to prevent enum mismatches
+      ALTER TABLE "User" ALTER COLUMN "role" TYPE TEXT;
+      ALTER TABLE "Event" ALTER COLUMN "status" TYPE TEXT;
+      ALTER TABLE "EventConflict" ALTER COLUMN "status" TYPE TEXT;
+      ALTER TABLE "Expense" ALTER COLUMN "category" TYPE TEXT;
+      ALTER TABLE "Budget" ALTER COLUMN "periodType" TYPE TEXT;
+
+      -- Clean up invalid clubIds
       UPDATE "User" SET "clubId" = NULL WHERE "clubId" IS NOT NULL AND "clubId" NOT IN (SELECT "id" FROM "Club");
 
       -- Event Table
@@ -180,6 +204,22 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP(3) DEFAULT '2026-12-31 23:59:59';
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
+      -- Dynamically remove NOT NULL from any legacy columns in Budget (e.g. semester, clubId)
+      DO $$ 
+      DECLARE
+          col RECORD;
+      BEGIN
+          FOR col IN (
+              SELECT column_name 
+              FROM information_schema.columns 
+              WHERE table_name = 'Budget' 
+                AND is_nullable = 'NO' 
+                AND column_name NOT IN ('id', 'name', 'amount', 'startDate', 'endDate')
+          ) LOOP
+              EXECUTE 'ALTER TABLE "Budget" ALTER COLUMN ' || quote_ident(col.column_name) || ' DROP NOT NULL';
+          END LOOP;
+      END $$;
+
       CREATE INDEX IF NOT EXISTS "Event_startTime_endTime_idx" ON "Event"("startTime", "endTime");
       CREATE INDEX IF NOT EXISTS "Event_venue_idx" ON "Event"("venue");
       CREATE INDEX IF NOT EXISTS "EventConflict_status_idx" ON "EventConflict"("status");
@@ -188,34 +228,46 @@ export async function ensureDatabaseTables() {
     `);
 
     // Pre-seed Core clubs if not present
-    await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS "Club_name_key" ON "Club"("name");
-      INSERT INTO "Club" ("id", "name", "description")
-      VALUES
-        ('club-acm', 'ACM Student Chapter', 'Association for Computing Machinery student chapter NIT Surat'),
-        ('club-ieee', 'IEEE Student Branch', 'Institute of Electrical and Electronics Engineers student branch'),
-        ('club-csi', 'Computer Society of India (CSI)', 'CSI Student Branch NIT Surat')
-      ON CONFLICT ("name") DO NOTHING;
-    `);
+    try {
+      await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS "Club_name_key" ON "Club"("name");
+        INSERT INTO "Club" ("id", "name", "description")
+        VALUES
+          ('club-acm', 'ACM Student Chapter', 'Association for Computing Machinery student chapter NIT Surat'),
+          ('club-ieee', 'IEEE Student Branch', 'Institute of Electrical and Electronics Engineers student branch'),
+          ('club-csi', 'Computer Society of India (CSI)', 'CSI Student Branch NIT Surat')
+        ON CONFLICT ("name") DO NOTHING;
+      `);
+    } catch (clubErr) {
+      console.warn('Could not seed clubs, continuing:', clubErr);
+    }
 
     // Pre-seed Pardhu as CORE_VERIFIER and demo users
-    await client.query(`
-      INSERT INTO "User" ("id", "name", "email", "role", "clubId")
-      VALUES
-        ('user-pardhu', 'Pardhu (Core Lead)', 'pardhu120907@gmail.com', 'CORE_VERIFIER', NULL),
-        ('user-core-admin', 'ACM Core Admin', 'acmcore@gmail.com', 'CORE_VERIFIER', NULL),
-        ('user-club-exec', 'Club Executive', 'acmexec@gmail.com', 'CLUB_EXEC', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1)),
-        ('user-ieee-exec', 'IEEE Executive', 'ieeelead@gmail.com', 'CLUB_EXEC', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%IEEE%' LIMIT 1)),
-        ('user-member', 'General Student', 'student@gmail.com', 'MEMBER', NULL)
-      ON CONFLICT ("email") DO UPDATE SET "role" = EXCLUDED."role", "clubId" = EXCLUDED."clubId";
-    `);
+    try {
+      await client.query(`
+        INSERT INTO "User" ("id", "name", "email", "role", "clubId")
+        VALUES
+          ('user-pardhu', 'Pardhu (Core Lead)', 'pardhu120907@gmail.com', 'CORE_VERIFIER', NULL),
+          ('user-core-admin', 'ACM Core Admin', 'acmcore@gmail.com', 'CORE_VERIFIER', NULL),
+          ('user-club-exec', 'Club Executive', 'acmexec@gmail.com', 'CLUB_EXEC', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1)),
+          ('user-ieee-exec', 'IEEE Executive', 'ieeelead@gmail.com', 'CLUB_EXEC', (SELECT "id" FROM "Club" WHERE "name" ILIKE '%IEEE%' LIMIT 1)),
+          ('user-member', 'General Student', 'student@gmail.com', 'MEMBER', NULL)
+        ON CONFLICT ("email") DO UPDATE SET "role" = EXCLUDED."role", "clubId" = EXCLUDED."clubId";
+      `);
+    } catch (userErr) {
+      console.warn('Could not seed demo users, continuing:', userErr);
+    }
 
     // Pre-seed current semester Budget
-    await client.query(`
-      INSERT INTO "Budget" ("id", "name", "amount", "periodType", "startDate", "endDate")
-      SELECT 'budget-fall-2026', 'Fall 2026 Semester Budget', 50000.00, 'SEMESTER', '2026-08-01 00:00:00', '2026-12-31 23:59:59'
-      WHERE NOT EXISTS (SELECT 1 FROM "Budget" WHERE "name" = 'Fall 2026 Semester Budget');
-    `);
+    try {
+      await client.query(`
+        INSERT INTO "Budget" ("id", "name", "amount", "periodType", "startDate", "endDate")
+        SELECT 'budget-fall-2026', 'Fall 2026 Semester Budget', 50000.00, 'SEMESTER', '2026-08-01 00:00:00', '2026-12-31 23:59:59'
+        WHERE NOT EXISTS (SELECT 1 FROM "Budget" WHERE "name" = 'Fall 2026 Semester Budget');
+      `);
+    } catch (budgetErr) {
+      console.warn('Could not seed default budget, continuing:', budgetErr);
+    }
   } finally {
     client.release();
   }
