@@ -70,6 +70,12 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Club" ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::text;
       ALTER TABLE "Club" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
+      -- If User_clubId_fkey is causing invalid references on legacy seed data, drop it or ensure it's safe
+      ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_clubId_fkey";
+      -- Fix any invalid clubId in User before re-adding constraint
+      UPDATE "User" SET "clubId" = NULL WHERE "clubId" IS NOT NULL AND "clubId" NOT IN (SELECT "id" FROM "Club");
+      ALTER TABLE "User" ADD CONSTRAINT "User_clubId_fkey" FOREIGN KEY ("clubId") REFERENCES "Club"("id") ON DELETE SET NULL;
+
       -- Event Table
       CREATE TABLE IF NOT EXISTS "Event" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
