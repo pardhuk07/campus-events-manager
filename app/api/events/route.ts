@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     });
 
     // 2. Trigger Person 2 Conflict Detection Engine
-    let conflictResult: any = { hasConflict: false, conflicts: [] };
+    let conflictResult: any = { hasConflict: false, flags: [], conflicts: [] };
     try {
       conflictResult = await checkEventConflicts({
         startTime: start,
@@ -140,11 +140,14 @@ export async function POST(request: NextRequest) {
       console.error('Non-blocking conflict detection error:', conflictErr);
     }
 
-    // Rule 1: A conflict is a WARNING, not an automatic rejection. Event stays PENDING, conflicts are flagged for review.
+    const refreshedEvent = (await dbService.getEventById(createdEvent.id)) || createdEvent;
+
+    // Rule: A conflict is a WARNING, NEVER an automatic rejection. Event stays PENDING, flags stored on event.
     return apiSuccess(
       {
-        event: createdEvent,
+        event: refreshedEvent,
         hasConflict: conflictResult.hasConflict,
+        flags: conflictResult.flags || [],
         conflictsCount: conflictResult.conflicts?.length || 0,
         conflicts: conflictResult.conflicts || [],
       },

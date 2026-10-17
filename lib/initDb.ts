@@ -138,29 +138,31 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "category" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
       ALTER TABLE "Event" ALTER COLUMN "status" TYPE TEXT;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "conflictFlags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "flags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
       -- EventConflict Table
       CREATE TABLE IF NOT EXISTS "EventConflict" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        "eventId" TEXT NOT NULL REFERENCES "Event"("id") ON DELETE CASCADE,
-        "conflictingEventId" TEXT NOT NULL REFERENCES "Event"("id") ON DELETE CASCADE,
+        "eventId" TEXT NOT NULL,
+        "conflictingEventId" TEXT NOT NULL,
         "reason" TEXT NOT NULL,
         "overlapStart" TIMESTAMP(3),
         "overlapEnd" TIMESTAMP(3),
-        "status" "ConflictStatus" NOT NULL DEFAULT 'FLAGGED',
-        "reviewedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL,
+        "status" TEXT NOT NULL DEFAULT 'FLAGGED',
+        "reviewedById" TEXT,
         "resolutionNote" TEXT,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "unique_event_conflict_pair" UNIQUE ("eventId", "conflictingEventId")
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
       -- Add missing columns to EventConflict if table existed
+      ALTER TABLE "EventConflict" DROP CONSTRAINT IF EXISTS "unique_event_conflict_pair";
       ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "overlapStart" TIMESTAMP(3);
       ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "overlapEnd" TIMESTAMP(3);
       ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'FLAGGED';
-      ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "reviewedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
+      ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "reviewedById" TEXT;
       ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "resolutionNote" TEXT;
       ALTER TABLE "EventConflict" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 

@@ -76,7 +76,36 @@ export async function PATCH(
     if (category !== undefined) updates.category = category;
 
     const updatedEvent = await dbService.updateEvent(id, updates);
-    return apiSuccess(updatedEvent);
+
+    // Conflict Detection on Proposal Edit:
+    // Compare with all pending and approved events, update flags on event, and never auto-reject
+    let conflictResult: any = { hasConflict: false, flags: [], conflicts: [] };
+    const finalStart = updates.startTime || new Date(existingEvent.startTime);
+    const finalEnd = updates.endTime || new Date(existingEvent.endTime);
+    const finalVenue = updates.venue || existingEvent.venue;
+    const finalTags = updates.audienceTags || existingEvent.audienceTags || ['ALL_STUDENTS'];
+
+    try {
+      const { checkEventConflicts } = await import('@/services/conflictEngine');
+      conflictResult = await checkEventConflicts({
+        startTime: finalStart,
+        endTime: finalEnd,
+        venue: finalVenue,
+        audienceTags: finalTags,
+        excludeEventId: id,
+        createRecordsIfEventId: id,
+      });
+    } catch (conflictErr) {
+      console.error('Conflict detection error on edit:', conflictErr);
+    }
+
+    const refreshedEvent = (await dbService.getEventById(id)) || updatedEvent;
+    return apiSuccess({
+      event: refreshedEvent,
+      hasConflict: conflictResult.hasConflict,
+      flags: conflictResult.flags || [],
+      conflicts: conflictResult.conflicts || [],
+    });
   } catch (error: any) {
     console.error('PATCH /api/events/:id error:', error);
     return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Server error', 500);

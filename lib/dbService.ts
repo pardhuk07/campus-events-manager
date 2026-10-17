@@ -64,6 +64,7 @@ export const dbService = {
     await checkInit();
     return query(`
       SELECT e.*,
+        COALESCE(e."conflictFlags", ARRAY[]::TEXT[]) as flags,
         COALESCE(
           CASE WHEN c.id IS NOT NULL THEN json_build_object('id', c.id, 'name', c.name, 'description', c.description) ELSE NULL END,
           json_build_object('id', e."clubId", 'name', 'General Campus Club', 'description', '')
@@ -88,6 +89,7 @@ export const dbService = {
     const rows = await query(
       `
       SELECT e.*,
+        COALESCE(e."conflictFlags", ARRAY[]::TEXT[]) as flags,
         COALESCE(
           CASE WHEN c.id IS NOT NULL THEN json_build_object('id', c.id, 'name', c.name, 'description', c.description) ELSE NULL END,
           json_build_object('id', e."clubId", 'name', 'General Campus Club', 'description', '')
@@ -126,18 +128,20 @@ export const dbService = {
     expectedAttendance?: number | null;
     category?: string | null;
     status?: string;
+    conflictFlags?: string[];
     submittedById: string;
   }) {
     await checkInit();
     const eventId = randomUUID();
+    const flags = data.conflictFlags || [];
     const rows = await query(
       `
       INSERT INTO "Event" (
         "id", "title", "description", "clubId", "startTime", "endTime",
         "venue", "audienceTags", "expectedAttendance", "category",
-        "status", "submittedById", "updatedAt"
+        "status", "conflictFlags", "flags", "submittedById", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12, $13, NOW())
       RETURNING *
     `,
       [
@@ -152,6 +156,7 @@ export const dbService = {
         data.expectedAttendance || 50,
         data.category || null,
         data.status || EventStatus.PENDING,
+        flags,
         data.submittedById,
       ]
     );
@@ -168,6 +173,7 @@ export const dbService = {
     expectedAttendance: number | null;
     category: string | null;
     status: string;
+    conflictFlags: string[];
   }>) {
     await checkInit();
     const fields: string[] = [];
@@ -178,6 +184,10 @@ export const dbService = {
       if (val !== undefined) {
         fields.push(`"${key}" = $${idx++}`);
         values.push(val);
+        if (key === 'conflictFlags') {
+          fields.push(`"flags" = $${idx++}`);
+          values.push(val);
+        }
       }
     }
 
@@ -193,8 +203,50 @@ export const dbService = {
     return this.getEventById(id);
   },
 
+  async setEventConflictFlags(eventId: string, flags: string[]) {
+    await checkInit();
+    await query(
+      `UPDATE "Event" SET "conflictFlags" = $1, "flags" = $1, "updatedAt" = NOW() WHERE id = $2`,
+      [flags, eventId]
+    );
+  },
+
+  async replaceEventConflicts(
+    eventId: string,
+    conflicts: Array<{
+      conflictingEventId?: string;
+      reason: string;
+      overlapStart?: Date | null;
+      overlapEnd?: Date | null;
+      status?: string;
+    }>
+  ) {
+    await checkInit();
+    // Clear old conflicts where this event is the primary proposal
+    await query(`DELETE FROM "EventConflict" WHERE "eventId" = $1`, [eventId]);
+
+    for (const c of conflicts) {
+      if (!c.conflictingEventId) continue;
+      const cid = randomUUID();
+      await query(
+        `INSERT INTO "EventConflict" ("id", "eventId", "conflictingEventId", "reason", "overlapStart", "overlapEnd", "status", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [
+          cid,
+          eventId,
+          c.conflictingEventId,
+          c.reason,
+          c.overlapStart || null,
+          c.overlapEnd || null,
+          c.status || ConflictStatus.FLAGGED,
+        ]
+      );
+    }
+  },
+
   async deleteEvent(id: string) {
     await checkInit();
+    await query('DELETE FROM "EventConflict" WHERE "eventId" = $1 OR "conflictingEventId" = $1', [id]);
     const rows = await query('DELETE FROM "Event" WHERE id = $1 RETURNING id', [id]);
     return rows.length > 0;
   },

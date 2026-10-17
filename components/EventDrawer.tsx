@@ -262,10 +262,19 @@ export default function EventDrawer({
                 </div>
 
                 {liveConflictResult.hasConflict && (
-                  <div className="space-y-1.5 mt-2">
-                    <p className="text-[11px] text-rose-700 font-medium">
-                      {liveConflictResult.conflicts?.[0]?.reason || 'Clashes with another booked campus event.'}
-                    </p>
+                  <div className="space-y-1 mt-2">
+                    {liveConflictResult.flags && liveConflictResult.flags.length > 0 ? (
+                      liveConflictResult.flags.map((flag: string, idx: number) => (
+                        <p key={idx} className="text-[11px] text-rose-800 font-medium flex items-start gap-1">
+                          <span className="text-rose-500 font-bold">•</span>
+                          <span>{flag}</span>
+                        </p>
+                      ))
+                    ) : (
+                      <p className="text-[11px] text-rose-700 font-medium">
+                        {liveConflictResult.conflicts?.[0]?.reason || 'Clashes with another booked campus event.'}
+                      </p>
+                    )}
 
                     {/* Suggested alternative free slots */}
                     {liveConflictResult.suggestedSlots?.length > 0 && (

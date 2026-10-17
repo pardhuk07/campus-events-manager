@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
 
     return apiSuccess({
       hasConflict: report.hasConflict,
+      flags: report.flags || [],
       conflicts: report.conflicts,
       suggestedSlots: suggestedSlots.slice(0, 3),
     });

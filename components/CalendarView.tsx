@@ -370,10 +370,23 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
               </div>
             </div>
 
-            {selectedEventModal.status === 'FLAGGED_CONFLICT' && (
-              <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
-                <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <span>This event has flagged scheduling clashes. Verification from ACM Core is required.</span>
+            {((selectedEventModal.flags && selectedEventModal.flags.length > 0) || selectedEventModal.status === 'FLAGGED_CONFLICT') && (
+              <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-rose-900">
+                  <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>Flagged Scheduling Clashes:</span>
+                </div>
+                {selectedEventModal.flags && selectedEventModal.flags.length > 0 ? (
+                  <div className="space-y-1 pl-1">
+                    {selectedEventModal.flags.map((flag: string, idx: number) => (
+                      <p key={idx} className="text-[11px] text-rose-800 font-medium">
+                        • {flag}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px]">This event has flagged scheduling clashes. Verification from ACM Core is required.</p>
+                )}
               </div>
             )}
 
