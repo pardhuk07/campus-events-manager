@@ -117,6 +117,60 @@ export const dbService = {
     return rows[0] || null;
   },
 
+  async getPendingEvents() {
+    await checkInit();
+    return query(`
+      SELECT e.*,
+        COALESCE(e."conflictFlags", ARRAY[]::TEXT[]) as flags,
+        COALESCE(
+          CASE WHEN c.id IS NOT NULL THEN json_build_object('id', c.id, 'name', c.name, 'description', c.description) ELSE NULL END,
+          json_build_object('id', e."clubId", 'name', 'General Campus Club', 'description', '')
+        ) as club,
+        COALESCE(
+          CASE WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', u.name, 'email', u.email) ELSE NULL END,
+          json_build_object('id', e."submittedById", 'name', 'Campus Member', 'email', '')
+        ) as "submittedBy",
+        COALESCE(
+          (SELECT json_agg(ec.*) FROM "EventConflict" ec WHERE ec."eventId" = e.id OR ec."conflictingEventId" = e.id),
+          '[]'::json
+        ) as conflicts
+      FROM "Event" e
+      LEFT JOIN "Club" c ON e."clubId" = c.id
+      LEFT JOIN "User" u ON e."submittedById" = u.id
+      WHERE e.status = 'PENDING'
+      ORDER BY e."createdAt" DESC
+    `);
+  },
+
+  async reviewEvent(data: {
+    eventId: string;
+    decision: 'APPROVE' | 'REJECT' | 'RESCHEDULE_REQUESTED';
+    comment?: string | null;
+    reviewerName?: string | null;
+  }) {
+    await checkInit();
+    const status =
+      data.decision === 'APPROVE'
+        ? EventStatus.APPROVED
+        : data.decision === 'REJECT'
+        ? EventStatus.REJECTED
+        : EventStatus.RESCHEDULE_REQUESTED;
+
+    await query(
+      `UPDATE "Event"
+       SET "status" = $1,
+           "reviewDecision" = $2,
+           "reviewComment" = $3,
+           "reviewedByName" = $4,
+           "reviewedAt" = NOW(),
+           "updatedAt" = NOW()
+       WHERE id = $5`,
+      [status, data.decision, data.comment || null, data.reviewerName || 'ACM Core Verifier', data.eventId]
+    );
+
+    return this.getEventById(data.eventId);
+  },
+
   async createEvent(data: {
     title: string;
     description?: string | null;
@@ -367,11 +421,12 @@ export const dbService = {
     return query(`
       SELECT ex.*,
         json_build_object('id', ev.id, 'title', ev.title) as event,
+        COALESCE(ex."addedByName", u.name, 'Club Executive') as "addedByName",
         json_build_object('id', u.id, 'name', u.name) as "submittedBy"
       FROM "Expense" ex
       LEFT JOIN "Event" ev ON ex."eventId" = ev.id
       LEFT JOIN "User" u ON ex."submittedById" = u.id
-      ORDER BY ex."expenseDate" DESC
+      ORDER BY ex."createdAt" DESC, ex."expenseDate" DESC
     `);
   },
 
@@ -381,6 +436,7 @@ export const dbService = {
       `
       SELECT ex.*,
         json_build_object('id', ev.id, 'title', ev.title) as event,
+        COALESCE(ex."addedByName", u.name, 'Club Executive') as "addedByName",
         json_build_object('id', u.id, 'name', u.name) as "submittedBy"
       FROM "Expense" ex
       LEFT JOIN "Event" ev ON ex."eventId" = ev.id
@@ -401,7 +457,9 @@ export const dbService = {
     expenseDate?: Date;
     receiptUrl?: string | null;
     receiptPublicId?: string | null;
+    receiptFileName?: string | null;
     submittedById: string;
+    addedByName?: string | null;
   }) {
     await checkInit();
     const expenseId = randomUUID();
@@ -409,9 +467,9 @@ export const dbService = {
       `
       INSERT INTO "Expense" (
         "id", "eventId", "amount", "category", "description", "expenseDate",
-        "receiptUrl", "receiptPublicId", "submittedById", "updatedAt"
+        "receiptUrl", "receiptPublicId", "receiptFileName", "submittedById", "addedByName", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
       RETURNING *
     `,
       [
@@ -423,7 +481,9 @@ export const dbService = {
         data.expenseDate || new Date(),
         data.receiptUrl || null,
         data.receiptPublicId || null,
+        data.receiptFileName || null,
         data.submittedById,
+        data.addedByName || null,
       ]
     );
     return this.getExpenseById(rows[0].id);

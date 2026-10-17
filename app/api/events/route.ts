@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
     let events = await dbService.getEvents();
 
     // Public users and general members can ONLY see APPROVED events
-    if (userRole === UserRole.MEMBER || userRole === 'PUBLIC') {
+    const isPublicUser = !userRole || userRole === UserRole.MEMBER || userRole === 'PUBLIC' || userRole === 'GUEST';
+    if (isPublicUser) {
       events = events.filter((e: any) => e.status === EventStatus.APPROVED);
     } else if (status && status !== 'ALL') {
       events = events.filter((e: any) => e.status === status);

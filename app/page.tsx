@@ -76,7 +76,7 @@ export default function Home() {
         </div>
 
         <div className={activeTab === 'expenses' ? 'block' : 'hidden'}>
-          <ExpenseManager currentRole={effectiveRole} />
+          <ExpenseManager currentRole={effectiveRole} currentUser={currentUser} />
         </div>
       </main>
 

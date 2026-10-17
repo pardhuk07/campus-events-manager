@@ -22,6 +22,7 @@ export const EventStatus = {
   REJECTED: 'REJECTED',
   CANCELLED: 'CANCELLED',
   COMPLETED: 'COMPLETED',
+  RESCHEDULE_REQUESTED: 'RESCHEDULE_REQUESTED',
 } as const;
 export type EventStatus = (typeof EventStatus)[keyof typeof EventStatus];
 

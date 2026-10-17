@@ -23,6 +23,7 @@ enum EventStatus {
   REJECTED
   CANCELLED
   COMPLETED
+  RESCHEDULE_REQUESTED
 }
 
 enum ConflictStatus {
@@ -96,6 +97,10 @@ model Event {
   organizer          String?
   conflictFlags      String[]     @default([])
   flags              String[]     @default([])
+  reviewDecision     String?
+  reviewComment      String?
+  reviewedByName     String?
+  reviewedAt         DateTime?
   status             EventStatus  @default(PENDING)
   submittedById      String
   submittedBy        User         @relation("EventSubmittedBy", fields: [submittedById], references: [id])
@@ -140,8 +145,10 @@ model Expense {
   expenseDate     DateTime        @default(now())
   receiptUrl      String?
   receiptPublicId String?
+  receiptFileName String?
   submittedById   String
   submittedBy     User            @relation("ExpenseSubmittedBy", fields: [submittedById], references: [id])
+  addedByName     String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 

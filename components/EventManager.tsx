@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import CalendarView from './CalendarView';
 import VenueTimeline from './VenueTimeline';
 import ClashesPanel from './ClashesPanel';
+import PendingReviewPanel from './PendingReviewPanel';
 import EventDrawer from './EventDrawer';
 import {
   CalendarIcon,
@@ -12,6 +13,7 @@ import {
   MapPinIcon,
   UsersIcon,
   PlusCircleIcon,
+  ShieldCheckIcon,
 } from './Icons';
 import { getClubTheme } from '@/lib/colors';
 import { UserRole } from '@/lib/constants';
@@ -26,10 +28,11 @@ export default function EventManager({
   const [events, setEvents] = useState<any[]>([]);
   const [clubs, setClubs] = useState<any[]>([]);
   const [conflicts, setConflicts] = useState<any[]>([]);
+  const [pendingCount, setPendingCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
-  // View state: 'calendar' | 'timeline' | 'clashes' | 'list'
-  const [viewMode, setViewMode] = useState<'calendar' | 'timeline' | 'clashes' | 'list'>('calendar');
+  // View state: 'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews'
+  const [viewMode, setViewMode] = useState<'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews'>('calendar');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -42,7 +45,7 @@ export default function EventManager({
 
   const fetchEvents = async () => {
     try {
-      const url = isMember ? `/api/events?userRole=${UserRole.MEMBER}` : '/api/events';
+      const url = isMember ? `/api/events?userRole=${UserRole.MEMBER}` : `/api/events?userRole=${encodeURIComponent(currentRole)}`;
       const res = await fetch(url);
       const json = await res.json();
       if (json.success && json.data) {
@@ -80,11 +83,29 @@ export default function EventManager({
     }
   };
 
+  const fetchPendingCount = async () => {
+    if (!isCoreVerifier) return;
+    try {
+      const res = await fetch(`/api/events/pending?userRole=${encodeURIComponent(currentRole)}`, {
+        headers: { 'x-user-role': currentRole },
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setPendingCount(json.data.totalPending ?? (json.data.events?.length || 0));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
     fetchClubs();
     if (!isMember) {
       fetchConflicts();
+    }
+    if (isCoreVerifier) {
+      fetchPendingCount();
     }
   }, [currentRole]);
 
@@ -184,6 +205,23 @@ export default function EventManager({
               <span>{conflictCount} Clashes</span>
             </button>
           )}
+
+          {isCoreVerifier && (
+            <button
+              type="button"
+              onClick={() => setViewMode('reviews')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition cursor-pointer ${
+                viewMode === 'reviews'
+                  ? 'bg-indigo-600 text-white border-indigo-600 font-bold shadow-sm'
+                  : pendingCount > 0
+                  ? 'bg-amber-50 border-amber-300 text-amber-800 font-bold hover:bg-amber-100'
+                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <ShieldCheckIcon className="w-3.5 h-3.5 text-indigo-500" />
+              <span>{pendingCount} Pending Reviews</span>
+            </button>
+          )}
         </div>
 
         {/* View Mode Switcher & + New Event Button */}
@@ -217,6 +255,22 @@ export default function EventManager({
                 }`}
               >
                 ⚠️ Clashes ({conflictCount})
+              </button>
+            )}
+            {isCoreVerifier && (
+              <button
+                type="button"
+                onClick={() => setViewMode('reviews')}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  viewMode === 'reviews' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                }`}
+              >
+                <span>📋 Reviews</span>
+                {pendingCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-400 text-slate-900">
+                    {pendingCount}
+                  </span>
+                )}
               </button>
             )}
             <button
@@ -397,6 +451,19 @@ export default function EventManager({
         </div>
       )}
 
+      {/* 4. ACM CORE PENDING REVIEWS PANEL */}
+      {viewMode === 'reviews' && isCoreVerifier && (
+        <PendingReviewPanel
+          currentRole={currentRole}
+          currentUser={currentUser}
+          onReviewCompleted={() => {
+            fetchEvents();
+            fetchConflicts();
+            fetchPendingCount();
+          }}
+        />
+      )}
+
       {/* Slide-Over Drawer for New Event Proposals */}
       <EventDrawer
         isOpen={isDrawerOpen}
@@ -407,6 +474,7 @@ export default function EventManager({
         onEventCreated={() => {
           fetchEvents();
           fetchConflicts();
+          fetchPendingCount();
         }}
         initialDate={drawerInitialDate}
       />

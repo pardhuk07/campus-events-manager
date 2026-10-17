@@ -140,9 +140,12 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "estimatedCost" NUMERIC(10, 2) DEFAULT 0;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "organizer" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
-      ALTER TABLE "Event" ALTER COLUMN "status" TYPE TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "conflictFlags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "flags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "reviewDecision" TEXT;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "reviewComment" TEXT;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "reviewedByName" TEXT;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP(3);
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
       -- EventConflict Table
@@ -188,6 +191,8 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "receiptPublicId" TEXT;
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "expenseDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "addedByName" TEXT;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "receiptFileName" TEXT;
 
       -- Budget Table
       CREATE TABLE IF NOT EXISTS "Budget" (
