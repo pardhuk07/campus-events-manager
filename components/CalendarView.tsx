@@ -46,8 +46,10 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
     });
   };
 
+  const [selectedDayEvents, setSelectedDayEvents] = useState<{ day: number; events: any[] } | null>(null);
+
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm text-slate-900">
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm text-slate-900">
       {/* 1. Month Navigation Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-200">
         <div>
@@ -137,19 +139,18 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
 
       {/* 3. Days of the Week */}
       <div className="grid grid-cols-7 gap-1 text-center font-bold text-xs text-slate-400 mb-2 uppercase tracking-wider">
-        <div className="py-1">Sun</div>
-        <div className="py-1">Mon</div>
-        <div className="py-1">Tue</div>
-        <div className="py-1">Wed</div>
-        <div className="py-1">Thu</div>
-        <div className="py-1">Fri</div>
-        <div className="py-1">Sat</div>
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+          <div key={d} className="py-1">
+            <span className="sm:hidden">{d.slice(0, 1)}</span>
+            <span className="hidden sm:inline">{d}</span>
+          </div>
+        ))}
       </div>
 
       {/* 4. Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {Array.from({ length: firstDayIndex }).map((_, i) => (
-          <div key={`empty-${i}`} className="min-h-[96px] bg-slate-50/50 rounded-xl border border-slate-100 p-1 opacity-40"></div>
+          <div key={`empty-${i}`} className="min-h-[52px] sm:min-h-[96px] bg-slate-50/50 rounded-lg sm:rounded-xl border border-slate-100 p-1 opacity-40"></div>
         ))}
 
         {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -164,7 +165,14 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
           return (
             <div
               key={`day-${day}`}
-              className={`min-h-[96px] p-2 rounded-xl border transition-all duration-150 flex flex-col justify-between ${
+              onClick={() => {
+                if (dayEvents.length === 1) {
+                  setSelectedEventModal(dayEvents[0]);
+                } else if (dayEvents.length > 1) {
+                  setSelectedDayEvents({ day, events: dayEvents });
+                }
+              }}
+              className={`min-h-[52px] sm:min-h-[96px] p-1 sm:p-2 rounded-lg sm:rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer ${
                 isToday
                   ? 'bg-indigo-50/40 border-indigo-400 shadow-sm'
                   : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
@@ -172,21 +180,39 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
             >
               <div className="flex items-center justify-between">
                 <span
-                  className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${
+                  className={`text-[11px] sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${
                     isToday ? 'btn-primary-gradient text-white' : 'text-slate-600'
                   }`}
                 >
                   {day}
                 </span>
                 {dayEvents.length > 0 && (
-                  <span className="text-[10px] font-mono text-slate-400 font-bold">
+                  <span className="text-[9px] sm:text-[10px] font-mono text-slate-400 font-bold">
                     {dayEvents.length}
                   </span>
                 )}
               </div>
 
-              {/* Event Chips (Color-coded by Club, Status shown via indicator) */}
-              <div className="space-y-1 mt-1.5 overflow-hidden">
+              {/* Mobile Event Dots */}
+              <div className="sm:hidden flex items-center justify-center gap-1 mt-1 flex-wrap">
+                {dayEvents.slice(0, 3).map((ev) => {
+                  const clubTheme = getClubTheme(ev.club?.name);
+                  return (
+                    <span
+                      key={ev.id}
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        ev.status === 'FLAGGED_CONFLICT' ? 'bg-rose-500 animate-pulse' : clubTheme.dot
+                      }`}
+                    />
+                  );
+                })}
+                {dayEvents.length > 3 && (
+                  <span className="text-[8px] text-slate-400 font-bold leading-none">+</span>
+                )}
+              </div>
+
+              {/* Desktop Event Chips */}
+              <div className="hidden sm:block space-y-1 mt-1.5 overflow-hidden">
                 {dayEvents.slice(0, 2).map((ev) => {
                   const clubTheme = getClubTheme(ev.club?.name);
                   const isConflict = ev.status === 'FLAGGED_CONFLICT';
@@ -195,7 +221,10 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
                     <button
                       key={ev.id}
                       type="button"
-                      onClick={() => setSelectedEventModal(ev)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedEventModal(ev);
+                      }}
                       className={`w-full text-left truncate text-[11px] px-2 py-1 rounded-lg font-semibold border transition-all duration-150 shadow-xs flex items-center gap-1.5 ${
                         isConflict
                           ? 'bg-rose-50 text-rose-800 border-rose-200 animate-pulse'
@@ -223,6 +252,70 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
           );
         })}
       </div>
+
+      {/* Mobile Day Events List Modal */}
+      {selectedDayEvents && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-sm w-full p-5 text-slate-900 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div>
+                <h4 className="text-base font-bold text-slate-900">
+                  {monthNames[month]} {selectedDayEvents.day}, {year}
+                </h4>
+                <p className="text-xs text-slate-500 font-medium">
+                  {selectedDayEvents.events.length} Scheduled Events
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDayEvents(null)}
+                className="text-slate-400 hover:text-slate-700 text-base font-bold p-1 rounded-lg hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 mt-4 max-h-[60vh] overflow-y-auto">
+              {selectedDayEvents.events.map((ev) => {
+                const clubTheme = getClubTheme(ev.club?.name);
+                return (
+                  <button
+                    key={ev.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDayEvents(null);
+                      setSelectedEventModal(ev);
+                    }}
+                    className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-slate-50 transition shadow-xs flex flex-col gap-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${clubTheme.bg} ${clubTheme.text}`}>
+                        {ev.club?.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {new Date(ev.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div className="font-bold text-xs text-slate-900 mt-1">{ev.title}</div>
+                    <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                      <MapPinIcon className="w-3 h-3 text-slate-400" />
+                      <span>{ev.venue}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedDayEvents(null)}
+              className="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold py-2 rounded-xl transition border border-slate-200"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 5. Event Detail Inspection Modal */}
       {selectedEventModal && (

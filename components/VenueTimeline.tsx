@@ -67,8 +67,14 @@ export default function VenueTimeline({ events, onSelectEvent }: VenueTimelinePr
         </div>
       </div>
 
+      {/* Mobile Swipe Hint */}
+      <div className="sm:hidden mb-3 px-3 py-1.5 bg-indigo-50/60 border border-indigo-100 rounded-xl text-[11px] text-indigo-700 flex items-center justify-between">
+        <span>👉 Swipe left/right to view all venue hours</span>
+        <span className="font-bold">9 AM - 8 PM</span>
+      </div>
+
       {/* Timeline Grid Container */}
-      <div className="overflow-x-auto pb-2">
+      <div className="overflow-x-auto pb-2 touch-scroll">
         <div className="min-w-[750px] space-y-2">
           {/* Hour Headers */}
           <div style={gridStyle} className="gap-1 mb-2 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">

@@ -141,7 +141,7 @@ export default function EventDrawer({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-sm flex justify-end animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white border-l border-slate-200 h-full overflow-y-auto p-6 sm:p-7 shadow-2xl flex flex-col justify-between text-slate-900 animate-in slide-in-from-right duration-300">
+      <div className="w-full sm:max-w-lg bg-white sm:border-l border-slate-200 h-full overflow-y-auto p-4 sm:p-7 shadow-2xl flex flex-col justify-between text-slate-900 animate-in slide-in-from-right duration-300">
         <div>
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-slate-200">

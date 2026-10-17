@@ -77,15 +77,15 @@ export default function GatekeeperModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-8 text-slate-900 shadow-2xl relative overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-8 max-h-[92vh] overflow-y-auto text-slate-900 shadow-2xl relative">
         {/* Glow Accent */}
         <div className="absolute -top-20 -left-20 w-44 h-44 bg-violet-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-20 -right-20 w-44 h-44 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md p-2">
+        <div className="text-center mb-5 sm:mb-6">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-md p-1.5 sm:p-2">
             <img src="/acm-logo.png" alt="ACM NIT Surat" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">

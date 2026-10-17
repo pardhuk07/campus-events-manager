@@ -69,13 +69,13 @@ export default function Navbar({
 
   return (
     <>
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/90 border-b border-slate-200 text-slate-900 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/95 border-b border-slate-200 text-slate-900 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between h-16 sm:h-20">
           {/* Brand Logo & Title with Violet-to-Cyan Accent */}
-          <div className="flex items-center space-x-3.5">
-            <div className="relative group">
+          <div className="flex items-center space-x-2 sm:space-x-3.5 min-w-0">
+            <div className="relative group shrink-0">
               <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-cyan-500 rounded-2xl blur-md opacity-40 group-hover:opacity-75 transition duration-300"></div>
-              <div className="relative w-12 h-12 bg-white rounded-xl p-1.5 border border-slate-200 flex items-center justify-center shadow-md">
+              <div className="relative w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-xl p-1 sm:p-1.5 border border-slate-200 flex items-center justify-center shadow-md">
                 <img
                   src="/acm-logo.png"
                   alt="ACM NIT Surat Logo"
@@ -86,62 +86,64 @@ export default function Navbar({
                 />
               </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-violet-700 via-indigo-600 to-cyan-600 bg-clip-text text-transparent">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h1 className="text-sm sm:text-lg font-bold tracking-tight bg-gradient-to-r from-violet-700 via-indigo-600 to-cyan-600 bg-clip-text text-transparent truncate">
                   ACM NIT Surat
                 </h1>
-                <span className="text-[10px] font-semibold bg-violet-50 text-indigo-700 border border-violet-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="hidden sm:inline-block text-[10px] font-semibold bg-violet-50 text-indigo-700 border border-violet-200 px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                   Campus Manager
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">Conflict-Aware Scheduling & Fund Memory</p>
+              <p className="hidden md:block text-xs text-slate-500 font-medium truncate">
+                Conflict-Aware Scheduling & Fund Memory
+              </p>
             </div>
           </div>
 
           {/* Navigation Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Navigation Tabs with Violet-to-Cyan Gradient Active State */}
-            <nav className="flex p-1 bg-slate-100 rounded-xl border border-slate-200 shadow-inner">
+            <nav className="flex p-0.5 sm:p-1 bg-slate-100 rounded-xl border border-slate-200 shadow-inner">
               <button
                 onClick={() => setActiveTab('events')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
                   activeTab === 'events'
                     ? 'tab-active-gradient'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white'
                 }`}
               >
-                <CalendarIcon className="w-3.5 h-3.5" />
+                <CalendarIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                 <span>Events</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('expenses')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
                   activeTab === 'expenses'
                     ? 'tab-active-gradient'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white'
                 }`}
               >
-                <RupeeIcon className="w-3.5 h-3.5" />
+                <RupeeIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                 <span>Budget</span>
               </button>
             </nav>
 
             {/* User Account / Role Verification State */}
             {currentUser ? (
-              <div className="flex items-center gap-2.5 bg-white pl-3 pr-2 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-1.5 sm:gap-2.5 bg-white pl-2 sm:pl-3 pr-1.5 sm:pr-2 py-1 sm:py-1.5 rounded-xl border border-slate-200 shadow-sm">
                 <div className="text-right">
-                  <div className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">
+                  <div className="text-[11px] sm:text-xs font-bold text-slate-800 leading-tight truncate max-w-[80px] sm:max-w-[120px]">
                     {currentUser.name}
                   </div>
-                  <div className="text-[10px] text-slate-500 truncate max-w-[120px]">
+                  <div className="hidden sm:block text-[10px] text-slate-500 truncate max-w-[120px]">
                     {currentUser.email}
                   </div>
                 </div>
 
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                  className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
                     currentUser.role === UserRole.CORE_VERIFIER
                       ? 'bg-purple-100 text-purple-700 border border-purple-200'
                       : currentUser.role === UserRole.CLUB_EXEC
@@ -153,13 +155,13 @@ export default function Navbar({
                     ? '👑 Core'
                     : currentUser.role === UserRole.CLUB_EXEC
                     ? '🛡️ Exec'
-                    : '👤 Member'}
+                    : '👤 Public'}
                 </span>
 
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="text-xs text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-slate-100 transition"
+                  className="text-xs text-slate-400 hover:text-rose-600 p-1 sm:p-1.5 rounded-lg hover:bg-slate-100 transition shrink-0"
                   title="Switch Persona / Sign out"
                 >
                   ✕
@@ -169,10 +171,10 @@ export default function Navbar({
               <button
                 type="button"
                 onClick={() => setShowLoginModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 btn-primary-gradient text-white text-xs font-semibold rounded-xl shadow-md transition"
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 btn-primary-gradient text-white text-[11px] sm:text-xs font-semibold rounded-xl shadow-md transition shrink-0"
               >
                 <ShieldCheckIcon className="w-3.5 h-3.5" />
-                Verify Gmail
+                <span className="hidden xs:inline">Verify</span> Gmail
               </button>
             )}
           </div>
