@@ -9,6 +9,7 @@ interface BudgetChartsProps {
   remainingBudget: number;
   percentSpent: number;
   categoryBreakdown: Record<string, number>;
+  periodLabel?: string;
 }
 
 export default function BudgetCharts({
@@ -17,6 +18,7 @@ export default function BudgetCharts({
   remainingBudget,
   percentSpent,
   categoryBreakdown,
+  periodLabel,
 }: BudgetChartsProps) {
   const radius = 64;
   const circumference = 2 * Math.PI * radius;
@@ -49,7 +51,7 @@ export default function BudgetCharts({
       {/* 1. Multi-Color Category Donut Chart */}
       <div className="flex flex-col items-center justify-center p-4 bg-slate-50/60 rounded-xl border border-slate-200">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
-          Fund Distribution Matrix
+          Fund Distribution Matrix {periodLabel ? `(${periodLabel})` : ''}
         </h4>
 
         <div className="relative w-44 h-44 flex items-center justify-center">
@@ -107,7 +109,7 @@ export default function BudgetCharts({
       {/* 2. Category Breakdown Bars */}
       <div className="flex flex-col justify-center space-y-3">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-          Spending Breakdown by Category
+          Spending Breakdown by Category {periodLabel ? `(${periodLabel})` : ''}
         </h4>
 
         {Object.entries(categoryBreakdown).map(([cat, amt]) => {
