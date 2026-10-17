@@ -72,7 +72,7 @@ export default function Home() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Keep-Alive Tab Rendering for Instantaneous (<5ms) Tab Switching */}
         <div className={activeTab === 'events' ? 'block' : 'hidden'}>
-          <EventManager currentRole={effectiveRole} />
+          <EventManager currentRole={effectiveRole} currentUser={currentUser} />
         </div>
 
         <div className={activeTab === 'expenses' ? 'block' : 'hidden'}>

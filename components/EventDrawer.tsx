@@ -12,6 +12,7 @@ interface EventDrawerProps {
   onClose: () => void;
   clubs: any[];
   currentRole: string;
+  currentUser?: { name?: string; email?: string } | null;
   onEventCreated: () => void;
   initialDate?: string;
 }
@@ -21,6 +22,7 @@ export default function EventDrawer({
   onClose,
   clubs,
   currentRole,
+  currentUser,
   onEventCreated,
   initialDate,
 }: EventDrawerProps) {
@@ -31,13 +33,29 @@ export default function EventDrawer({
   const [endTime, setEndTime] = useState('');
   const [audienceTag, setAudienceTag] = useState('TECH_UG');
   const [expectedAttendance, setExpectedAttendance] = useState(100);
-  const [category, setCategory] = useState('Technical Workshop');
+  const [eventType, setEventType] = useState('Workshop');
+  const [estimatedCost, setEstimatedCost] = useState<number | string>('0');
+  const [organizer, setOrganizer] = useState('');
   const [clubId, setClubId] = useState('');
 
   // Live as-you-type conflict state
   const [checkingConflict, setCheckingConflict] = useState(false);
   const [liveConflictResult, setLiveConflictResult] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (currentUser?.name) {
+      setOrganizer(currentUser.name);
+    } else {
+      try {
+        const saved = localStorage.getItem('acm_auth_user');
+        if (saved) {
+          const u = JSON.parse(saved);
+          if (u.name) setOrganizer(u.name);
+        }
+      } catch (e) {}
+    }
+  }, [currentUser, isOpen]);
 
   useEffect(() => {
     if (clubs.length > 0 && !clubId) {
@@ -99,7 +117,10 @@ export default function EventDrawer({
           endTime: new Date(endTime).toISOString(),
           audienceTags: [audienceTag],
           expectedAttendance,
-          category,
+          category: eventType,
+          eventType,
+          estimatedCost: Number(estimatedCost) || 0,
+          organizer: organizer || currentUser?.name || 'Club Organizer',
           clubId,
           userRole: currentRole,
         }),
@@ -111,6 +132,7 @@ export default function EventDrawer({
         onClose();
         setTitle('');
         setDescription('');
+        setEstimatedCost('0');
       } else {
         const errorMsg =
           typeof result.error === 'string'
@@ -180,6 +202,19 @@ export default function EventDrawer({
               </select>
             </div>
 
+            {/* Organizer Field: Auto-fills from logged-in user's name and can't be edited */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Organizer <span className="text-[10px] text-slate-400 font-normal">(Auto-filled from account)</span>
+              </label>
+              <input
+                type="text"
+                readOnly
+                value={organizer || currentUser?.name || 'Logged-in Executive'}
+                className="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-600 font-semibold cursor-not-allowed select-none"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Event Title</label>
               <input
@@ -190,6 +225,40 @@ export default function EventDrawer({
                 placeholder="e.g. ACM TechFest Inauguration"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
               />
+            </div>
+
+            {/* Event Type Dropdown & Estimated Cost Number Field */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Event Type</label>
+                <select
+                  value={eventType}
+                  onChange={(e) => setEventType(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
+                >
+                  <option value="Workshop">Workshop</option>
+                  <option value="Competition">Competition</option>
+                  <option value="Talk">Talk</option>
+                  <option value="Social">Social</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Estimated Cost (₹) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="1"
+                  value={estimatedCost}
+                  onChange={(e) => setEstimatedCost(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 font-medium"
+                />
+              </div>
             </div>
 
             <div>

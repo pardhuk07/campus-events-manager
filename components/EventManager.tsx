@@ -16,7 +16,13 @@ import {
 import { getClubTheme } from '@/lib/colors';
 import { UserRole } from '@/lib/constants';
 
-export default function EventManager({ currentRole }: { currentRole: string }) {
+export default function EventManager({
+  currentRole,
+  currentUser,
+}: {
+  currentRole: string;
+  currentUser?: any;
+}) {
   const [events, setEvents] = useState<any[]>([]);
   const [clubs, setClubs] = useState<any[]>([]);
   const [conflicts, setConflicts] = useState<any[]>([]);
@@ -308,8 +314,11 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-slate-900 text-sm">{ev.title}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            {ev.eventType || ev.category || 'Workshop'}
+                          </span>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                               ev.status === 'APPROVED'
@@ -322,7 +331,14 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                             {ev.status}
                           </span>
                         </div>
-                        <p className={`text-xs font-semibold mt-0.5 ${clubTheme.text}`}>{ev.club?.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className={`text-xs font-semibold ${clubTheme.text}`}>{ev.club?.name}</p>
+                          {ev.organizer && (
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              • Lead: {ev.organizer}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {isCoreVerifier && (
@@ -354,6 +370,10 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
                     </p>
 
                     <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
+                      {/* Estimated Cost Display */}
+                      <div className="flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-xs">
+                        <span>₹{Number(ev.estimatedCost ?? 0).toLocaleString()} est.</span>
+                      </div>
                       <div className="flex items-center gap-1.5">
                         <MapPinIcon className="w-3.5 h-3.5 text-slate-400" />
                         <span className="font-medium text-slate-700">{ev.venue}</span>
@@ -383,6 +403,7 @@ export default function EventManager({ currentRole }: { currentRole: string }) {
         onClose={() => setIsDrawerOpen(false)}
         clubs={clubs}
         currentRole={currentRole}
+        currentUser={currentUser}
         onEventCreated={() => {
           fetchEvents();
           fetchConflicts();

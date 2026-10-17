@@ -91,6 +91,11 @@ model Event {
   audienceTags       String[]
   expectedAttendance Int?
   category           String?
+  eventType          String?
+  estimatedCost      Decimal?     @default(0) @db.Decimal(10, 2)
+  organizer          String?
+  conflictFlags      String[]     @default([])
+  flags              String[]     @default([])
   status             EventStatus  @default(PENDING)
   submittedById      String
   submittedBy        User         @relation("EventSubmittedBy", fields: [submittedById], references: [id])

@@ -7,6 +7,9 @@ export interface EventItem {
   audienceTags?: string[];
   status?: string;
   clubName?: string;
+  eventType?: string;
+  estimatedCost?: number;
+  organizer?: string;
 }
 
 export interface DetectedConflict {

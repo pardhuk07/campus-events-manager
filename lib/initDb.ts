@@ -136,6 +136,9 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "audienceTags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "expectedAttendance" INTEGER;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "category" TEXT;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "eventType" TEXT DEFAULT 'Workshop';
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "estimatedCost" NUMERIC(10, 2) DEFAULT 0;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "organizer" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
       ALTER TABLE "Event" ALTER COLUMN "status" TYPE TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "conflictFlags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

@@ -64,6 +64,9 @@ export async function POST(request: NextRequest) {
       audienceTags,
       expectedAttendance,
       category,
+      eventType,
+      estimatedCost,
+      organizer,
       submittedById,
       userRole,
     } = body;
@@ -91,6 +94,11 @@ export async function POST(request: NextRequest) {
       return apiError(ErrorCodes.VALIDATION_ERROR, 'Start time and end time are required.');
     }
 
+    const costNum = Number(estimatedCost);
+    if (estimatedCost === undefined || estimatedCost === null || isNaN(costNum) || costNum < 0) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Estimated Cost (₹) is required and must be minimum 0.');
+    }
+
     const start = new Date(startTime);
     const end = new Date(endTime);
 
@@ -110,6 +118,8 @@ export async function POST(request: NextRequest) {
       finalSubmitterId = defaultUser ? defaultUser.id : 'user-pardhu';
     }
 
+    const finalEventType = eventType || category || 'Workshop';
+
     // 1. Create the event initially with PENDING status
     const createdEvent = await dbService.createEvent({
       title: title.trim(),
@@ -120,7 +130,10 @@ export async function POST(request: NextRequest) {
       venue: venue.trim(),
       audienceTags: tags,
       expectedAttendance: expectedAttendance ? parseInt(expectedAttendance) : 50,
-      category: category || 'General',
+      category: finalEventType,
+      eventType: finalEventType,
+      estimatedCost: costNum,
+      organizer: organizer ? organizer.trim() : 'Club Organizer',
       status: EventStatus.PENDING,
       submittedById: finalSubmitterId,
     });

@@ -323,21 +323,33 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
           <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-slate-900 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between">
               <div>
-                <span
-                  className={`text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full tracking-wider ${
-                    selectedEventModal.status === 'FLAGGED_CONFLICT'
-                      ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                      : selectedEventModal.status === 'APPROVED'
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      : 'bg-amber-100 text-amber-800 border border-amber-200'
-                  }`}
-                >
-                  {selectedEventModal.status}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className={`text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full tracking-wider ${
+                      selectedEventModal.status === 'FLAGGED_CONFLICT'
+                        ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                        : selectedEventModal.status === 'APPROVED'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-amber-100 text-amber-800 border border-amber-200'
+                    }`}
+                  >
+                    {selectedEventModal.status}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    {selectedEventModal.eventType || selectedEventModal.category || 'Workshop'}
+                  </span>
+                </div>
                 <h4 className="text-lg font-bold mt-2 text-slate-900">{selectedEventModal.title}</h4>
-                <p className={`text-xs font-semibold ${getClubTheme(selectedEventModal.club?.name).text}`}>
-                  {selectedEventModal.club?.name}
-                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className={`text-xs font-semibold ${getClubTheme(selectedEventModal.club?.name).text}`}>
+                    {selectedEventModal.club?.name}
+                  </p>
+                  {selectedEventModal.organizer && (
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      • Lead: {selectedEventModal.organizer}
+                    </span>
+                  )}
+                </div>
               </div>
               <button
                 type="button"
@@ -353,6 +365,10 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
             </p>
 
             <div className="space-y-2.5 mt-4 pt-3 border-t border-slate-200 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 font-bold">₹</span>
+                <span>Estimated Cost: <strong className="text-emerald-700 font-bold">₹{Number(selectedEventModal.estimatedCost ?? 0).toLocaleString()}</strong></span>
+              </div>
               <div className="flex items-center gap-2">
                 <MapPinIcon className="w-4 h-4 text-slate-400" />
                 <span>Venue: <strong className="text-slate-900">{selectedEventModal.venue}</strong></span>

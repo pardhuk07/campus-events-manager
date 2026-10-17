@@ -127,6 +127,9 @@ export const dbService = {
     audienceTags: string[];
     expectedAttendance?: number | null;
     category?: string | null;
+    eventType?: string | null;
+    estimatedCost?: number | null;
+    organizer?: string | null;
     status?: string;
     conflictFlags?: string[];
     submittedById: string;
@@ -134,14 +137,18 @@ export const dbService = {
     await checkInit();
     const eventId = randomUUID();
     const flags = data.conflictFlags || [];
+    const eventType = data.eventType || data.category || 'Workshop';
+    const estimatedCost = data.estimatedCost !== undefined && data.estimatedCost !== null ? Number(data.estimatedCost) : 0;
+    const organizer = data.organizer || 'Club Organizer';
     const rows = await query(
       `
       INSERT INTO "Event" (
         "id", "title", "description", "clubId", "startTime", "endTime",
         "venue", "audienceTags", "expectedAttendance", "category",
+        "eventType", "estimatedCost", "organizer",
         "status", "conflictFlags", "flags", "submittedById", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12, $13, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15, $16, NOW())
       RETURNING *
     `,
       [
@@ -154,7 +161,10 @@ export const dbService = {
         data.venue,
         data.audienceTags || [],
         data.expectedAttendance || 50,
-        data.category || null,
+        data.category || eventType,
+        eventType,
+        estimatedCost,
+        organizer,
         data.status || EventStatus.PENDING,
         flags,
         data.submittedById,
@@ -172,6 +182,9 @@ export const dbService = {
     audienceTags: string[];
     expectedAttendance: number | null;
     category: string | null;
+    eventType: string | null;
+    estimatedCost: number | null;
+    organizer: string | null;
     status: string;
     conflictFlags: string[];
   }>) {

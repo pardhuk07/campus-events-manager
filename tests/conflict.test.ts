@@ -419,4 +419,44 @@ describe('Conflict Detection Engine Unit Tests', () => {
       assert.ok(aConf?.reason.endsWith(', audience conflict'));
     });
   });
+
+  // ==========================================
+  // 7. PROPOSALS WITH EVENT TYPE, COST & ORGANIZER
+  // ==========================================
+  describe('Proposal with Event Type, Estimated Cost, and Organizer', () => {
+    it('accurately detects audience conflicts when proposals carry eventType, estimatedCost, and organizer fields', () => {
+      const existing: EventItem[] = [
+        {
+          id: 'ev-prop-1',
+          title: 'ACM Coding Championship',
+          startTime: time(14, 0),
+          endTime: time(17, 0),
+          venue: 'Central Auditorium',
+          audienceTags: ['TECH_UG'],
+          status: 'APPROVED',
+          eventType: 'Competition',
+          estimatedCost: 8000,
+          organizer: 'Pardhu (ACM Lead)',
+        },
+      ];
+
+      const candidate: EventItem = {
+        title: 'Algorithms Workshop',
+        startTime: time(15, 0),
+        endTime: time(16, 30),
+        venue: 'ECE Seminar Hall', // Different venue
+        audienceTags: ['TECH_UG'], // Same audience
+        eventType: 'Workshop',
+        estimatedCost: 2500,
+        organizer: 'Club Executive',
+      };
+
+      const conflicts = detectConflicts(candidate, existing);
+
+      // Audience conflict must be detected cleanly regardless of venue
+      assert.equal(conflicts.length, 1);
+      assert.equal(conflicts[0].conflictType, 'audience conflict');
+      assert.match(conflicts[0].reason, /^Overlaps with ACM Coding Championship, .+, audience conflict$/);
+    });
+  });
 });
