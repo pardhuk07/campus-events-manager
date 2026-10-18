@@ -400,6 +400,7 @@ export const ModelName = {
   User: 'User',
   Club: 'Club',
   Event: 'Event',
+  EventConflict: 'EventConflict',
   Expense: 'Expense',
   Budget: 'Budget'
 } as const
@@ -417,7 +418,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "club" | "event" | "expense" | "budget"
+    modelProps: "user" | "club" | "event" | "eventConflict" | "expense" | "budget"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -643,6 +644,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    EventConflict: {
+      payload: Prisma.$EventConflictPayload<ExtArgs>
+      fields: Prisma.EventConflictFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EventConflictFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EventConflictFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload>
+        }
+        findFirst: {
+          args: Prisma.EventConflictFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EventConflictFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload>
+        }
+        findMany: {
+          args: Prisma.EventConflictFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload>[]
+        }
+        create: {
+          args: Prisma.EventConflictCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload>
+        }
+        createMany: {
+          args: Prisma.EventConflictCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EventConflictCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload>[]
+        }
+        delete: {
+          args: Prisma.EventConflictDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload>
+        }
+        update: {
+          args: Prisma.EventConflictUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload>
+        }
+        deleteMany: {
+          args: Prisma.EventConflictDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EventConflictUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EventConflictUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload>[]
+        }
+        upsert: {
+          args: Prisma.EventConflictUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventConflictPayload>
+        }
+        aggregate: {
+          args: Prisma.EventConflictAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEventConflict>
+        }
+        groupBy: {
+          args: Prisma.EventConflictGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EventConflictGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EventConflictCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EventConflictCountAggregateOutputType> | number
+        }
+      }
+    }
     Expense: {
       payload: Prisma.$ExpensePayload<ExtArgs>
       fields: Prisma.ExpenseFieldRefs
@@ -834,9 +909,11 @@ export const UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
   email: 'email',
+  passwordHash: 'passwordHash',
   role: 'role',
   clubId: 'clubId',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -846,7 +923,8 @@ export const ClubScalarFieldEnum = {
   id: 'id',
   name: 'name',
   description: 'description',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type ClubScalarFieldEnum = (typeof ClubScalarFieldEnum)[keyof typeof ClubScalarFieldEnum]
@@ -856,13 +934,24 @@ export const EventScalarFieldEnum = {
   id: 'id',
   title: 'title',
   description: 'description',
+  clubId: 'clubId',
   startTime: 'startTime',
   endTime: 'endTime',
   venue: 'venue',
-  expectedAudience: 'expectedAudience',
-  audienceType: 'audienceType',
+  audienceTags: 'audienceTags',
+  expectedAttendance: 'expectedAttendance',
+  category: 'category',
+  eventType: 'eventType',
+  estimatedCost: 'estimatedCost',
+  organizer: 'organizer',
+  conflictFlags: 'conflictFlags',
+  flags: 'flags',
+  reviewDecision: 'reviewDecision',
+  reviewComment: 'reviewComment',
+  reviewedByName: 'reviewedByName',
+  reviewedAt: 'reviewedAt',
   status: 'status',
-  clubId: 'clubId',
+  submittedById: 'submittedById',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -870,16 +959,37 @@ export const EventScalarFieldEnum = {
 export type EventScalarFieldEnum = (typeof EventScalarFieldEnum)[keyof typeof EventScalarFieldEnum]
 
 
+export const EventConflictScalarFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  conflictingEventId: 'conflictingEventId',
+  reason: 'reason',
+  overlapStart: 'overlapStart',
+  overlapEnd: 'overlapEnd',
+  status: 'status',
+  reviewedById: 'reviewedById',
+  resolutionNote: 'resolutionNote',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EventConflictScalarFieldEnum = (typeof EventConflictScalarFieldEnum)[keyof typeof EventConflictScalarFieldEnum]
+
+
 export const ExpenseScalarFieldEnum = {
   id: 'id',
-  title: 'title',
+  eventId: 'eventId',
   amount: 'amount',
   category: 'category',
-  date: 'date',
-  receiptUrl: 'receiptUrl',
   description: 'description',
-  eventId: 'eventId',
-  createdAt: 'createdAt'
+  expenseDate: 'expenseDate',
+  receiptUrl: 'receiptUrl',
+  receiptPublicId: 'receiptPublicId',
+  receiptFileName: 'receiptFileName',
+  submittedById: 'submittedById',
+  addedByName: 'addedByName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type ExpenseScalarFieldEnum = (typeof ExpenseScalarFieldEnum)[keyof typeof ExpenseScalarFieldEnum]
@@ -887,9 +997,13 @@ export type ExpenseScalarFieldEnum = (typeof ExpenseScalarFieldEnum)[keyof typeo
 
 export const BudgetScalarFieldEnum = {
   id: 'id',
-  semester: 'semester',
-  totalAllocated: 'totalAllocated',
-  createdAt: 'createdAt'
+  name: 'name',
+  amount: 'amount',
+  periodType: 'periodType',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type BudgetScalarFieldEnum = (typeof BudgetScalarFieldEnum)[keyof typeof BudgetScalarFieldEnum]
@@ -940,16 +1054,16 @@ export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMod
 
 
 /**
- * Reference to a field of type 'Role'
+ * Reference to a field of type 'UserRole'
  */
-export type EnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Role'>
+export type EnumUserRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserRole'>
     
 
 
 /**
- * Reference to a field of type 'Role[]'
+ * Reference to a field of type 'UserRole[]'
  */
-export type ListEnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Role[]'>
+export type ListEnumUserRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserRole[]'>
     
 
 
@@ -982,16 +1096,16 @@ export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
- * Reference to a field of type 'AudienceType'
+ * Reference to a field of type 'Decimal'
  */
-export type EnumAudienceTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AudienceType'>
+export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
     
 
 
 /**
- * Reference to a field of type 'AudienceType[]'
+ * Reference to a field of type 'Decimal[]'
  */
-export type ListEnumAudienceTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AudienceType[]'>
+export type ListDecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal[]'>
     
 
 
@@ -1010,16 +1124,16 @@ export type ListEnumEventStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$
 
 
 /**
- * Reference to a field of type 'Float'
+ * Reference to a field of type 'ConflictStatus'
  */
-export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+export type EnumConflictStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ConflictStatus'>
     
 
 
 /**
- * Reference to a field of type 'Float[]'
+ * Reference to a field of type 'ConflictStatus[]'
  */
-export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+export type ListEnumConflictStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ConflictStatus[]'>
     
 
 
@@ -1034,6 +1148,34 @@ export type EnumExpenseCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$
  * Reference to a field of type 'ExpenseCategory[]'
  */
 export type ListEnumExpenseCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ExpenseCategory[]'>
+    
+
+
+/**
+ * Reference to a field of type 'BudgetPeriod'
+ */
+export type EnumBudgetPeriodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BudgetPeriod'>
+    
+
+
+/**
+ * Reference to a field of type 'BudgetPeriod[]'
+ */
+export type ListEnumBudgetPeriodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BudgetPeriod[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Float'
+ */
+export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'Float[]'
+ */
+export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
 
 /**
@@ -1190,6 +1332,7 @@ export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   club?: Prisma.ClubOmit
   event?: Prisma.EventOmit
+  eventConflict?: Prisma.EventConflictOmit
   expense?: Prisma.ExpenseOmit
   budget?: Prisma.BudgetOmit
 }

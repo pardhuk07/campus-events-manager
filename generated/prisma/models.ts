@@ -11,6 +11,7 @@
 export type * from './models/User'
 export type * from './models/Club'
 export type * from './models/Event'
+export type * from './models/EventConflict'
 export type * from './models/Expense'
 export type * from './models/Budget'
 export type * from './commonInputTypes'

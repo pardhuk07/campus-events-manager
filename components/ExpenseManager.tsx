@@ -37,10 +37,13 @@ export default function ExpenseManager({
   const [viewPeriod, setViewPeriod] = useState<'semester' | 'month'>('semester');
 
   // Month selector state (defaults to current month: e.g. "2026-10")
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(() => {
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>('2026-10');
+
+  useEffect(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    setSelectedMonthKey(currentKey);
+  }, []);
 
   // Budget Edit State (STRICTLY for CORE_VERIFIER)
   const [isEditingBudget, setIsEditingBudget] = useState(false);

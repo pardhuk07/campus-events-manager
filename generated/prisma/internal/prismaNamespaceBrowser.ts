@@ -54,6 +54,7 @@ export const ModelName = {
   User: 'User',
   Club: 'Club',
   Event: 'Event',
+  EventConflict: 'EventConflict',
   Expense: 'Expense',
   Budget: 'Budget'
 } as const
@@ -78,9 +79,11 @@ export const UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
   email: 'email',
+  passwordHash: 'passwordHash',
   role: 'role',
   clubId: 'clubId',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -90,7 +93,8 @@ export const ClubScalarFieldEnum = {
   id: 'id',
   name: 'name',
   description: 'description',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type ClubScalarFieldEnum = (typeof ClubScalarFieldEnum)[keyof typeof ClubScalarFieldEnum]
@@ -100,13 +104,24 @@ export const EventScalarFieldEnum = {
   id: 'id',
   title: 'title',
   description: 'description',
+  clubId: 'clubId',
   startTime: 'startTime',
   endTime: 'endTime',
   venue: 'venue',
-  expectedAudience: 'expectedAudience',
-  audienceType: 'audienceType',
+  audienceTags: 'audienceTags',
+  expectedAttendance: 'expectedAttendance',
+  category: 'category',
+  eventType: 'eventType',
+  estimatedCost: 'estimatedCost',
+  organizer: 'organizer',
+  conflictFlags: 'conflictFlags',
+  flags: 'flags',
+  reviewDecision: 'reviewDecision',
+  reviewComment: 'reviewComment',
+  reviewedByName: 'reviewedByName',
+  reviewedAt: 'reviewedAt',
   status: 'status',
-  clubId: 'clubId',
+  submittedById: 'submittedById',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -114,16 +129,37 @@ export const EventScalarFieldEnum = {
 export type EventScalarFieldEnum = (typeof EventScalarFieldEnum)[keyof typeof EventScalarFieldEnum]
 
 
+export const EventConflictScalarFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  conflictingEventId: 'conflictingEventId',
+  reason: 'reason',
+  overlapStart: 'overlapStart',
+  overlapEnd: 'overlapEnd',
+  status: 'status',
+  reviewedById: 'reviewedById',
+  resolutionNote: 'resolutionNote',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EventConflictScalarFieldEnum = (typeof EventConflictScalarFieldEnum)[keyof typeof EventConflictScalarFieldEnum]
+
+
 export const ExpenseScalarFieldEnum = {
   id: 'id',
-  title: 'title',
+  eventId: 'eventId',
   amount: 'amount',
   category: 'category',
-  date: 'date',
-  receiptUrl: 'receiptUrl',
   description: 'description',
-  eventId: 'eventId',
-  createdAt: 'createdAt'
+  expenseDate: 'expenseDate',
+  receiptUrl: 'receiptUrl',
+  receiptPublicId: 'receiptPublicId',
+  receiptFileName: 'receiptFileName',
+  submittedById: 'submittedById',
+  addedByName: 'addedByName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type ExpenseScalarFieldEnum = (typeof ExpenseScalarFieldEnum)[keyof typeof ExpenseScalarFieldEnum]
@@ -131,9 +167,13 @@ export type ExpenseScalarFieldEnum = (typeof ExpenseScalarFieldEnum)[keyof typeo
 
 export const BudgetScalarFieldEnum = {
   id: 'id',
-  semester: 'semester',
-  totalAllocated: 'totalAllocated',
-  createdAt: 'createdAt'
+  name: 'name',
+  amount: 'amount',
+  periodType: 'periodType',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type BudgetScalarFieldEnum = (typeof BudgetScalarFieldEnum)[keyof typeof BudgetScalarFieldEnum]

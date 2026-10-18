@@ -9,43 +9,54 @@
 * 🟢 You can import this file directly.
 */
 
-export const Role = {
+export const UserRole = {
   MEMBER: 'MEMBER',
   CLUB_EXEC: 'CLUB_EXEC',
-  ACM_CORE: 'ACM_CORE'
+  CORE_VERIFIER: 'CORE_VERIFIER'
 } as const
 
-export type Role = (typeof Role)[keyof typeof Role]
+export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
 
 export const EventStatus = {
   PENDING: 'PENDING',
   APPROVED: 'APPROVED',
   REJECTED: 'REJECTED',
-  FLAGGED_CONFLICT: 'FLAGGED_CONFLICT'
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED',
+  RESCHEDULE_REQUESTED: 'RESCHEDULE_REQUESTED'
 } as const
 
 export type EventStatus = (typeof EventStatus)[keyof typeof EventStatus]
 
 
-export const AudienceType = {
-  TECH_UG: 'TECH_UG',
-  TECH_PG: 'TECH_PG',
-  NON_TECH_CULTURAL: 'NON_TECH_CULTURAL',
-  SPORTS: 'SPORTS',
-  ALL_CAMPUS: 'ALL_CAMPUS'
+export const ConflictStatus = {
+  FLAGGED: 'FLAGGED',
+  REVIEWED: 'REVIEWED',
+  DISMISSED: 'DISMISSED',
+  RESOLVED: 'RESOLVED'
 } as const
 
-export type AudienceType = (typeof AudienceType)[keyof typeof AudienceType]
+export type ConflictStatus = (typeof ConflictStatus)[keyof typeof ConflictStatus]
 
 
 export const ExpenseCategory = {
+  FOOD: 'FOOD',
+  VENUE: 'VENUE',
+  PRIZES: 'PRIZES',
+  MARKETING: 'MARKETING',
   PRINTING: 'PRINTING',
-  REFRESHMENTS: 'REFRESHMENTS',
-  PRIZES_MEMENTOS: 'PRIZES_MEMENTOS',
-  LOGISTICS_EQUIPMENT: 'LOGISTICS_EQUIPMENT',
-  MARKETING_BANNERS: 'MARKETING_BANNERS',
+  EQUIPMENT: 'EQUIPMENT',
+  TRAVEL: 'TRAVEL',
   MISCELLANEOUS: 'MISCELLANEOUS'
 } as const
 
 export type ExpenseCategory = (typeof ExpenseCategory)[keyof typeof ExpenseCategory]
+
+
+export const BudgetPeriod = {
+  MONTHLY: 'MONTHLY',
+  SEMESTER: 'SEMESTER'
+} as const
+
+export type BudgetPeriod = (typeof BudgetPeriod)[keyof typeof BudgetPeriod]

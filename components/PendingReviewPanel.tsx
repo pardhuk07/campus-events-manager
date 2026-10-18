@@ -425,7 +425,7 @@ export default function PendingReviewPanel({
               </div>
 
               {/* Required Comment Box for Reject and Reschedule */}
-              {isActionOpen && (
+              {isActionOpen && activeAction && (
                 <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3 transition-all">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-800">

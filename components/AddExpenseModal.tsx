@@ -26,7 +26,11 @@ export default function AddExpenseModal({
 }: AddExpenseModalProps) {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<string>(ExpenseCategory.FOOD);
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState('2026-10-18');
+
+  useEffect(() => {
+    setDate(new Date().toISOString().split('T')[0]);
+  }, []);
   const [eventId, setEventId] = useState('');
   const [description, setDescription] = useState('');
 

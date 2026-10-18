@@ -57,6 +57,11 @@ export type Club = Prisma.ClubModel
  */
 export type Event = Prisma.EventModel
 /**
+ * Model EventConflict
+ * 
+ */
+export type EventConflict = Prisma.EventConflictModel
+/**
  * Model Expense
  * 
  */

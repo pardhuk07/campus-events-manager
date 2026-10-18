@@ -27,63 +27,87 @@ export type AggregateBudget = {
 }
 
 export type BudgetAvgAggregateOutputType = {
-  totalAllocated: number | null
+  amount: runtime.Decimal | null
 }
 
 export type BudgetSumAggregateOutputType = {
-  totalAllocated: number | null
+  amount: runtime.Decimal | null
 }
 
 export type BudgetMinAggregateOutputType = {
   id: string | null
-  semester: string | null
-  totalAllocated: number | null
+  name: string | null
+  amount: runtime.Decimal | null
+  periodType: $Enums.BudgetPeriod | null
+  startDate: Date | null
+  endDate: Date | null
   createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type BudgetMaxAggregateOutputType = {
   id: string | null
-  semester: string | null
-  totalAllocated: number | null
+  name: string | null
+  amount: runtime.Decimal | null
+  periodType: $Enums.BudgetPeriod | null
+  startDate: Date | null
+  endDate: Date | null
   createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type BudgetCountAggregateOutputType = {
   id: number
-  semester: number
-  totalAllocated: number
+  name: number
+  amount: number
+  periodType: number
+  startDate: number
+  endDate: number
   createdAt: number
+  updatedAt: number
   _all: number
 }
 
 
 export type BudgetAvgAggregateInputType = {
-  totalAllocated?: true
+  amount?: true
 }
 
 export type BudgetSumAggregateInputType = {
-  totalAllocated?: true
+  amount?: true
 }
 
 export type BudgetMinAggregateInputType = {
   id?: true
-  semester?: true
-  totalAllocated?: true
+  name?: true
+  amount?: true
+  periodType?: true
+  startDate?: true
+  endDate?: true
   createdAt?: true
+  updatedAt?: true
 }
 
 export type BudgetMaxAggregateInputType = {
   id?: true
-  semester?: true
-  totalAllocated?: true
+  name?: true
+  amount?: true
+  periodType?: true
+  startDate?: true
+  endDate?: true
   createdAt?: true
+  updatedAt?: true
 }
 
 export type BudgetCountAggregateInputType = {
   id?: true
-  semester?: true
-  totalAllocated?: true
+  name?: true
+  amount?: true
+  periodType?: true
+  startDate?: true
+  endDate?: true
   createdAt?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -175,9 +199,13 @@ export type BudgetGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 
 export type BudgetGroupByOutputType = {
   id: string
-  semester: string
-  totalAllocated: number
+  name: string
+  amount: runtime.Decimal
+  periodType: $Enums.BudgetPeriod
+  startDate: Date
+  endDate: Date
   createdAt: Date
+  updatedAt: Date
   _count: BudgetCountAggregateOutputType | null
   _avg: BudgetAvgAggregateOutputType | null
   _sum: BudgetSumAggregateOutputType | null
@@ -205,33 +233,49 @@ export type BudgetWhereInput = {
   OR?: Prisma.BudgetWhereInput[]
   NOT?: Prisma.BudgetWhereInput | Prisma.BudgetWhereInput[]
   id?: Prisma.StringFilter<"Budget"> | string
-  semester?: Prisma.StringFilter<"Budget"> | string
-  totalAllocated?: Prisma.FloatFilter<"Budget"> | number
+  name?: Prisma.StringFilter<"Budget"> | string
+  amount?: Prisma.DecimalFilter<"Budget"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: Prisma.EnumBudgetPeriodFilter<"Budget"> | $Enums.BudgetPeriod
+  startDate?: Prisma.DateTimeFilter<"Budget"> | Date | string
+  endDate?: Prisma.DateTimeFilter<"Budget"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Budget"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"Budget"> | Date | string
 }
 
 export type BudgetOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  semester?: Prisma.SortOrder
-  totalAllocated?: Prisma.SortOrder
+  name?: Prisma.SortOrder
+  amount?: Prisma.SortOrder
+  periodType?: Prisma.SortOrder
+  startDate?: Prisma.SortOrder
+  endDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type BudgetWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  semester?: string
   AND?: Prisma.BudgetWhereInput | Prisma.BudgetWhereInput[]
   OR?: Prisma.BudgetWhereInput[]
   NOT?: Prisma.BudgetWhereInput | Prisma.BudgetWhereInput[]
-  totalAllocated?: Prisma.FloatFilter<"Budget"> | number
+  name?: Prisma.StringFilter<"Budget"> | string
+  amount?: Prisma.DecimalFilter<"Budget"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: Prisma.EnumBudgetPeriodFilter<"Budget"> | $Enums.BudgetPeriod
+  startDate?: Prisma.DateTimeFilter<"Budget"> | Date | string
+  endDate?: Prisma.DateTimeFilter<"Budget"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Budget"> | Date | string
-}, "id" | "semester">
+  updatedAt?: Prisma.DateTimeFilter<"Budget"> | Date | string
+}, "id">
 
 export type BudgetOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  semester?: Prisma.SortOrder
-  totalAllocated?: Prisma.SortOrder
+  name?: Prisma.SortOrder
+  amount?: Prisma.SortOrder
+  periodType?: Prisma.SortOrder
+  startDate?: Prisma.SortOrder
+  endDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.BudgetCountOrderByAggregateInput
   _avg?: Prisma.BudgetAvgOrderByAggregateInput
   _max?: Prisma.BudgetMaxOrderByAggregateInput
@@ -244,129 +288,197 @@ export type BudgetScalarWhereWithAggregatesInput = {
   OR?: Prisma.BudgetScalarWhereWithAggregatesInput[]
   NOT?: Prisma.BudgetScalarWhereWithAggregatesInput | Prisma.BudgetScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Budget"> | string
-  semester?: Prisma.StringWithAggregatesFilter<"Budget"> | string
-  totalAllocated?: Prisma.FloatWithAggregatesFilter<"Budget"> | number
+  name?: Prisma.StringWithAggregatesFilter<"Budget"> | string
+  amount?: Prisma.DecimalWithAggregatesFilter<"Budget"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: Prisma.EnumBudgetPeriodWithAggregatesFilter<"Budget"> | $Enums.BudgetPeriod
+  startDate?: Prisma.DateTimeWithAggregatesFilter<"Budget"> | Date | string
+  endDate?: Prisma.DateTimeWithAggregatesFilter<"Budget"> | Date | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Budget"> | Date | string
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Budget"> | Date | string
 }
 
 export type BudgetCreateInput = {
   id?: string
-  semester: string
-  totalAllocated?: number
+  name: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: $Enums.BudgetPeriod
+  startDate: Date | string
+  endDate: Date | string
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BudgetUncheckedCreateInput = {
   id?: string
-  semester: string
-  totalAllocated?: number
+  name: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: $Enums.BudgetPeriod
+  startDate: Date | string
+  endDate: Date | string
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BudgetUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  semester?: Prisma.StringFieldUpdateOperationsInput | string
-  totalAllocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: Prisma.EnumBudgetPeriodFieldUpdateOperationsInput | $Enums.BudgetPeriod
+  startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BudgetUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  semester?: Prisma.StringFieldUpdateOperationsInput | string
-  totalAllocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: Prisma.EnumBudgetPeriodFieldUpdateOperationsInput | $Enums.BudgetPeriod
+  startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BudgetCreateManyInput = {
   id?: string
-  semester: string
-  totalAllocated?: number
+  name: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: $Enums.BudgetPeriod
+  startDate: Date | string
+  endDate: Date | string
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BudgetUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  semester?: Prisma.StringFieldUpdateOperationsInput | string
-  totalAllocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: Prisma.EnumBudgetPeriodFieldUpdateOperationsInput | $Enums.BudgetPeriod
+  startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BudgetUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  semester?: Prisma.StringFieldUpdateOperationsInput | string
-  totalAllocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  periodType?: Prisma.EnumBudgetPeriodFieldUpdateOperationsInput | $Enums.BudgetPeriod
+  startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BudgetCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  semester?: Prisma.SortOrder
-  totalAllocated?: Prisma.SortOrder
+  name?: Prisma.SortOrder
+  amount?: Prisma.SortOrder
+  periodType?: Prisma.SortOrder
+  startDate?: Prisma.SortOrder
+  endDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type BudgetAvgOrderByAggregateInput = {
-  totalAllocated?: Prisma.SortOrder
+  amount?: Prisma.SortOrder
 }
 
 export type BudgetMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  semester?: Prisma.SortOrder
-  totalAllocated?: Prisma.SortOrder
+  name?: Prisma.SortOrder
+  amount?: Prisma.SortOrder
+  periodType?: Prisma.SortOrder
+  startDate?: Prisma.SortOrder
+  endDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type BudgetMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  semester?: Prisma.SortOrder
-  totalAllocated?: Prisma.SortOrder
+  name?: Prisma.SortOrder
+  amount?: Prisma.SortOrder
+  periodType?: Prisma.SortOrder
+  startDate?: Prisma.SortOrder
+  endDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type BudgetSumOrderByAggregateInput = {
-  totalAllocated?: Prisma.SortOrder
+  amount?: Prisma.SortOrder
+}
+
+export type EnumBudgetPeriodFieldUpdateOperationsInput = {
+  set?: $Enums.BudgetPeriod
 }
 
 
 
 export type BudgetSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  semester?: boolean
-  totalAllocated?: boolean
+  name?: boolean
+  amount?: boolean
+  periodType?: boolean
+  startDate?: boolean
+  endDate?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }, ExtArgs["result"]["budget"]>
 
 export type BudgetSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  semester?: boolean
-  totalAllocated?: boolean
+  name?: boolean
+  amount?: boolean
+  periodType?: boolean
+  startDate?: boolean
+  endDate?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }, ExtArgs["result"]["budget"]>
 
 export type BudgetSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  semester?: boolean
-  totalAllocated?: boolean
+  name?: boolean
+  amount?: boolean
+  periodType?: boolean
+  startDate?: boolean
+  endDate?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }, ExtArgs["result"]["budget"]>
 
 export type BudgetSelectScalar = {
   id?: boolean
-  semester?: boolean
-  totalAllocated?: boolean
+  name?: boolean
+  amount?: boolean
+  periodType?: boolean
+  startDate?: boolean
+  endDate?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }
 
-export type BudgetOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "semester" | "totalAllocated" | "createdAt", ExtArgs["result"]["budget"]>
+export type BudgetOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "amount" | "periodType" | "startDate" | "endDate" | "createdAt" | "updatedAt", ExtArgs["result"]["budget"]>
 
 export type $BudgetPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Budget"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    semester: string
-    totalAllocated: number
+    name: string
+    amount: runtime.Decimal
+    periodType: $Enums.BudgetPeriod
+    startDate: Date
+    endDate: Date
     createdAt: Date
+    updatedAt: Date
   }, ExtArgs["result"]["budget"]>
   composites: {}
 }
@@ -791,9 +903,13 @@ export interface Prisma__BudgetClient<T, Null = never, ExtArgs extends runtime.T
  */
 export interface BudgetFieldRefs {
   readonly id: Prisma.FieldRef<"Budget", 'String'>
-  readonly semester: Prisma.FieldRef<"Budget", 'String'>
-  readonly totalAllocated: Prisma.FieldRef<"Budget", 'Float'>
+  readonly name: Prisma.FieldRef<"Budget", 'String'>
+  readonly amount: Prisma.FieldRef<"Budget", 'Decimal'>
+  readonly periodType: Prisma.FieldRef<"Budget", 'BudgetPeriod'>
+  readonly startDate: Prisma.FieldRef<"Budget", 'DateTime'>
+  readonly endDate: Prisma.FieldRef<"Budget", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Budget", 'DateTime'>
+  readonly updatedAt: Prisma.FieldRef<"Budget", 'DateTime'>
 }
     
 

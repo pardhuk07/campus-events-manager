@@ -27,24 +27,34 @@ export type AggregateEvent = {
 }
 
 export type EventAvgAggregateOutputType = {
-  expectedAudience: number | null
+  expectedAttendance: number | null
+  estimatedCost: runtime.Decimal | null
 }
 
 export type EventSumAggregateOutputType = {
-  expectedAudience: number | null
+  expectedAttendance: number | null
+  estimatedCost: runtime.Decimal | null
 }
 
 export type EventMinAggregateOutputType = {
   id: string | null
   title: string | null
   description: string | null
+  clubId: string | null
   startTime: Date | null
   endTime: Date | null
   venue: string | null
-  expectedAudience: number | null
-  audienceType: $Enums.AudienceType | null
+  expectedAttendance: number | null
+  category: string | null
+  eventType: string | null
+  estimatedCost: runtime.Decimal | null
+  organizer: string | null
+  reviewDecision: string | null
+  reviewComment: string | null
+  reviewedByName: string | null
+  reviewedAt: Date | null
   status: $Enums.EventStatus | null
-  clubId: string | null
+  submittedById: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -53,13 +63,21 @@ export type EventMaxAggregateOutputType = {
   id: string | null
   title: string | null
   description: string | null
+  clubId: string | null
   startTime: Date | null
   endTime: Date | null
   venue: string | null
-  expectedAudience: number | null
-  audienceType: $Enums.AudienceType | null
+  expectedAttendance: number | null
+  category: string | null
+  eventType: string | null
+  estimatedCost: runtime.Decimal | null
+  organizer: string | null
+  reviewDecision: string | null
+  reviewComment: string | null
+  reviewedByName: string | null
+  reviewedAt: Date | null
   status: $Enums.EventStatus | null
-  clubId: string | null
+  submittedById: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -68,13 +86,24 @@ export type EventCountAggregateOutputType = {
   id: number
   title: number
   description: number
+  clubId: number
   startTime: number
   endTime: number
   venue: number
-  expectedAudience: number
-  audienceType: number
+  audienceTags: number
+  expectedAttendance: number
+  category: number
+  eventType: number
+  estimatedCost: number
+  organizer: number
+  conflictFlags: number
+  flags: number
+  reviewDecision: number
+  reviewComment: number
+  reviewedByName: number
+  reviewedAt: number
   status: number
-  clubId: number
+  submittedById: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -82,24 +111,34 @@ export type EventCountAggregateOutputType = {
 
 
 export type EventAvgAggregateInputType = {
-  expectedAudience?: true
+  expectedAttendance?: true
+  estimatedCost?: true
 }
 
 export type EventSumAggregateInputType = {
-  expectedAudience?: true
+  expectedAttendance?: true
+  estimatedCost?: true
 }
 
 export type EventMinAggregateInputType = {
   id?: true
   title?: true
   description?: true
+  clubId?: true
   startTime?: true
   endTime?: true
   venue?: true
-  expectedAudience?: true
-  audienceType?: true
+  expectedAttendance?: true
+  category?: true
+  eventType?: true
+  estimatedCost?: true
+  organizer?: true
+  reviewDecision?: true
+  reviewComment?: true
+  reviewedByName?: true
+  reviewedAt?: true
   status?: true
-  clubId?: true
+  submittedById?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -108,13 +147,21 @@ export type EventMaxAggregateInputType = {
   id?: true
   title?: true
   description?: true
+  clubId?: true
   startTime?: true
   endTime?: true
   venue?: true
-  expectedAudience?: true
-  audienceType?: true
+  expectedAttendance?: true
+  category?: true
+  eventType?: true
+  estimatedCost?: true
+  organizer?: true
+  reviewDecision?: true
+  reviewComment?: true
+  reviewedByName?: true
+  reviewedAt?: true
   status?: true
-  clubId?: true
+  submittedById?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -123,13 +170,24 @@ export type EventCountAggregateInputType = {
   id?: true
   title?: true
   description?: true
+  clubId?: true
   startTime?: true
   endTime?: true
   venue?: true
-  expectedAudience?: true
-  audienceType?: true
+  audienceTags?: true
+  expectedAttendance?: true
+  category?: true
+  eventType?: true
+  estimatedCost?: true
+  organizer?: true
+  conflictFlags?: true
+  flags?: true
+  reviewDecision?: true
+  reviewComment?: true
+  reviewedByName?: true
+  reviewedAt?: true
   status?: true
-  clubId?: true
+  submittedById?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -225,13 +283,24 @@ export type EventGroupByOutputType = {
   id: string
   title: string
   description: string | null
+  clubId: string
   startTime: Date
   endTime: Date
   venue: string
-  expectedAudience: number
-  audienceType: $Enums.AudienceType
+  audienceTags: string[]
+  expectedAttendance: number | null
+  category: string | null
+  eventType: string | null
+  estimatedCost: runtime.Decimal | null
+  organizer: string | null
+  conflictFlags: string[]
+  flags: string[]
+  reviewDecision: string | null
+  reviewComment: string | null
+  reviewedByName: string | null
+  reviewedAt: Date | null
   status: $Enums.EventStatus
-  clubId: string
+  submittedById: string
   createdAt: Date
   updatedAt: Date
   _count: EventCountAggregateOutputType | null
@@ -263,34 +332,62 @@ export type EventWhereInput = {
   id?: Prisma.StringFilter<"Event"> | string
   title?: Prisma.StringFilter<"Event"> | string
   description?: Prisma.StringNullableFilter<"Event"> | string | null
+  clubId?: Prisma.StringFilter<"Event"> | string
   startTime?: Prisma.DateTimeFilter<"Event"> | Date | string
   endTime?: Prisma.DateTimeFilter<"Event"> | Date | string
   venue?: Prisma.StringFilter<"Event"> | string
-  expectedAudience?: Prisma.IntFilter<"Event"> | number
-  audienceType?: Prisma.EnumAudienceTypeFilter<"Event"> | $Enums.AudienceType
+  audienceTags?: Prisma.StringNullableListFilter<"Event">
+  expectedAttendance?: Prisma.IntNullableFilter<"Event"> | number | null
+  category?: Prisma.StringNullableFilter<"Event"> | string | null
+  eventType?: Prisma.StringNullableFilter<"Event"> | string | null
+  estimatedCost?: Prisma.DecimalNullableFilter<"Event"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.StringNullableFilter<"Event"> | string | null
+  conflictFlags?: Prisma.StringNullableListFilter<"Event">
+  flags?: Prisma.StringNullableListFilter<"Event">
+  reviewDecision?: Prisma.StringNullableFilter<"Event"> | string | null
+  reviewComment?: Prisma.StringNullableFilter<"Event"> | string | null
+  reviewedByName?: Prisma.StringNullableFilter<"Event"> | string | null
+  reviewedAt?: Prisma.DateTimeNullableFilter<"Event"> | Date | string | null
   status?: Prisma.EnumEventStatusFilter<"Event"> | $Enums.EventStatus
-  clubId?: Prisma.StringFilter<"Event"> | string
+  submittedById?: Prisma.StringFilter<"Event"> | string
   createdAt?: Prisma.DateTimeFilter<"Event"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Event"> | Date | string
   club?: Prisma.XOR<Prisma.ClubScalarRelationFilter, Prisma.ClubWhereInput>
+  submittedBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   expenses?: Prisma.ExpenseListRelationFilter
+  conflictsAsEvent?: Prisma.EventConflictListRelationFilter
+  conflictsAsTarget?: Prisma.EventConflictListRelationFilter
 }
 
 export type EventOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  clubId?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
   venue?: Prisma.SortOrder
-  expectedAudience?: Prisma.SortOrder
-  audienceType?: Prisma.SortOrder
+  audienceTags?: Prisma.SortOrder
+  expectedAttendance?: Prisma.SortOrderInput | Prisma.SortOrder
+  category?: Prisma.SortOrderInput | Prisma.SortOrder
+  eventType?: Prisma.SortOrderInput | Prisma.SortOrder
+  estimatedCost?: Prisma.SortOrderInput | Prisma.SortOrder
+  organizer?: Prisma.SortOrderInput | Prisma.SortOrder
+  conflictFlags?: Prisma.SortOrder
+  flags?: Prisma.SortOrder
+  reviewDecision?: Prisma.SortOrderInput | Prisma.SortOrder
+  reviewComment?: Prisma.SortOrderInput | Prisma.SortOrder
+  reviewedByName?: Prisma.SortOrderInput | Prisma.SortOrder
+  reviewedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
-  clubId?: Prisma.SortOrder
+  submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   club?: Prisma.ClubOrderByWithRelationInput
+  submittedBy?: Prisma.UserOrderByWithRelationInput
   expenses?: Prisma.ExpenseOrderByRelationAggregateInput
+  conflictsAsEvent?: Prisma.EventConflictOrderByRelationAggregateInput
+  conflictsAsTarget?: Prisma.EventConflictOrderByRelationAggregateInput
 }
 
 export type EventWhereUniqueInput = Prisma.AtLeast<{
@@ -300,30 +397,55 @@ export type EventWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.EventWhereInput | Prisma.EventWhereInput[]
   title?: Prisma.StringFilter<"Event"> | string
   description?: Prisma.StringNullableFilter<"Event"> | string | null
+  clubId?: Prisma.StringFilter<"Event"> | string
   startTime?: Prisma.DateTimeFilter<"Event"> | Date | string
   endTime?: Prisma.DateTimeFilter<"Event"> | Date | string
   venue?: Prisma.StringFilter<"Event"> | string
-  expectedAudience?: Prisma.IntFilter<"Event"> | number
-  audienceType?: Prisma.EnumAudienceTypeFilter<"Event"> | $Enums.AudienceType
+  audienceTags?: Prisma.StringNullableListFilter<"Event">
+  expectedAttendance?: Prisma.IntNullableFilter<"Event"> | number | null
+  category?: Prisma.StringNullableFilter<"Event"> | string | null
+  eventType?: Prisma.StringNullableFilter<"Event"> | string | null
+  estimatedCost?: Prisma.DecimalNullableFilter<"Event"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.StringNullableFilter<"Event"> | string | null
+  conflictFlags?: Prisma.StringNullableListFilter<"Event">
+  flags?: Prisma.StringNullableListFilter<"Event">
+  reviewDecision?: Prisma.StringNullableFilter<"Event"> | string | null
+  reviewComment?: Prisma.StringNullableFilter<"Event"> | string | null
+  reviewedByName?: Prisma.StringNullableFilter<"Event"> | string | null
+  reviewedAt?: Prisma.DateTimeNullableFilter<"Event"> | Date | string | null
   status?: Prisma.EnumEventStatusFilter<"Event"> | $Enums.EventStatus
-  clubId?: Prisma.StringFilter<"Event"> | string
+  submittedById?: Prisma.StringFilter<"Event"> | string
   createdAt?: Prisma.DateTimeFilter<"Event"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Event"> | Date | string
   club?: Prisma.XOR<Prisma.ClubScalarRelationFilter, Prisma.ClubWhereInput>
+  submittedBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   expenses?: Prisma.ExpenseListRelationFilter
+  conflictsAsEvent?: Prisma.EventConflictListRelationFilter
+  conflictsAsTarget?: Prisma.EventConflictListRelationFilter
 }, "id">
 
 export type EventOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  clubId?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
   venue?: Prisma.SortOrder
-  expectedAudience?: Prisma.SortOrder
-  audienceType?: Prisma.SortOrder
+  audienceTags?: Prisma.SortOrder
+  expectedAttendance?: Prisma.SortOrderInput | Prisma.SortOrder
+  category?: Prisma.SortOrderInput | Prisma.SortOrder
+  eventType?: Prisma.SortOrderInput | Prisma.SortOrder
+  estimatedCost?: Prisma.SortOrderInput | Prisma.SortOrder
+  organizer?: Prisma.SortOrderInput | Prisma.SortOrder
+  conflictFlags?: Prisma.SortOrder
+  flags?: Prisma.SortOrder
+  reviewDecision?: Prisma.SortOrderInput | Prisma.SortOrder
+  reviewComment?: Prisma.SortOrderInput | Prisma.SortOrder
+  reviewedByName?: Prisma.SortOrderInput | Prisma.SortOrder
+  reviewedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
-  clubId?: Prisma.SortOrder
+  submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.EventCountOrderByAggregateInput
@@ -340,13 +462,24 @@ export type EventScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Event"> | string
   title?: Prisma.StringWithAggregatesFilter<"Event"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
+  clubId?: Prisma.StringWithAggregatesFilter<"Event"> | string
   startTime?: Prisma.DateTimeWithAggregatesFilter<"Event"> | Date | string
   endTime?: Prisma.DateTimeWithAggregatesFilter<"Event"> | Date | string
   venue?: Prisma.StringWithAggregatesFilter<"Event"> | string
-  expectedAudience?: Prisma.IntWithAggregatesFilter<"Event"> | number
-  audienceType?: Prisma.EnumAudienceTypeWithAggregatesFilter<"Event"> | $Enums.AudienceType
+  audienceTags?: Prisma.StringNullableListFilter<"Event">
+  expectedAttendance?: Prisma.IntNullableWithAggregatesFilter<"Event"> | number | null
+  category?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
+  eventType?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
+  estimatedCost?: Prisma.DecimalNullableWithAggregatesFilter<"Event"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
+  conflictFlags?: Prisma.StringNullableListFilter<"Event">
+  flags?: Prisma.StringNullableListFilter<"Event">
+  reviewDecision?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
+  reviewComment?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
+  reviewedByName?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
+  reviewedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Event"> | Date | string | null
   status?: Prisma.EnumEventStatusWithAggregatesFilter<"Event"> | $Enums.EventStatus
-  clubId?: Prisma.StringWithAggregatesFilter<"Event"> | string
+  submittedById?: Prisma.StringWithAggregatesFilter<"Event"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Event"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Event"> | Date | string
 }
@@ -358,29 +491,55 @@ export type EventCreateInput = {
   startTime: Date | string
   endTime: Date | string
   venue: string
-  expectedAudience?: number
-  audienceType: $Enums.AudienceType
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   club: Prisma.ClubCreateNestedOneWithoutEventsInput
+  submittedBy: Prisma.UserCreateNestedOneWithoutSubmittedEventsInput
   expenses?: Prisma.ExpenseCreateNestedManyWithoutEventInput
+  conflictsAsEvent?: Prisma.EventConflictCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictCreateNestedManyWithoutConflictingEventInput
 }
 
 export type EventUncheckedCreateInput = {
   id?: string
   title: string
   description?: string | null
+  clubId: string
   startTime: Date | string
   endTime: Date | string
   venue: string
-  expectedAudience?: number
-  audienceType: $Enums.AudienceType
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
   status?: $Enums.EventStatus
-  clubId: string
+  submittedById: string
   createdAt?: Date | string
   updatedAt?: Date | string
   expenses?: Prisma.ExpenseUncheckedCreateNestedManyWithoutEventInput
+  conflictsAsEvent?: Prisma.EventConflictUncheckedCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedCreateNestedManyWithoutConflictingEventInput
 }
 
 export type EventUpdateInput = {
@@ -390,42 +549,79 @@ export type EventUpdateInput = {
   startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   venue?: Prisma.StringFieldUpdateOperationsInput | string
-  expectedAudience?: Prisma.IntFieldUpdateOperationsInput | number
-  audienceType?: Prisma.EnumAudienceTypeFieldUpdateOperationsInput | $Enums.AudienceType
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   club?: Prisma.ClubUpdateOneRequiredWithoutEventsNestedInput
+  submittedBy?: Prisma.UserUpdateOneRequiredWithoutSubmittedEventsNestedInput
   expenses?: Prisma.ExpenseUpdateManyWithoutEventNestedInput
+  conflictsAsEvent?: Prisma.EventConflictUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUpdateManyWithoutConflictingEventNestedInput
 }
 
 export type EventUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  clubId?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   venue?: Prisma.StringFieldUpdateOperationsInput | string
-  expectedAudience?: Prisma.IntFieldUpdateOperationsInput | number
-  audienceType?: Prisma.EnumAudienceTypeFieldUpdateOperationsInput | $Enums.AudienceType
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
-  clubId?: Prisma.StringFieldUpdateOperationsInput | string
+  submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expenses?: Prisma.ExpenseUncheckedUpdateManyWithoutEventNestedInput
+  conflictsAsEvent?: Prisma.EventConflictUncheckedUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedUpdateManyWithoutConflictingEventNestedInput
 }
 
 export type EventCreateManyInput = {
   id?: string
   title: string
   description?: string | null
+  clubId: string
   startTime: Date | string
   endTime: Date | string
   venue: string
-  expectedAudience?: number
-  audienceType: $Enums.AudienceType
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
   status?: $Enums.EventStatus
-  clubId: string
+  submittedById: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -437,8 +633,18 @@ export type EventUpdateManyMutationInput = {
   startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   venue?: Prisma.StringFieldUpdateOperationsInput | string
-  expectedAudience?: Prisma.IntFieldUpdateOperationsInput | number
-  audienceType?: Prisma.EnumAudienceTypeFieldUpdateOperationsInput | $Enums.AudienceType
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -448,13 +654,24 @@ export type EventUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  clubId?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   venue?: Prisma.StringFieldUpdateOperationsInput | string
-  expectedAudience?: Prisma.IntFieldUpdateOperationsInput | number
-  audienceType?: Prisma.EnumAudienceTypeFieldUpdateOperationsInput | $Enums.AudienceType
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
-  clubId?: Prisma.StringFieldUpdateOperationsInput | string
+  submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -469,36 +686,64 @@ export type EventOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type StringNullableListFilter<$PrismaModel = never> = {
+  equals?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel> | null
+  has?: string | Prisma.StringFieldRefInput<$PrismaModel> | null
+  hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  isEmpty?: boolean
+}
+
 export type EventCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  clubId?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
   venue?: Prisma.SortOrder
-  expectedAudience?: Prisma.SortOrder
-  audienceType?: Prisma.SortOrder
+  audienceTags?: Prisma.SortOrder
+  expectedAttendance?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  eventType?: Prisma.SortOrder
+  estimatedCost?: Prisma.SortOrder
+  organizer?: Prisma.SortOrder
+  conflictFlags?: Prisma.SortOrder
+  flags?: Prisma.SortOrder
+  reviewDecision?: Prisma.SortOrder
+  reviewComment?: Prisma.SortOrder
+  reviewedByName?: Prisma.SortOrder
+  reviewedAt?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  clubId?: Prisma.SortOrder
+  submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type EventAvgOrderByAggregateInput = {
-  expectedAudience?: Prisma.SortOrder
+  expectedAttendance?: Prisma.SortOrder
+  estimatedCost?: Prisma.SortOrder
 }
 
 export type EventMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  clubId?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
   venue?: Prisma.SortOrder
-  expectedAudience?: Prisma.SortOrder
-  audienceType?: Prisma.SortOrder
+  expectedAttendance?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  eventType?: Prisma.SortOrder
+  estimatedCost?: Prisma.SortOrder
+  organizer?: Prisma.SortOrder
+  reviewDecision?: Prisma.SortOrder
+  reviewComment?: Prisma.SortOrder
+  reviewedByName?: Prisma.SortOrder
+  reviewedAt?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  clubId?: Prisma.SortOrder
+  submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -507,24 +752,80 @@ export type EventMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  clubId?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
   venue?: Prisma.SortOrder
-  expectedAudience?: Prisma.SortOrder
-  audienceType?: Prisma.SortOrder
+  expectedAttendance?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  eventType?: Prisma.SortOrder
+  estimatedCost?: Prisma.SortOrder
+  organizer?: Prisma.SortOrder
+  reviewDecision?: Prisma.SortOrder
+  reviewComment?: Prisma.SortOrder
+  reviewedByName?: Prisma.SortOrder
+  reviewedAt?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  clubId?: Prisma.SortOrder
+  submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type EventSumOrderByAggregateInput = {
-  expectedAudience?: Prisma.SortOrder
+  expectedAttendance?: Prisma.SortOrder
+  estimatedCost?: Prisma.SortOrder
+}
+
+export type EventScalarRelationFilter = {
+  is?: Prisma.EventWhereInput
+  isNot?: Prisma.EventWhereInput
 }
 
 export type EventNullableScalarRelationFilter = {
   is?: Prisma.EventWhereInput | null
   isNot?: Prisma.EventWhereInput | null
+}
+
+export type EventCreateNestedManyWithoutSubmittedByInput = {
+  create?: Prisma.XOR<Prisma.EventCreateWithoutSubmittedByInput, Prisma.EventUncheckedCreateWithoutSubmittedByInput> | Prisma.EventCreateWithoutSubmittedByInput[] | Prisma.EventUncheckedCreateWithoutSubmittedByInput[]
+  connectOrCreate?: Prisma.EventCreateOrConnectWithoutSubmittedByInput | Prisma.EventCreateOrConnectWithoutSubmittedByInput[]
+  createMany?: Prisma.EventCreateManySubmittedByInputEnvelope
+  connect?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+}
+
+export type EventUncheckedCreateNestedManyWithoutSubmittedByInput = {
+  create?: Prisma.XOR<Prisma.EventCreateWithoutSubmittedByInput, Prisma.EventUncheckedCreateWithoutSubmittedByInput> | Prisma.EventCreateWithoutSubmittedByInput[] | Prisma.EventUncheckedCreateWithoutSubmittedByInput[]
+  connectOrCreate?: Prisma.EventCreateOrConnectWithoutSubmittedByInput | Prisma.EventCreateOrConnectWithoutSubmittedByInput[]
+  createMany?: Prisma.EventCreateManySubmittedByInputEnvelope
+  connect?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+}
+
+export type EventUpdateManyWithoutSubmittedByNestedInput = {
+  create?: Prisma.XOR<Prisma.EventCreateWithoutSubmittedByInput, Prisma.EventUncheckedCreateWithoutSubmittedByInput> | Prisma.EventCreateWithoutSubmittedByInput[] | Prisma.EventUncheckedCreateWithoutSubmittedByInput[]
+  connectOrCreate?: Prisma.EventCreateOrConnectWithoutSubmittedByInput | Prisma.EventCreateOrConnectWithoutSubmittedByInput[]
+  upsert?: Prisma.EventUpsertWithWhereUniqueWithoutSubmittedByInput | Prisma.EventUpsertWithWhereUniqueWithoutSubmittedByInput[]
+  createMany?: Prisma.EventCreateManySubmittedByInputEnvelope
+  set?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+  disconnect?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+  delete?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+  connect?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+  update?: Prisma.EventUpdateWithWhereUniqueWithoutSubmittedByInput | Prisma.EventUpdateWithWhereUniqueWithoutSubmittedByInput[]
+  updateMany?: Prisma.EventUpdateManyWithWhereWithoutSubmittedByInput | Prisma.EventUpdateManyWithWhereWithoutSubmittedByInput[]
+  deleteMany?: Prisma.EventScalarWhereInput | Prisma.EventScalarWhereInput[]
+}
+
+export type EventUncheckedUpdateManyWithoutSubmittedByNestedInput = {
+  create?: Prisma.XOR<Prisma.EventCreateWithoutSubmittedByInput, Prisma.EventUncheckedCreateWithoutSubmittedByInput> | Prisma.EventCreateWithoutSubmittedByInput[] | Prisma.EventUncheckedCreateWithoutSubmittedByInput[]
+  connectOrCreate?: Prisma.EventCreateOrConnectWithoutSubmittedByInput | Prisma.EventCreateOrConnectWithoutSubmittedByInput[]
+  upsert?: Prisma.EventUpsertWithWhereUniqueWithoutSubmittedByInput | Prisma.EventUpsertWithWhereUniqueWithoutSubmittedByInput[]
+  createMany?: Prisma.EventCreateManySubmittedByInputEnvelope
+  set?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+  disconnect?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+  delete?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+  connect?: Prisma.EventWhereUniqueInput | Prisma.EventWhereUniqueInput[]
+  update?: Prisma.EventUpdateWithWhereUniqueWithoutSubmittedByInput | Prisma.EventUpdateWithWhereUniqueWithoutSubmittedByInput[]
+  updateMany?: Prisma.EventUpdateManyWithWhereWithoutSubmittedByInput | Prisma.EventUpdateManyWithWhereWithoutSubmittedByInput[]
+  deleteMany?: Prisma.EventScalarWhereInput | Prisma.EventScalarWhereInput[]
 }
 
 export type EventCreateNestedManyWithoutClubInput = {
@@ -569,20 +870,83 @@ export type EventUncheckedUpdateManyWithoutClubNestedInput = {
   deleteMany?: Prisma.EventScalarWhereInput | Prisma.EventScalarWhereInput[]
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
+export type EventCreateaudienceTagsInput = {
+  set: string[]
+}
+
+export type EventCreateconflictFlagsInput = {
+  set: string[]
+}
+
+export type EventCreateflagsInput = {
+  set: string[]
+}
+
+export type EventUpdateaudienceTagsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type NullableIntFieldUpdateOperationsInput = {
+  set?: number | null
   increment?: number
   decrement?: number
   multiply?: number
   divide?: number
 }
 
-export type EnumAudienceTypeFieldUpdateOperationsInput = {
-  set?: $Enums.AudienceType
+export type NullableDecimalFieldUpdateOperationsInput = {
+  set?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  increment?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  decrement?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  multiply?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
+}
+
+export type EventUpdateconflictFlagsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type EventUpdateflagsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
 }
 
 export type EnumEventStatusFieldUpdateOperationsInput = {
   set?: $Enums.EventStatus
+}
+
+export type EventCreateNestedOneWithoutConflictsAsEventInput = {
+  create?: Prisma.XOR<Prisma.EventCreateWithoutConflictsAsEventInput, Prisma.EventUncheckedCreateWithoutConflictsAsEventInput>
+  connectOrCreate?: Prisma.EventCreateOrConnectWithoutConflictsAsEventInput
+  connect?: Prisma.EventWhereUniqueInput
+}
+
+export type EventCreateNestedOneWithoutConflictsAsTargetInput = {
+  create?: Prisma.XOR<Prisma.EventCreateWithoutConflictsAsTargetInput, Prisma.EventUncheckedCreateWithoutConflictsAsTargetInput>
+  connectOrCreate?: Prisma.EventCreateOrConnectWithoutConflictsAsTargetInput
+  connect?: Prisma.EventWhereUniqueInput
+}
+
+export type EventUpdateOneRequiredWithoutConflictsAsEventNestedInput = {
+  create?: Prisma.XOR<Prisma.EventCreateWithoutConflictsAsEventInput, Prisma.EventUncheckedCreateWithoutConflictsAsEventInput>
+  connectOrCreate?: Prisma.EventCreateOrConnectWithoutConflictsAsEventInput
+  upsert?: Prisma.EventUpsertWithoutConflictsAsEventInput
+  connect?: Prisma.EventWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EventUpdateToOneWithWhereWithoutConflictsAsEventInput, Prisma.EventUpdateWithoutConflictsAsEventInput>, Prisma.EventUncheckedUpdateWithoutConflictsAsEventInput>
+}
+
+export type EventUpdateOneRequiredWithoutConflictsAsTargetNestedInput = {
+  create?: Prisma.XOR<Prisma.EventCreateWithoutConflictsAsTargetInput, Prisma.EventUncheckedCreateWithoutConflictsAsTargetInput>
+  connectOrCreate?: Prisma.EventCreateOrConnectWithoutConflictsAsTargetInput
+  upsert?: Prisma.EventUpsertWithoutConflictsAsTargetInput
+  connect?: Prisma.EventWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EventUpdateToOneWithWhereWithoutConflictsAsTargetInput, Prisma.EventUpdateWithoutConflictsAsTargetInput>, Prisma.EventUncheckedUpdateWithoutConflictsAsTargetInput>
 }
 
 export type EventCreateNestedOneWithoutExpensesInput = {
@@ -601,6 +965,117 @@ export type EventUpdateOneWithoutExpensesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EventUpdateToOneWithWhereWithoutExpensesInput, Prisma.EventUpdateWithoutExpensesInput>, Prisma.EventUncheckedUpdateWithoutExpensesInput>
 }
 
+export type EventCreateWithoutSubmittedByInput = {
+  id?: string
+  title: string
+  description?: string | null
+  startTime: Date | string
+  endTime: Date | string
+  venue: string
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
+  status?: $Enums.EventStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  club: Prisma.ClubCreateNestedOneWithoutEventsInput
+  expenses?: Prisma.ExpenseCreateNestedManyWithoutEventInput
+  conflictsAsEvent?: Prisma.EventConflictCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictCreateNestedManyWithoutConflictingEventInput
+}
+
+export type EventUncheckedCreateWithoutSubmittedByInput = {
+  id?: string
+  title: string
+  description?: string | null
+  clubId: string
+  startTime: Date | string
+  endTime: Date | string
+  venue: string
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
+  status?: $Enums.EventStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  expenses?: Prisma.ExpenseUncheckedCreateNestedManyWithoutEventInput
+  conflictsAsEvent?: Prisma.EventConflictUncheckedCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedCreateNestedManyWithoutConflictingEventInput
+}
+
+export type EventCreateOrConnectWithoutSubmittedByInput = {
+  where: Prisma.EventWhereUniqueInput
+  create: Prisma.XOR<Prisma.EventCreateWithoutSubmittedByInput, Prisma.EventUncheckedCreateWithoutSubmittedByInput>
+}
+
+export type EventCreateManySubmittedByInputEnvelope = {
+  data: Prisma.EventCreateManySubmittedByInput | Prisma.EventCreateManySubmittedByInput[]
+  skipDuplicates?: boolean
+}
+
+export type EventUpsertWithWhereUniqueWithoutSubmittedByInput = {
+  where: Prisma.EventWhereUniqueInput
+  update: Prisma.XOR<Prisma.EventUpdateWithoutSubmittedByInput, Prisma.EventUncheckedUpdateWithoutSubmittedByInput>
+  create: Prisma.XOR<Prisma.EventCreateWithoutSubmittedByInput, Prisma.EventUncheckedCreateWithoutSubmittedByInput>
+}
+
+export type EventUpdateWithWhereUniqueWithoutSubmittedByInput = {
+  where: Prisma.EventWhereUniqueInput
+  data: Prisma.XOR<Prisma.EventUpdateWithoutSubmittedByInput, Prisma.EventUncheckedUpdateWithoutSubmittedByInput>
+}
+
+export type EventUpdateManyWithWhereWithoutSubmittedByInput = {
+  where: Prisma.EventScalarWhereInput
+  data: Prisma.XOR<Prisma.EventUpdateManyMutationInput, Prisma.EventUncheckedUpdateManyWithoutSubmittedByInput>
+}
+
+export type EventScalarWhereInput = {
+  AND?: Prisma.EventScalarWhereInput | Prisma.EventScalarWhereInput[]
+  OR?: Prisma.EventScalarWhereInput[]
+  NOT?: Prisma.EventScalarWhereInput | Prisma.EventScalarWhereInput[]
+  id?: Prisma.StringFilter<"Event"> | string
+  title?: Prisma.StringFilter<"Event"> | string
+  description?: Prisma.StringNullableFilter<"Event"> | string | null
+  clubId?: Prisma.StringFilter<"Event"> | string
+  startTime?: Prisma.DateTimeFilter<"Event"> | Date | string
+  endTime?: Prisma.DateTimeFilter<"Event"> | Date | string
+  venue?: Prisma.StringFilter<"Event"> | string
+  audienceTags?: Prisma.StringNullableListFilter<"Event">
+  expectedAttendance?: Prisma.IntNullableFilter<"Event"> | number | null
+  category?: Prisma.StringNullableFilter<"Event"> | string | null
+  eventType?: Prisma.StringNullableFilter<"Event"> | string | null
+  estimatedCost?: Prisma.DecimalNullableFilter<"Event"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.StringNullableFilter<"Event"> | string | null
+  conflictFlags?: Prisma.StringNullableListFilter<"Event">
+  flags?: Prisma.StringNullableListFilter<"Event">
+  reviewDecision?: Prisma.StringNullableFilter<"Event"> | string | null
+  reviewComment?: Prisma.StringNullableFilter<"Event"> | string | null
+  reviewedByName?: Prisma.StringNullableFilter<"Event"> | string | null
+  reviewedAt?: Prisma.DateTimeNullableFilter<"Event"> | Date | string | null
+  status?: Prisma.EnumEventStatusFilter<"Event"> | $Enums.EventStatus
+  submittedById?: Prisma.StringFilter<"Event"> | string
+  createdAt?: Prisma.DateTimeFilter<"Event"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"Event"> | Date | string
+}
+
 export type EventCreateWithoutClubInput = {
   id?: string
   title: string
@@ -608,12 +1083,25 @@ export type EventCreateWithoutClubInput = {
   startTime: Date | string
   endTime: Date | string
   venue: string
-  expectedAudience?: number
-  audienceType: $Enums.AudienceType
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  submittedBy: Prisma.UserCreateNestedOneWithoutSubmittedEventsInput
   expenses?: Prisma.ExpenseCreateNestedManyWithoutEventInput
+  conflictsAsEvent?: Prisma.EventConflictCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictCreateNestedManyWithoutConflictingEventInput
 }
 
 export type EventUncheckedCreateWithoutClubInput = {
@@ -623,12 +1111,25 @@ export type EventUncheckedCreateWithoutClubInput = {
   startTime: Date | string
   endTime: Date | string
   venue: string
-  expectedAudience?: number
-  audienceType: $Enums.AudienceType
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
   status?: $Enums.EventStatus
+  submittedById: string
   createdAt?: Date | string
   updatedAt?: Date | string
   expenses?: Prisma.ExpenseUncheckedCreateNestedManyWithoutEventInput
+  conflictsAsEvent?: Prisma.EventConflictUncheckedCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedCreateNestedManyWithoutConflictingEventInput
 }
 
 export type EventCreateOrConnectWithoutClubInput = {
@@ -657,22 +1158,260 @@ export type EventUpdateManyWithWhereWithoutClubInput = {
   data: Prisma.XOR<Prisma.EventUpdateManyMutationInput, Prisma.EventUncheckedUpdateManyWithoutClubInput>
 }
 
-export type EventScalarWhereInput = {
-  AND?: Prisma.EventScalarWhereInput | Prisma.EventScalarWhereInput[]
-  OR?: Prisma.EventScalarWhereInput[]
-  NOT?: Prisma.EventScalarWhereInput | Prisma.EventScalarWhereInput[]
-  id?: Prisma.StringFilter<"Event"> | string
-  title?: Prisma.StringFilter<"Event"> | string
-  description?: Prisma.StringNullableFilter<"Event"> | string | null
-  startTime?: Prisma.DateTimeFilter<"Event"> | Date | string
-  endTime?: Prisma.DateTimeFilter<"Event"> | Date | string
-  venue?: Prisma.StringFilter<"Event"> | string
-  expectedAudience?: Prisma.IntFilter<"Event"> | number
-  audienceType?: Prisma.EnumAudienceTypeFilter<"Event"> | $Enums.AudienceType
-  status?: Prisma.EnumEventStatusFilter<"Event"> | $Enums.EventStatus
-  clubId?: Prisma.StringFilter<"Event"> | string
-  createdAt?: Prisma.DateTimeFilter<"Event"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"Event"> | Date | string
+export type EventCreateWithoutConflictsAsEventInput = {
+  id?: string
+  title: string
+  description?: string | null
+  startTime: Date | string
+  endTime: Date | string
+  venue: string
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
+  status?: $Enums.EventStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  club: Prisma.ClubCreateNestedOneWithoutEventsInput
+  submittedBy: Prisma.UserCreateNestedOneWithoutSubmittedEventsInput
+  expenses?: Prisma.ExpenseCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictCreateNestedManyWithoutConflictingEventInput
+}
+
+export type EventUncheckedCreateWithoutConflictsAsEventInput = {
+  id?: string
+  title: string
+  description?: string | null
+  clubId: string
+  startTime: Date | string
+  endTime: Date | string
+  venue: string
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
+  status?: $Enums.EventStatus
+  submittedById: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  expenses?: Prisma.ExpenseUncheckedCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedCreateNestedManyWithoutConflictingEventInput
+}
+
+export type EventCreateOrConnectWithoutConflictsAsEventInput = {
+  where: Prisma.EventWhereUniqueInput
+  create: Prisma.XOR<Prisma.EventCreateWithoutConflictsAsEventInput, Prisma.EventUncheckedCreateWithoutConflictsAsEventInput>
+}
+
+export type EventCreateWithoutConflictsAsTargetInput = {
+  id?: string
+  title: string
+  description?: string | null
+  startTime: Date | string
+  endTime: Date | string
+  venue: string
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
+  status?: $Enums.EventStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  club: Prisma.ClubCreateNestedOneWithoutEventsInput
+  submittedBy: Prisma.UserCreateNestedOneWithoutSubmittedEventsInput
+  expenses?: Prisma.ExpenseCreateNestedManyWithoutEventInput
+  conflictsAsEvent?: Prisma.EventConflictCreateNestedManyWithoutEventInput
+}
+
+export type EventUncheckedCreateWithoutConflictsAsTargetInput = {
+  id?: string
+  title: string
+  description?: string | null
+  clubId: string
+  startTime: Date | string
+  endTime: Date | string
+  venue: string
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
+  status?: $Enums.EventStatus
+  submittedById: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  expenses?: Prisma.ExpenseUncheckedCreateNestedManyWithoutEventInput
+  conflictsAsEvent?: Prisma.EventConflictUncheckedCreateNestedManyWithoutEventInput
+}
+
+export type EventCreateOrConnectWithoutConflictsAsTargetInput = {
+  where: Prisma.EventWhereUniqueInput
+  create: Prisma.XOR<Prisma.EventCreateWithoutConflictsAsTargetInput, Prisma.EventUncheckedCreateWithoutConflictsAsTargetInput>
+}
+
+export type EventUpsertWithoutConflictsAsEventInput = {
+  update: Prisma.XOR<Prisma.EventUpdateWithoutConflictsAsEventInput, Prisma.EventUncheckedUpdateWithoutConflictsAsEventInput>
+  create: Prisma.XOR<Prisma.EventCreateWithoutConflictsAsEventInput, Prisma.EventUncheckedCreateWithoutConflictsAsEventInput>
+  where?: Prisma.EventWhereInput
+}
+
+export type EventUpdateToOneWithWhereWithoutConflictsAsEventInput = {
+  where?: Prisma.EventWhereInput
+  data: Prisma.XOR<Prisma.EventUpdateWithoutConflictsAsEventInput, Prisma.EventUncheckedUpdateWithoutConflictsAsEventInput>
+}
+
+export type EventUpdateWithoutConflictsAsEventInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  club?: Prisma.ClubUpdateOneRequiredWithoutEventsNestedInput
+  submittedBy?: Prisma.UserUpdateOneRequiredWithoutSubmittedEventsNestedInput
+  expenses?: Prisma.ExpenseUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUpdateManyWithoutConflictingEventNestedInput
+}
+
+export type EventUncheckedUpdateWithoutConflictsAsEventInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  clubId?: Prisma.StringFieldUpdateOperationsInput | string
+  startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
+  submittedById?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expenses?: Prisma.ExpenseUncheckedUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedUpdateManyWithoutConflictingEventNestedInput
+}
+
+export type EventUpsertWithoutConflictsAsTargetInput = {
+  update: Prisma.XOR<Prisma.EventUpdateWithoutConflictsAsTargetInput, Prisma.EventUncheckedUpdateWithoutConflictsAsTargetInput>
+  create: Prisma.XOR<Prisma.EventCreateWithoutConflictsAsTargetInput, Prisma.EventUncheckedCreateWithoutConflictsAsTargetInput>
+  where?: Prisma.EventWhereInput
+}
+
+export type EventUpdateToOneWithWhereWithoutConflictsAsTargetInput = {
+  where?: Prisma.EventWhereInput
+  data: Prisma.XOR<Prisma.EventUpdateWithoutConflictsAsTargetInput, Prisma.EventUncheckedUpdateWithoutConflictsAsTargetInput>
+}
+
+export type EventUpdateWithoutConflictsAsTargetInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  club?: Prisma.ClubUpdateOneRequiredWithoutEventsNestedInput
+  submittedBy?: Prisma.UserUpdateOneRequiredWithoutSubmittedEventsNestedInput
+  expenses?: Prisma.ExpenseUpdateManyWithoutEventNestedInput
+  conflictsAsEvent?: Prisma.EventConflictUpdateManyWithoutEventNestedInput
+}
+
+export type EventUncheckedUpdateWithoutConflictsAsTargetInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  clubId?: Prisma.StringFieldUpdateOperationsInput | string
+  startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
+  submittedById?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expenses?: Prisma.ExpenseUncheckedUpdateManyWithoutEventNestedInput
+  conflictsAsEvent?: Prisma.EventConflictUncheckedUpdateManyWithoutEventNestedInput
 }
 
 export type EventCreateWithoutExpensesInput = {
@@ -682,27 +1421,53 @@ export type EventCreateWithoutExpensesInput = {
   startTime: Date | string
   endTime: Date | string
   venue: string
-  expectedAudience?: number
-  audienceType: $Enums.AudienceType
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   club: Prisma.ClubCreateNestedOneWithoutEventsInput
+  submittedBy: Prisma.UserCreateNestedOneWithoutSubmittedEventsInput
+  conflictsAsEvent?: Prisma.EventConflictCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictCreateNestedManyWithoutConflictingEventInput
 }
 
 export type EventUncheckedCreateWithoutExpensesInput = {
   id?: string
   title: string
   description?: string | null
+  clubId: string
   startTime: Date | string
   endTime: Date | string
   venue: string
-  expectedAudience?: number
-  audienceType: $Enums.AudienceType
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
   status?: $Enums.EventStatus
-  clubId: string
+  submittedById: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  conflictsAsEvent?: Prisma.EventConflictUncheckedCreateNestedManyWithoutEventInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedCreateNestedManyWithoutConflictingEventInput
 }
 
 export type EventCreateOrConnectWithoutExpensesInput = {
@@ -728,25 +1493,157 @@ export type EventUpdateWithoutExpensesInput = {
   startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   venue?: Prisma.StringFieldUpdateOperationsInput | string
-  expectedAudience?: Prisma.IntFieldUpdateOperationsInput | number
-  audienceType?: Prisma.EnumAudienceTypeFieldUpdateOperationsInput | $Enums.AudienceType
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   club?: Prisma.ClubUpdateOneRequiredWithoutEventsNestedInput
+  submittedBy?: Prisma.UserUpdateOneRequiredWithoutSubmittedEventsNestedInput
+  conflictsAsEvent?: Prisma.EventConflictUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUpdateManyWithoutConflictingEventNestedInput
 }
 
 export type EventUncheckedUpdateWithoutExpensesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  clubId?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   venue?: Prisma.StringFieldUpdateOperationsInput | string
-  expectedAudience?: Prisma.IntFieldUpdateOperationsInput | number
-  audienceType?: Prisma.EnumAudienceTypeFieldUpdateOperationsInput | $Enums.AudienceType
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
+  submittedById?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  conflictsAsEvent?: Prisma.EventConflictUncheckedUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedUpdateManyWithoutConflictingEventNestedInput
+}
+
+export type EventCreateManySubmittedByInput = {
+  id?: string
+  title: string
+  description?: string | null
+  clubId: string
+  startTime: Date | string
+  endTime: Date | string
+  venue: string
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
+  status?: $Enums.EventStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type EventUpdateWithoutSubmittedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  club?: Prisma.ClubUpdateOneRequiredWithoutEventsNestedInput
+  expenses?: Prisma.ExpenseUpdateManyWithoutEventNestedInput
+  conflictsAsEvent?: Prisma.EventConflictUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUpdateManyWithoutConflictingEventNestedInput
+}
+
+export type EventUncheckedUpdateWithoutSubmittedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clubId?: Prisma.StringFieldUpdateOperationsInput | string
+  startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expenses?: Prisma.ExpenseUncheckedUpdateManyWithoutEventNestedInput
+  conflictsAsEvent?: Prisma.EventConflictUncheckedUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedUpdateManyWithoutConflictingEventNestedInput
+}
+
+export type EventUncheckedUpdateManyWithoutSubmittedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  clubId?: Prisma.StringFieldUpdateOperationsInput | string
+  startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -758,9 +1655,20 @@ export type EventCreateManyClubInput = {
   startTime: Date | string
   endTime: Date | string
   venue: string
-  expectedAudience?: number
-  audienceType: $Enums.AudienceType
+  audienceTags?: Prisma.EventCreateaudienceTagsInput | string[]
+  expectedAttendance?: number | null
+  category?: string | null
+  eventType?: string | null
+  estimatedCost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: string | null
+  conflictFlags?: Prisma.EventCreateconflictFlagsInput | string[]
+  flags?: Prisma.EventCreateflagsInput | string[]
+  reviewDecision?: string | null
+  reviewComment?: string | null
+  reviewedByName?: string | null
+  reviewedAt?: Date | string | null
   status?: $Enums.EventStatus
+  submittedById: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -772,12 +1680,25 @@ export type EventUpdateWithoutClubInput = {
   startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   venue?: Prisma.StringFieldUpdateOperationsInput | string
-  expectedAudience?: Prisma.IntFieldUpdateOperationsInput | number
-  audienceType?: Prisma.EnumAudienceTypeFieldUpdateOperationsInput | $Enums.AudienceType
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  submittedBy?: Prisma.UserUpdateOneRequiredWithoutSubmittedEventsNestedInput
   expenses?: Prisma.ExpenseUpdateManyWithoutEventNestedInput
+  conflictsAsEvent?: Prisma.EventConflictUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUpdateManyWithoutConflictingEventNestedInput
 }
 
 export type EventUncheckedUpdateWithoutClubInput = {
@@ -787,12 +1708,25 @@ export type EventUncheckedUpdateWithoutClubInput = {
   startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   venue?: Prisma.StringFieldUpdateOperationsInput | string
-  expectedAudience?: Prisma.IntFieldUpdateOperationsInput | number
-  audienceType?: Prisma.EnumAudienceTypeFieldUpdateOperationsInput | $Enums.AudienceType
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
+  submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expenses?: Prisma.ExpenseUncheckedUpdateManyWithoutEventNestedInput
+  conflictsAsEvent?: Prisma.EventConflictUncheckedUpdateManyWithoutEventNestedInput
+  conflictsAsTarget?: Prisma.EventConflictUncheckedUpdateManyWithoutConflictingEventNestedInput
 }
 
 export type EventUncheckedUpdateManyWithoutClubInput = {
@@ -802,9 +1736,20 @@ export type EventUncheckedUpdateManyWithoutClubInput = {
   startTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endTime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   venue?: Prisma.StringFieldUpdateOperationsInput | string
-  expectedAudience?: Prisma.IntFieldUpdateOperationsInput | number
-  audienceType?: Prisma.EnumAudienceTypeFieldUpdateOperationsInput | $Enums.AudienceType
+  audienceTags?: Prisma.EventUpdateaudienceTagsInput | string[]
+  expectedAttendance?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  eventType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedCost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  organizer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conflictFlags?: Prisma.EventUpdateconflictFlagsInput | string[]
+  flags?: Prisma.EventUpdateflagsInput | string[]
+  reviewDecision?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
+  submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -816,10 +1761,14 @@ export type EventUncheckedUpdateManyWithoutClubInput = {
 
 export type EventCountOutputType = {
   expenses: number
+  conflictsAsEvent: number
+  conflictsAsTarget: number
 }
 
 export type EventCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   expenses?: boolean | EventCountOutputTypeCountExpensesArgs
+  conflictsAsEvent?: boolean | EventCountOutputTypeCountConflictsAsEventArgs
+  conflictsAsTarget?: boolean | EventCountOutputTypeCountConflictsAsTargetArgs
 }
 
 /**
@@ -839,22 +1788,50 @@ export type EventCountOutputTypeCountExpensesArgs<ExtArgs extends runtime.Types.
   where?: Prisma.ExpenseWhereInput
 }
 
+/**
+ * EventCountOutputType without action
+ */
+export type EventCountOutputTypeCountConflictsAsEventArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EventConflictWhereInput
+}
+
+/**
+ * EventCountOutputType without action
+ */
+export type EventCountOutputTypeCountConflictsAsTargetArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EventConflictWhereInput
+}
+
 
 export type EventSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   title?: boolean
   description?: boolean
+  clubId?: boolean
   startTime?: boolean
   endTime?: boolean
   venue?: boolean
-  expectedAudience?: boolean
-  audienceType?: boolean
+  audienceTags?: boolean
+  expectedAttendance?: boolean
+  category?: boolean
+  eventType?: boolean
+  estimatedCost?: boolean
+  organizer?: boolean
+  conflictFlags?: boolean
+  flags?: boolean
+  reviewDecision?: boolean
+  reviewComment?: boolean
+  reviewedByName?: boolean
+  reviewedAt?: boolean
   status?: boolean
-  clubId?: boolean
+  submittedById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   club?: boolean | Prisma.ClubDefaultArgs<ExtArgs>
+  submittedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   expenses?: boolean | Prisma.Event$expensesArgs<ExtArgs>
+  conflictsAsEvent?: boolean | Prisma.Event$conflictsAsEventArgs<ExtArgs>
+  conflictsAsTarget?: boolean | Prisma.Event$conflictsAsTargetArgs<ExtArgs>
   _count?: boolean | Prisma.EventCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["event"]>
 
@@ -862,79 +1839,133 @@ export type EventSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   id?: boolean
   title?: boolean
   description?: boolean
+  clubId?: boolean
   startTime?: boolean
   endTime?: boolean
   venue?: boolean
-  expectedAudience?: boolean
-  audienceType?: boolean
+  audienceTags?: boolean
+  expectedAttendance?: boolean
+  category?: boolean
+  eventType?: boolean
+  estimatedCost?: boolean
+  organizer?: boolean
+  conflictFlags?: boolean
+  flags?: boolean
+  reviewDecision?: boolean
+  reviewComment?: boolean
+  reviewedByName?: boolean
+  reviewedAt?: boolean
   status?: boolean
-  clubId?: boolean
+  submittedById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   club?: boolean | Prisma.ClubDefaultArgs<ExtArgs>
+  submittedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["event"]>
 
 export type EventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   title?: boolean
   description?: boolean
+  clubId?: boolean
   startTime?: boolean
   endTime?: boolean
   venue?: boolean
-  expectedAudience?: boolean
-  audienceType?: boolean
+  audienceTags?: boolean
+  expectedAttendance?: boolean
+  category?: boolean
+  eventType?: boolean
+  estimatedCost?: boolean
+  organizer?: boolean
+  conflictFlags?: boolean
+  flags?: boolean
+  reviewDecision?: boolean
+  reviewComment?: boolean
+  reviewedByName?: boolean
+  reviewedAt?: boolean
   status?: boolean
-  clubId?: boolean
+  submittedById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   club?: boolean | Prisma.ClubDefaultArgs<ExtArgs>
+  submittedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["event"]>
 
 export type EventSelectScalar = {
   id?: boolean
   title?: boolean
   description?: boolean
+  clubId?: boolean
   startTime?: boolean
   endTime?: boolean
   venue?: boolean
-  expectedAudience?: boolean
-  audienceType?: boolean
+  audienceTags?: boolean
+  expectedAttendance?: boolean
+  category?: boolean
+  eventType?: boolean
+  estimatedCost?: boolean
+  organizer?: boolean
+  conflictFlags?: boolean
+  flags?: boolean
+  reviewDecision?: boolean
+  reviewComment?: boolean
+  reviewedByName?: boolean
+  reviewedAt?: boolean
   status?: boolean
-  clubId?: boolean
+  submittedById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type EventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "description" | "startTime" | "endTime" | "venue" | "expectedAudience" | "audienceType" | "status" | "clubId" | "createdAt" | "updatedAt", ExtArgs["result"]["event"]>
+export type EventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "description" | "clubId" | "startTime" | "endTime" | "venue" | "audienceTags" | "expectedAttendance" | "category" | "eventType" | "estimatedCost" | "organizer" | "conflictFlags" | "flags" | "reviewDecision" | "reviewComment" | "reviewedByName" | "reviewedAt" | "status" | "submittedById" | "createdAt" | "updatedAt", ExtArgs["result"]["event"]>
 export type EventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   club?: boolean | Prisma.ClubDefaultArgs<ExtArgs>
+  submittedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   expenses?: boolean | Prisma.Event$expensesArgs<ExtArgs>
+  conflictsAsEvent?: boolean | Prisma.Event$conflictsAsEventArgs<ExtArgs>
+  conflictsAsTarget?: boolean | Prisma.Event$conflictsAsTargetArgs<ExtArgs>
   _count?: boolean | Prisma.EventCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type EventIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   club?: boolean | Prisma.ClubDefaultArgs<ExtArgs>
+  submittedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 export type EventIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   club?: boolean | Prisma.ClubDefaultArgs<ExtArgs>
+  submittedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 
 export type $EventPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Event"
   objects: {
     club: Prisma.$ClubPayload<ExtArgs>
+    submittedBy: Prisma.$UserPayload<ExtArgs>
     expenses: Prisma.$ExpensePayload<ExtArgs>[]
+    conflictsAsEvent: Prisma.$EventConflictPayload<ExtArgs>[]
+    conflictsAsTarget: Prisma.$EventConflictPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     title: string
     description: string | null
+    clubId: string
     startTime: Date
     endTime: Date
     venue: string
-    expectedAudience: number
-    audienceType: $Enums.AudienceType
+    audienceTags: string[]
+    expectedAttendance: number | null
+    category: string | null
+    eventType: string | null
+    estimatedCost: runtime.Decimal | null
+    organizer: string | null
+    conflictFlags: string[]
+    flags: string[]
+    reviewDecision: string | null
+    reviewComment: string | null
+    reviewedByName: string | null
+    reviewedAt: Date | null
     status: $Enums.EventStatus
-    clubId: string
+    submittedById: string
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["event"]>
@@ -1332,7 +2363,10 @@ readonly fields: EventFieldRefs;
 export interface Prisma__EventClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   club<T extends Prisma.ClubDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClubDefaultArgs<ExtArgs>>): Prisma.Prisma__ClubClient<runtime.Types.Result.GetResult<Prisma.$ClubPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  submittedBy<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   expenses<T extends Prisma.Event$expensesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Event$expensesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ExpensePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  conflictsAsEvent<T extends Prisma.Event$conflictsAsEventArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Event$conflictsAsEventArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EventConflictPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  conflictsAsTarget<T extends Prisma.Event$conflictsAsTargetArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Event$conflictsAsTargetArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EventConflictPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1365,13 +2399,24 @@ export interface EventFieldRefs {
   readonly id: Prisma.FieldRef<"Event", 'String'>
   readonly title: Prisma.FieldRef<"Event", 'String'>
   readonly description: Prisma.FieldRef<"Event", 'String'>
+  readonly clubId: Prisma.FieldRef<"Event", 'String'>
   readonly startTime: Prisma.FieldRef<"Event", 'DateTime'>
   readonly endTime: Prisma.FieldRef<"Event", 'DateTime'>
   readonly venue: Prisma.FieldRef<"Event", 'String'>
-  readonly expectedAudience: Prisma.FieldRef<"Event", 'Int'>
-  readonly audienceType: Prisma.FieldRef<"Event", 'AudienceType'>
+  readonly audienceTags: Prisma.FieldRef<"Event", 'String[]'>
+  readonly expectedAttendance: Prisma.FieldRef<"Event", 'Int'>
+  readonly category: Prisma.FieldRef<"Event", 'String'>
+  readonly eventType: Prisma.FieldRef<"Event", 'String'>
+  readonly estimatedCost: Prisma.FieldRef<"Event", 'Decimal'>
+  readonly organizer: Prisma.FieldRef<"Event", 'String'>
+  readonly conflictFlags: Prisma.FieldRef<"Event", 'String[]'>
+  readonly flags: Prisma.FieldRef<"Event", 'String[]'>
+  readonly reviewDecision: Prisma.FieldRef<"Event", 'String'>
+  readonly reviewComment: Prisma.FieldRef<"Event", 'String'>
+  readonly reviewedByName: Prisma.FieldRef<"Event", 'String'>
+  readonly reviewedAt: Prisma.FieldRef<"Event", 'DateTime'>
   readonly status: Prisma.FieldRef<"Event", 'EventStatus'>
-  readonly clubId: Prisma.FieldRef<"Event", 'String'>
+  readonly submittedById: Prisma.FieldRef<"Event", 'String'>
   readonly createdAt: Prisma.FieldRef<"Event", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Event", 'DateTime'>
 }
@@ -1796,6 +2841,54 @@ export type Event$expensesArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.ExpenseScalarFieldEnum | Prisma.ExpenseScalarFieldEnum[]
+}
+
+/**
+ * Event.conflictsAsEvent
+ */
+export type Event$conflictsAsEventArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EventConflict
+   */
+  select?: Prisma.EventConflictSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EventConflict
+   */
+  omit?: Prisma.EventConflictOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EventConflictInclude<ExtArgs> | null
+  where?: Prisma.EventConflictWhereInput
+  orderBy?: Prisma.EventConflictOrderByWithRelationInput | Prisma.EventConflictOrderByWithRelationInput[]
+  cursor?: Prisma.EventConflictWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EventConflictScalarFieldEnum | Prisma.EventConflictScalarFieldEnum[]
+}
+
+/**
+ * Event.conflictsAsTarget
+ */
+export type Event$conflictsAsTargetArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EventConflict
+   */
+  select?: Prisma.EventConflictSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EventConflict
+   */
+  omit?: Prisma.EventConflictOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EventConflictInclude<ExtArgs> | null
+  where?: Prisma.EventConflictWhereInput
+  orderBy?: Prisma.EventConflictOrderByWithRelationInput | Prisma.EventConflictOrderByWithRelationInput[]
+  cursor?: Prisma.EventConflictWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EventConflictScalarFieldEnum | Prisma.EventConflictScalarFieldEnum[]
 }
 
 /**
