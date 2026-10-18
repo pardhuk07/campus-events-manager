@@ -156,6 +156,47 @@ export async function POST(request: NextRequest) {
 
     const refreshedEvent = (await dbService.getEventById(createdEvent.id)) || createdEvent;
 
+    // 3. Generate ACM Core Notifications
+    try {
+      const clubName = refreshedEvent.club?.name || 'Club';
+
+      // (3) Any new proposal is submitted, as a lower-priority item
+      await dbService.createNotification({
+        message: `New proposal submitted: ${refreshedEvent.title} by ${clubName}`,
+        eventId: refreshedEvent.id,
+        priority: 'LOW',
+        type: 'NEW_PROPOSAL',
+      });
+
+      // (1) A new proposal is submitted with at least one conflict flag
+      if (conflictResult.hasConflict && conflictResult.conflicts?.length > 0) {
+        for (const c of conflictResult.conflicts) {
+          const reasonLabel = c.conflictType === 'venue conflict' ? 'same venue' : 'same audience';
+          await dbService.createNotification({
+            message: `New conflict: ${refreshedEvent.title} overlaps ${c.conflictingEventTitle} (${reasonLabel})`,
+            eventId: refreshedEvent.id,
+            priority: 'HIGH',
+            type: 'CONFLICT_PROPOSAL',
+          });
+
+          // (2) A pending event gets a new conflict because another event was added
+          if (c.conflictingEventId) {
+            const conflictingEvent = await dbService.getEventById(c.conflictingEventId);
+            if (conflictingEvent && conflictingEvent.status === 'PENDING') {
+              await dbService.createNotification({
+                message: `New conflict: ${c.conflictingEventTitle} overlaps ${refreshedEvent.title} (${reasonLabel})`,
+                eventId: conflictingEvent.id,
+                priority: 'HIGH',
+                type: 'NEW_CONFLICT',
+              });
+            }
+          }
+        }
+      }
+    } catch (notifErr) {
+      console.error('Non-blocking notification error:', notifErr);
+    }
+
     // Rule: A conflict is a WARNING, NEVER an automatic rejection. Event stays PENDING, flags stored on event.
     return apiSuccess(
       {

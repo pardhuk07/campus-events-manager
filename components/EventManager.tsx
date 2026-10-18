@@ -21,9 +21,13 @@ import { UserRole } from '@/lib/constants';
 export default function EventManager({
   currentRole,
   currentUser,
+  initialViewMode,
+  highlightEventId,
 }: {
   currentRole: string;
   currentUser?: any;
+  initialViewMode?: 'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews';
+  highlightEventId?: string;
 }) {
   const [events, setEvents] = useState<any[]>([]);
   const [clubs, setClubs] = useState<any[]>([]);
@@ -32,9 +36,18 @@ export default function EventManager({
   const [loading, setLoading] = useState(true);
 
   // View state: 'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews'
-  const [viewMode, setViewMode] = useState<'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews'>('calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews'>(
+    initialViewMode || 'calendar'
+  );
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Sync initialViewMode if changed externally (e.g. from notification bell)
+  useEffect(() => {
+    if (initialViewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode, highlightEventId]);
 
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -456,6 +469,7 @@ export default function EventManager({
         <PendingReviewPanel
           currentRole={currentRole}
           currentUser={currentUser}
+          highlightEventId={highlightEventId}
           onReviewCompleted={() => {
             fetchEvents();
             fetchConflicts();

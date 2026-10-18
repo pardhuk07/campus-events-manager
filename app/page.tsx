@@ -11,6 +11,14 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'events' | 'expenses' | 'history'>('events');
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [showGatekeeper, setShowGatekeeper] = useState(false);
+  const [eventViewMode, setEventViewMode] = useState<'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews'>('calendar');
+  const [targetEventId, setTargetEventId] = useState<string | undefined>();
+
+  const handleOpenPendingReview = (eventId?: string) => {
+    setActiveTab('events');
+    setEventViewMode('reviews');
+    setTargetEventId(eventId);
+  };
 
   // Check saved session on mount
   useEffect(() => {
@@ -68,12 +76,18 @@ export default function Home() {
         currentUser={currentUser}
         onLogin={handleLoginSuccess}
         onLogout={handleLogout}
+        onOpenPendingReview={handleOpenPendingReview}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Keep-Alive Tab Rendering for Instantaneous (<5ms) Tab Switching */}
         <div className={activeTab === 'events' ? 'block' : 'hidden'}>
-          <EventManager currentRole={effectiveRole} currentUser={currentUser} />
+          <EventManager
+            currentRole={effectiveRole}
+            currentUser={currentUser}
+            initialViewMode={eventViewMode}
+            highlightEventId={targetEventId}
+          />
         </div>
 
         <div className={activeTab === 'expenses' ? 'block' : 'hidden'}>

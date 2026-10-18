@@ -607,4 +607,59 @@ export const dbService = {
     );
     return this.getBudgetById(id);
   },
+
+  // --- NOTIFICATIONS (ACM CORE ONLY) ---
+  async createNotification(data: {
+    message: string;
+    eventId?: string | null;
+    priority?: string;
+    type?: string;
+  }) {
+    await checkInit();
+    const id = randomUUID();
+    const rows = await query(
+      `
+      INSERT INTO "Notification" ("id", "message", "eventId", "priority", "type", "isRead", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, false, NOW(), NOW())
+      RETURNING *
+    `,
+      [
+        id,
+        data.message,
+        data.eventId || null,
+        data.priority || 'NORMAL',
+        data.type || 'SYSTEM',
+      ]
+    );
+    return rows[0];
+  },
+
+  async getNotifications(limit = 50) {
+    await checkInit();
+    const notifications = await query(
+      `SELECT * FROM "Notification" ORDER BY "createdAt" DESC LIMIT $1`,
+      [limit]
+    );
+    const unreadCountRows = await query(
+      `SELECT COUNT(*)::INT as count FROM "Notification" WHERE "isRead" = false`
+    );
+    const unreadCount = unreadCountRows[0]?.count || 0;
+    return { notifications, unreadCount };
+  },
+
+  async markNotificationAsRead(id: string) {
+    await checkInit();
+    const rows = await query(
+      `UPDATE "Notification" SET "isRead" = true, "updatedAt" = NOW() WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    return rows[0] || null;
+  },
+
+  async markAllNotificationsAsRead() {
+    await checkInit();
+    await query(`UPDATE "Notification" SET "isRead" = true, "updatedAt" = NOW() WHERE "isRead" = false`);
+    return { success: true };
+  },
 };
+

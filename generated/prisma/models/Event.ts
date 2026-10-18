@@ -53,6 +53,7 @@ export type EventMinAggregateOutputType = {
   reviewComment: string | null
   reviewedByName: string | null
   reviewedAt: Date | null
+  lessonsLearned: string | null
   status: $Enums.EventStatus | null
   submittedById: string | null
   createdAt: Date | null
@@ -76,6 +77,7 @@ export type EventMaxAggregateOutputType = {
   reviewComment: string | null
   reviewedByName: string | null
   reviewedAt: Date | null
+  lessonsLearned: string | null
   status: $Enums.EventStatus | null
   submittedById: string | null
   createdAt: Date | null
@@ -102,6 +104,7 @@ export type EventCountAggregateOutputType = {
   reviewComment: number
   reviewedByName: number
   reviewedAt: number
+  lessonsLearned: number
   status: number
   submittedById: number
   createdAt: number
@@ -137,6 +140,7 @@ export type EventMinAggregateInputType = {
   reviewComment?: true
   reviewedByName?: true
   reviewedAt?: true
+  lessonsLearned?: true
   status?: true
   submittedById?: true
   createdAt?: true
@@ -160,6 +164,7 @@ export type EventMaxAggregateInputType = {
   reviewComment?: true
   reviewedByName?: true
   reviewedAt?: true
+  lessonsLearned?: true
   status?: true
   submittedById?: true
   createdAt?: true
@@ -186,6 +191,7 @@ export type EventCountAggregateInputType = {
   reviewComment?: true
   reviewedByName?: true
   reviewedAt?: true
+  lessonsLearned?: true
   status?: true
   submittedById?: true
   createdAt?: true
@@ -299,6 +305,7 @@ export type EventGroupByOutputType = {
   reviewComment: string | null
   reviewedByName: string | null
   reviewedAt: Date | null
+  lessonsLearned: string | null
   status: $Enums.EventStatus
   submittedById: string
   createdAt: Date
@@ -348,6 +355,7 @@ export type EventWhereInput = {
   reviewComment?: Prisma.StringNullableFilter<"Event"> | string | null
   reviewedByName?: Prisma.StringNullableFilter<"Event"> | string | null
   reviewedAt?: Prisma.DateTimeNullableFilter<"Event"> | Date | string | null
+  lessonsLearned?: Prisma.StringNullableFilter<"Event"> | string | null
   status?: Prisma.EnumEventStatusFilter<"Event"> | $Enums.EventStatus
   submittedById?: Prisma.StringFilter<"Event"> | string
   createdAt?: Prisma.DateTimeFilter<"Event"> | Date | string
@@ -379,6 +387,7 @@ export type EventOrderByWithRelationInput = {
   reviewComment?: Prisma.SortOrderInput | Prisma.SortOrder
   reviewedByName?: Prisma.SortOrderInput | Prisma.SortOrder
   reviewedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lessonsLearned?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -413,6 +422,7 @@ export type EventWhereUniqueInput = Prisma.AtLeast<{
   reviewComment?: Prisma.StringNullableFilter<"Event"> | string | null
   reviewedByName?: Prisma.StringNullableFilter<"Event"> | string | null
   reviewedAt?: Prisma.DateTimeNullableFilter<"Event"> | Date | string | null
+  lessonsLearned?: Prisma.StringNullableFilter<"Event"> | string | null
   status?: Prisma.EnumEventStatusFilter<"Event"> | $Enums.EventStatus
   submittedById?: Prisma.StringFilter<"Event"> | string
   createdAt?: Prisma.DateTimeFilter<"Event"> | Date | string
@@ -444,6 +454,7 @@ export type EventOrderByWithAggregationInput = {
   reviewComment?: Prisma.SortOrderInput | Prisma.SortOrder
   reviewedByName?: Prisma.SortOrderInput | Prisma.SortOrder
   reviewedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lessonsLearned?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -478,6 +489,7 @@ export type EventScalarWhereWithAggregatesInput = {
   reviewComment?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
   reviewedByName?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
   reviewedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Event"> | Date | string | null
+  lessonsLearned?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
   status?: Prisma.EnumEventStatusWithAggregatesFilter<"Event"> | $Enums.EventStatus
   submittedById?: Prisma.StringWithAggregatesFilter<"Event"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Event"> | Date | string
@@ -503,6 +515,7 @@ export type EventCreateInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -533,6 +546,7 @@ export type EventUncheckedCreateInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   submittedById: string
   createdAt?: Date | string
@@ -561,6 +575,7 @@ export type EventUpdateInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -591,6 +606,7 @@ export type EventUncheckedUpdateInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -620,6 +636,7 @@ export type EventCreateManyInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   submittedById: string
   createdAt?: Date | string
@@ -645,6 +662,7 @@ export type EventUpdateManyMutationInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -670,6 +688,7 @@ export type EventUncheckedUpdateManyInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -714,6 +733,7 @@ export type EventCountOrderByAggregateInput = {
   reviewComment?: Prisma.SortOrder
   reviewedByName?: Prisma.SortOrder
   reviewedAt?: Prisma.SortOrder
+  lessonsLearned?: Prisma.SortOrder
   status?: Prisma.SortOrder
   submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -742,6 +762,7 @@ export type EventMaxOrderByAggregateInput = {
   reviewComment?: Prisma.SortOrder
   reviewedByName?: Prisma.SortOrder
   reviewedAt?: Prisma.SortOrder
+  lessonsLearned?: Prisma.SortOrder
   status?: Prisma.SortOrder
   submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -765,6 +786,7 @@ export type EventMinOrderByAggregateInput = {
   reviewComment?: Prisma.SortOrder
   reviewedByName?: Prisma.SortOrder
   reviewedAt?: Prisma.SortOrder
+  lessonsLearned?: Prisma.SortOrder
   status?: Prisma.SortOrder
   submittedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -984,6 +1006,7 @@ export type EventCreateWithoutSubmittedByInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1013,6 +1036,7 @@ export type EventUncheckedCreateWithoutSubmittedByInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1070,6 +1094,7 @@ export type EventScalarWhereInput = {
   reviewComment?: Prisma.StringNullableFilter<"Event"> | string | null
   reviewedByName?: Prisma.StringNullableFilter<"Event"> | string | null
   reviewedAt?: Prisma.DateTimeNullableFilter<"Event"> | Date | string | null
+  lessonsLearned?: Prisma.StringNullableFilter<"Event"> | string | null
   status?: Prisma.EnumEventStatusFilter<"Event"> | $Enums.EventStatus
   submittedById?: Prisma.StringFilter<"Event"> | string
   createdAt?: Prisma.DateTimeFilter<"Event"> | Date | string
@@ -1095,6 +1120,7 @@ export type EventCreateWithoutClubInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1123,6 +1149,7 @@ export type EventUncheckedCreateWithoutClubInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   submittedById: string
   createdAt?: Date | string
@@ -1177,6 +1204,7 @@ export type EventCreateWithoutConflictsAsEventInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1206,6 +1234,7 @@ export type EventUncheckedCreateWithoutConflictsAsEventInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   submittedById: string
   createdAt?: Date | string
@@ -1238,6 +1267,7 @@ export type EventCreateWithoutConflictsAsTargetInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1267,6 +1297,7 @@ export type EventUncheckedCreateWithoutConflictsAsTargetInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   submittedById: string
   createdAt?: Date | string
@@ -1310,6 +1341,7 @@ export type EventUpdateWithoutConflictsAsEventInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1339,6 +1371,7 @@ export type EventUncheckedUpdateWithoutConflictsAsEventInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1377,6 +1410,7 @@ export type EventUpdateWithoutConflictsAsTargetInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1406,6 +1440,7 @@ export type EventUncheckedUpdateWithoutConflictsAsTargetInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1433,6 +1468,7 @@ export type EventCreateWithoutExpensesInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1462,6 +1498,7 @@ export type EventUncheckedCreateWithoutExpensesInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   submittedById: string
   createdAt?: Date | string
@@ -1505,6 +1542,7 @@ export type EventUpdateWithoutExpensesInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1534,6 +1572,7 @@ export type EventUncheckedUpdateWithoutExpensesInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1562,6 +1601,7 @@ export type EventCreateManySubmittedByInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1586,6 +1626,7 @@ export type EventUpdateWithoutSubmittedByInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1615,6 +1656,7 @@ export type EventUncheckedUpdateWithoutSubmittedByInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1643,6 +1685,7 @@ export type EventUncheckedUpdateManyWithoutSubmittedByInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1667,6 +1710,7 @@ export type EventCreateManyClubInput = {
   reviewComment?: string | null
   reviewedByName?: string | null
   reviewedAt?: Date | string | null
+  lessonsLearned?: string | null
   status?: $Enums.EventStatus
   submittedById: string
   createdAt?: Date | string
@@ -1692,6 +1736,7 @@ export type EventUpdateWithoutClubInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1720,6 +1765,7 @@ export type EventUncheckedUpdateWithoutClubInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1748,6 +1794,7 @@ export type EventUncheckedUpdateManyWithoutClubInput = {
   reviewComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedByName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lessonsLearned?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumEventStatusFieldUpdateOperationsInput | $Enums.EventStatus
   submittedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1823,6 +1870,7 @@ export type EventSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   reviewComment?: boolean
   reviewedByName?: boolean
   reviewedAt?: boolean
+  lessonsLearned?: boolean
   status?: boolean
   submittedById?: boolean
   createdAt?: boolean
@@ -1855,6 +1903,7 @@ export type EventSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   reviewComment?: boolean
   reviewedByName?: boolean
   reviewedAt?: boolean
+  lessonsLearned?: boolean
   status?: boolean
   submittedById?: boolean
   createdAt?: boolean
@@ -1883,6 +1932,7 @@ export type EventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   reviewComment?: boolean
   reviewedByName?: boolean
   reviewedAt?: boolean
+  lessonsLearned?: boolean
   status?: boolean
   submittedById?: boolean
   createdAt?: boolean
@@ -1911,13 +1961,14 @@ export type EventSelectScalar = {
   reviewComment?: boolean
   reviewedByName?: boolean
   reviewedAt?: boolean
+  lessonsLearned?: boolean
   status?: boolean
   submittedById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type EventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "description" | "clubId" | "startTime" | "endTime" | "venue" | "audienceTags" | "expectedAttendance" | "category" | "eventType" | "estimatedCost" | "organizer" | "conflictFlags" | "flags" | "reviewDecision" | "reviewComment" | "reviewedByName" | "reviewedAt" | "status" | "submittedById" | "createdAt" | "updatedAt", ExtArgs["result"]["event"]>
+export type EventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "description" | "clubId" | "startTime" | "endTime" | "venue" | "audienceTags" | "expectedAttendance" | "category" | "eventType" | "estimatedCost" | "organizer" | "conflictFlags" | "flags" | "reviewDecision" | "reviewComment" | "reviewedByName" | "reviewedAt" | "lessonsLearned" | "status" | "submittedById" | "createdAt" | "updatedAt", ExtArgs["result"]["event"]>
 export type EventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   club?: boolean | Prisma.ClubDefaultArgs<ExtArgs>
   submittedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -1964,6 +2015,7 @@ export type $EventPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     reviewComment: string | null
     reviewedByName: string | null
     reviewedAt: Date | null
+    lessonsLearned: string | null
     status: $Enums.EventStatus
     submittedById: string
     createdAt: Date
@@ -2415,6 +2467,7 @@ export interface EventFieldRefs {
   readonly reviewComment: Prisma.FieldRef<"Event", 'String'>
   readonly reviewedByName: Prisma.FieldRef<"Event", 'String'>
   readonly reviewedAt: Prisma.FieldRef<"Event", 'DateTime'>
+  readonly lessonsLearned: Prisma.FieldRef<"Event", 'String'>
   readonly status: Prisma.FieldRef<"Event", 'EventStatus'>
   readonly submittedById: Prisma.FieldRef<"Event", 'String'>
   readonly createdAt: Prisma.FieldRef<"Event", 'DateTime'>

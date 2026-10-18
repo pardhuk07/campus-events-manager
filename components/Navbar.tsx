@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { CalendarIcon, RupeeIcon, ShieldCheckIcon } from './Icons';
+import NotificationBell from './NotificationBell';
 import { UserRole } from '@/lib/constants';
 
 export interface AuthUser {
@@ -18,6 +19,7 @@ interface NavbarProps {
   currentUser: AuthUser | null;
   onLogin: (user: AuthUser) => void;
   onLogout: () => void;
+  onOpenPendingReview?: (eventId?: string) => void;
 }
 
 export default function Navbar({
@@ -26,6 +28,7 @@ export default function Navbar({
   currentUser,
   onLogin,
   onLogout,
+  onOpenPendingReview,
 }: NavbarProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [inputEmail, setInputEmail] = useState('');
@@ -141,6 +144,14 @@ export default function Navbar({
                 <span>History</span>
               </button>
             </nav>
+
+            {/* Notification Bell: Visible to ACM Core Only */}
+            {currentUser && (currentUser.role === UserRole.CORE_VERIFIER || (currentUser.role as any) === 'ACM_CORE') && (
+              <NotificationBell
+                currentRole={currentUser.role}
+                onOpenPendingReview={onOpenPendingReview}
+              />
+            )}
 
             {/* User Account / Role Verification State */}
             {currentUser ? (

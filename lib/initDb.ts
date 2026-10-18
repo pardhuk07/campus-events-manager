@@ -236,6 +236,20 @@ export async function ensureDatabaseTables() {
       CREATE INDEX IF NOT EXISTS "EventConflict_status_idx" ON "EventConflict"("status");
       CREATE INDEX IF NOT EXISTS "Expense_eventId_idx" ON "Expense"("eventId");
       CREATE INDEX IF NOT EXISTS "Expense_expenseDate_idx" ON "Expense"("expenseDate");
+
+      -- Notification Table for ACM Core Notifications
+      CREATE TABLE IF NOT EXISTS "Notification" (
+        "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        "message" TEXT NOT NULL,
+        "eventId" TEXT,
+        "priority" TEXT NOT NULL DEFAULT 'NORMAL',
+        "type" TEXT NOT NULL DEFAULT 'SYSTEM',
+        "isRead" BOOLEAN NOT NULL DEFAULT false,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "Notification_isRead_idx" ON "Notification"("isRead");
+      CREATE INDEX IF NOT EXISTS "Notification_createdAt_idx" ON "Notification"("createdAt");
     `);
 
     // Pre-seed Core clubs if not present
@@ -379,6 +393,23 @@ export async function ensureDatabaseTables() {
           'Overlaps with ACM ICPC Regional BootCamp, Sep 5, audience conflict',
           'RESOLVED', 'Core reviewed and approved despite overlap as target years did not clash.', '2026-09-02 14:00:00'
         WHERE NOT EXISTS (SELECT 1 FROM "EventConflict" WHERE "id" = 'conflict-demo-1');
+
+        -- Seed initial notifications for ACM Core demonstration
+        INSERT INTO "Notification" ("id", "message", "eventId", "priority", "type", "isRead", "createdAt")
+        SELECT
+          'notif-demo-1',
+          'New conflict: CheS Quiz overlaps IEEE Cloud Workshop (same audience)',
+          (SELECT "id" FROM "Event" WHERE "status" = 'PENDING' LIMIT 1),
+          'HIGH', 'CONFLICT_PROPOSAL', false, NOW() - INTERVAL '15 minutes'
+        WHERE NOT EXISTS (SELECT 1 FROM "Notification" WHERE "id" = 'notif-demo-1');
+
+        INSERT INTO "Notification" ("id", "message", "eventId", "priority", "type", "isRead", "createdAt")
+        SELECT
+          'notif-demo-2',
+          'New proposal submitted: AI Agent Hackathon by ACM Student Chapter',
+          (SELECT "id" FROM "Event" WHERE "status" = 'PENDING' LIMIT 1),
+          'LOW', 'NEW_PROPOSAL', false, NOW() - INTERVAL '2 hours'
+        WHERE NOT EXISTS (SELECT 1 FROM "Notification" WHERE "id" = 'notif-demo-2');
       `);
     } catch (eventsErr) {
       console.warn('Could not seed historical events, continuing:', eventsErr);

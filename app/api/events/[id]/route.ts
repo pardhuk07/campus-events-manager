@@ -100,6 +100,36 @@ export async function PATCH(
     }
 
     const refreshedEvent = (await dbService.getEventById(id)) || updatedEvent;
+
+    // Generate ACM Core Notifications for conflicts resulting from edit
+    try {
+      if (conflictResult.hasConflict && conflictResult.conflicts?.length > 0) {
+        for (const c of conflictResult.conflicts) {
+          const reasonLabel = c.conflictType === 'venue conflict' ? 'same venue' : 'same audience';
+          if (c.conflictingEventId) {
+            const conflictingEvent = await dbService.getEventById(c.conflictingEventId);
+            if (conflictingEvent && conflictingEvent.status === 'PENDING') {
+              await dbService.createNotification({
+                message: `New conflict: ${c.conflictingEventTitle} overlaps ${refreshedEvent.title} (${reasonLabel})`,
+                eventId: conflictingEvent.id,
+                priority: 'HIGH',
+                type: 'NEW_CONFLICT',
+              });
+            }
+          }
+          if (refreshedEvent.status === 'PENDING') {
+            await dbService.createNotification({
+              message: `New conflict: ${refreshedEvent.title} overlaps ${c.conflictingEventTitle} (${reasonLabel})`,
+              eventId: refreshedEvent.id,
+              priority: 'HIGH',
+              type: 'NEW_CONFLICT',
+            });
+          }
+        }
+      }
+    } catch (notifErr) {
+      console.error('Non-blocking notification error on edit:', notifErr);
+    }
     return apiSuccess({
       event: refreshedEvent,
       hasConflict: conflictResult.hasConflict,

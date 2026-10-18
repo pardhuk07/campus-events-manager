@@ -16,12 +16,14 @@ interface PendingReviewPanelProps {
   currentRole: string;
   currentUser?: any;
   onReviewCompleted?: () => void;
+  highlightEventId?: string;
 }
 
 export default function PendingReviewPanel({
   currentRole,
   currentUser,
   onReviewCompleted,
+  highlightEventId,
 }: PendingReviewPanelProps) {
   const [pendingEvents, setPendingEvents] = useState<any[]>([]);
   const [budgetInfo, setBudgetInfo] = useState<{ total: number; spent: number; remaining: number }>({
@@ -259,11 +261,17 @@ export default function PendingReviewPanel({
             : [];
 
           const isActionOpen = activeAction?.eventId === ev.id;
+          const isHighlighted = highlightEventId === ev.id;
 
           return (
             <div
               key={ev.id}
-              className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-slate-300 transition space-y-4 text-slate-900"
+              id={`event-card-${ev.id}`}
+              className={`border rounded-2xl p-5 shadow-sm transition space-y-4 text-slate-900 ${
+                isHighlighted
+                  ? 'bg-indigo-50/40 border-indigo-400 ring-2 ring-indigo-500 shadow-md'
+                  : 'bg-white border-slate-200 hover:border-slate-300'
+              }`}
             >
               {/* Event Header & Badges */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">

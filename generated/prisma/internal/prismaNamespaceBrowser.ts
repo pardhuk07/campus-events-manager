@@ -56,7 +56,8 @@ export const ModelName = {
   Event: 'Event',
   EventConflict: 'EventConflict',
   Expense: 'Expense',
-  Budget: 'Budget'
+  Budget: 'Budget',
+  Notification: 'Notification'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -120,6 +121,7 @@ export const EventScalarFieldEnum = {
   reviewComment: 'reviewComment',
   reviewedByName: 'reviewedByName',
   reviewedAt: 'reviewedAt',
+  lessonsLearned: 'lessonsLearned',
   status: 'status',
   submittedById: 'submittedById',
   createdAt: 'createdAt',
@@ -177,6 +179,20 @@ export const BudgetScalarFieldEnum = {
 } as const
 
 export type BudgetScalarFieldEnum = (typeof BudgetScalarFieldEnum)[keyof typeof BudgetScalarFieldEnum]
+
+
+export const NotificationScalarFieldEnum = {
+  id: 'id',
+  message: 'message',
+  eventId: 'eventId',
+  priority: 'priority',
+  type: 'type',
+  isRead: 'isRead',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type NotificationScalarFieldEnum = (typeof NotificationScalarFieldEnum)[keyof typeof NotificationScalarFieldEnum]
 
 
 export const SortOrder = {

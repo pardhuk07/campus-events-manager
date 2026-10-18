@@ -71,3 +71,8 @@ export type Expense = Prisma.ExpenseModel
  * 
  */
 export type Budget = Prisma.BudgetModel
+/**
+ * Model Notification
+ * 
+ */
+export type Notification = Prisma.NotificationModel
