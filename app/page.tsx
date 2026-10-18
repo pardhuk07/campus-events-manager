@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Navbar, { AuthUser } from '../components/Navbar';
 import EventManager from '../components/EventManager';
 import ExpenseManager from '../components/ExpenseManager';
+import HistoryView from '../components/HistoryView';
 import GatekeeperModal from '../components/GatekeeperModal';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'events' | 'expenses'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'expenses' | 'history'>('events');
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [showGatekeeper, setShowGatekeeper] = useState(false);
 
@@ -77,6 +78,10 @@ export default function Home() {
 
         <div className={activeTab === 'expenses' ? 'block' : 'hidden'}>
           <ExpenseManager currentRole={effectiveRole} currentUser={currentUser} />
+        </div>
+
+        <div className={activeTab === 'history' ? 'block' : 'hidden'}>
+          <HistoryView currentRole={effectiveRole} currentUser={currentUser} />
         </div>
       </main>
 

@@ -13,8 +13,8 @@ export interface AuthUser {
 }
 
 interface NavbarProps {
-  activeTab: 'events' | 'expenses';
-  setActiveTab: (tab: 'events' | 'expenses') => void;
+  activeTab: 'events' | 'expenses' | 'history';
+  setActiveTab: (tab: 'events' | 'expenses' | 'history') => void;
   currentUser: AuthUser | null;
   onLogin: (user: AuthUser) => void;
   onLogout: () => void;
@@ -127,6 +127,18 @@ export default function Navbar({
               >
                 <RupeeIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                 <span>Budget</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
+                  activeTab === 'history'
+                    ? 'tab-active-gradient'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                }`}
+              >
+                <span className="text-xs">📜</span>
+                <span>History</span>
               </button>
             </nav>
 

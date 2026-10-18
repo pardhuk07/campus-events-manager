@@ -101,6 +101,7 @@ model Event {
   reviewComment      String?
   reviewedByName     String?
   reviewedAt         DateTime?
+  lessonsLearned     String?
   status             EventStatus  @default(PENDING)
   submittedById      String
   submittedBy        User         @relation("EventSubmittedBy", fields: [submittedById], references: [id])

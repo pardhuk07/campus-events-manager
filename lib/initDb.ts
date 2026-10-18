@@ -146,6 +146,7 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "reviewComment" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "reviewedByName" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP(3);
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "lessonsLearned" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
       -- EventConflict Table
@@ -268,15 +269,119 @@ export async function ensureDatabaseTables() {
       console.warn('Could not seed demo users, continuing:', userErr);
     }
 
-    // Pre-seed current semester Budget
+    // Pre-seed current and previous semester Budgets
     try {
       await client.query(`
         INSERT INTO "Budget" ("id", "name", "amount", "periodType", "startDate", "endDate")
         SELECT 'budget-fall-2026', 'Fall 2026 Semester Budget', 50000.00, 'SEMESTER', '2026-08-01 00:00:00', '2026-12-31 23:59:59'
         WHERE NOT EXISTS (SELECT 1 FROM "Budget" WHERE "name" = 'Fall 2026 Semester Budget');
+
+        INSERT INTO "Budget" ("id", "name", "amount", "periodType", "startDate", "endDate")
+        SELECT 'budget-spring-2026', 'Spring 2026 Semester Budget', 45000.00, 'SEMESTER', '2026-01-01 00:00:00', '2026-05-31 23:59:59'
+        WHERE NOT EXISTS (SELECT 1 FROM "Budget" WHERE "name" = 'Spring 2026 Semester Budget');
       `);
     } catch (budgetErr) {
-      console.warn('Could not seed default budget, continuing:', budgetErr);
+      console.warn('Could not seed default budgets, continuing:', budgetErr);
+    }
+
+    // Pre-seed sample completed events with handover lessons learned
+    try {
+      await client.query(`
+        INSERT INTO "Event" (
+          "id", "title", "description", "clubId", "startTime", "endTime", "venue",
+          "audienceTags", "expectedAttendance", "category", "eventType", "estimatedCost",
+          "organizer", "status", "submittedById", "reviewDecision", "reviewComment",
+          "reviewedByName", "reviewedAt", "lessonsLearned"
+        )
+        SELECT
+          'ev-past-fall-1', 'ACM ICPC Regional BootCamp', 'Advanced competitive programming bootcamp with mock contest',
+          (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1),
+          '2026-09-05 09:00:00', '2026-09-05 17:00:00', 'Seminar Hall 1',
+          ARRAY['TECH_UG', 'CODING_CLUB']::TEXT[], 120, 'Technical', 'Workshop', 8500.00,
+          'Pardhu (Core Lead)', 'COMPLETED',
+          (SELECT "id" FROM "User" WHERE "email" = 'pardhu120907@gmail.com' LIMIT 1),
+          'APPROVE', 'Approved for regional preparations with venue reservation.', 'ACM Core Verifier', '2026-09-01 10:00:00',
+          'Good turnout (115 attendees). Recommend booking CS Lab 2 earlier next semester to prevent lab capacity limits during the afternoon mock contest.'
+        WHERE NOT EXISTS (SELECT 1 FROM "Event" WHERE "id" = 'ev-past-fall-1');
+
+        INSERT INTO "Event" (
+          "id", "title", "description", "clubId", "startTime", "endTime", "venue",
+          "audienceTags", "expectedAttendance", "category", "eventType", "estimatedCost",
+          "organizer", "status", "submittedById", "reviewDecision", "reviewComment",
+          "reviewedByName", "reviewedAt", "lessonsLearned"
+        )
+        SELECT
+          'ev-past-fall-2', 'IEEE Hardware IoT HackSprint', '24-hour hardware prototyping and sensor sprint',
+          (SELECT "id" FROM "Club" WHERE "name" ILIKE '%IEEE%' LIMIT 1),
+          '2026-09-20 10:00:00', '2026-09-21 10:00:00', 'Central Auditorium',
+          ARRAY['HARDWARE_UG', 'ECE_STUDENTS']::TEXT[], 90, 'Competition', 'Competition', 14500.00,
+          'IEEE Executive', 'COMPLETED',
+          (SELECT "id" FROM "User" WHERE "email" = 'ieeelead@gmail.com' LIMIT 1),
+          'APPROVE', 'Approved with equipment procurement note.', 'ACM Core Verifier', '2026-09-12 11:30:00',
+          'Components arrived late by 1 day. In future sprints, place orders with vendor at least 10 business days prior. Catering budget was well utilized.'
+        WHERE NOT EXISTS (SELECT 1 FROM "Event" WHERE "id" = 'ev-past-fall-2');
+
+        -- Seed expenses for past events if not present
+        INSERT INTO "Expense" ("id", "eventId", "amount", "category", "description", "expenseDate", "submittedById", "addedByName")
+        SELECT 'exp-past-1', 'ev-past-fall-1', 4200.00, 'FOOD', 'Lunch and refreshments for bootcamp attendees', '2026-09-05 13:00:00',
+          (SELECT "id" FROM "User" WHERE "email" = 'pardhu120907@gmail.com' LIMIT 1), 'Pardhu (Core Lead)'
+        WHERE NOT EXISTS (SELECT 1 FROM "Expense" WHERE "id" = 'exp-past-1');
+
+        INSERT INTO "Expense" ("id", "eventId", "amount", "category", "description", "expenseDate", "submittedById", "addedByName")
+        SELECT 'exp-past-2', 'ev-past-fall-1', 3500.00, 'PRINTING', 'Contest problem booklets and participant badges', '2026-09-04 16:00:00',
+          (SELECT "id" FROM "User" WHERE "email" = 'pardhu120907@gmail.com' LIMIT 1), 'Pardhu (Core Lead)'
+        WHERE NOT EXISTS (SELECT 1 FROM "Expense" WHERE "id" = 'exp-past-2');
+
+        INSERT INTO "Expense" ("id", "eventId", "amount", "category", "description", "expenseDate", "submittedById", "addedByName")
+        SELECT 'exp-past-3', 'ev-past-fall-2', 8000.00, 'EQUIPMENT', 'Arduino sensors, ESP32 boards and jumper kits', '2026-09-18 14:00:00',
+          (SELECT "id" FROM "User" WHERE "email" = 'ieeelead@gmail.com' LIMIT 1), 'IEEE Executive'
+        WHERE NOT EXISTS (SELECT 1 FROM "Expense" WHERE "id" = 'exp-past-3');
+
+        INSERT INTO "Expense" ("id", "eventId", "amount", "category", "description", "expenseDate", "submittedById", "addedByName")
+        SELECT 'exp-past-4', 'ev-past-fall-2', 5000.00, 'PRIZES', 'Trophies and hardware starter kits for 1st and 2nd place', '2026-09-21 11:00:00',
+          (SELECT "id" FROM "User" WHERE "email" = 'ieeelead@gmail.com' LIMIT 1), 'IEEE Executive'
+        WHERE NOT EXISTS (SELECT 1 FROM "Expense" WHERE "id" = 'exp-past-4');
+
+        -- Seed Spring 2026 completed event & expenses
+        INSERT INTO "Event" (
+          "id", "title", "description", "clubId", "startTime", "endTime", "venue",
+          "audienceTags", "expectedAttendance", "category", "eventType", "estimatedCost",
+          "organizer", "status", "submittedById", "reviewDecision", "reviewComment",
+          "reviewedByName", "reviewedAt", "lessonsLearned"
+        )
+        SELECT
+          'ev-past-spring-1', 'Spring Tech Symposium 2026', 'Annual spring conference with guest keynote speakers',
+          (SELECT "id" FROM "Club" WHERE "name" ILIKE '%ACM%' LIMIT 1),
+          '2026-03-15 10:00:00', '2026-03-15 16:00:00', 'Central Auditorium',
+          ARRAY['ALL_STUDENTS', 'FACULTY']::TEXT[], 250, 'Talk', 'Talk', 18000.00,
+          'Pardhu (Core Lead)', 'COMPLETED',
+          (SELECT "id" FROM "User" WHERE "email" = 'pardhu120907@gmail.com' LIMIT 1),
+          'APPROVE', 'Approved for flagship symposium.', 'ACM Core Verifier', '2026-03-01 10:00:00',
+          'Auditorium sound system required pre-testing 2 hours in advance. Great student interaction with industry speakers.'
+        WHERE NOT EXISTS (SELECT 1 FROM "Event" WHERE "id" = 'ev-past-spring-1');
+
+        INSERT INTO "Expense" ("id", "eventId", "amount", "category", "description", "expenseDate", "submittedById", "addedByName")
+        SELECT 'exp-past-spring-1', 'ev-past-spring-1', 9500.00, 'VENUE', 'Stage lighting, AV setup and auditorium maintenance fee', '2026-03-15 17:00:00',
+          (SELECT "id" FROM "User" WHERE "email" = 'pardhu120907@gmail.com' LIMIT 1), 'Pardhu (Core Lead)'
+        WHERE NOT EXISTS (SELECT 1 FROM "Expense" WHERE "id" = 'exp-past-spring-1');
+
+        INSERT INTO "Expense" ("id", "eventId", "amount", "category", "description", "expenseDate", "submittedById", "addedByName")
+        SELECT 'exp-past-spring-2', 'ev-past-spring-1', 6500.00, 'FOOD', 'Speaker lunch and student tea refreshments', '2026-03-15 13:00:00',
+          (SELECT "id" FROM "User" WHERE "email" = 'pardhu120907@gmail.com' LIMIT 1), 'Pardhu (Core Lead)'
+        WHERE NOT EXISTS (SELECT 1 FROM "Expense" WHERE "id" = 'exp-past-spring-2');
+
+        -- Seed a sample conflict resolution record for conflict log
+        INSERT INTO "EventConflict" (
+          "id", "eventId", "conflictingEventId", "reason", "status", "resolutionNote", "createdAt"
+        )
+        SELECT
+          'conflict-demo-1', 'ev-past-fall-2', 'ev-past-fall-1',
+          'Overlaps with ACM ICPC Regional BootCamp, Sep 5, audience conflict',
+          'RESOLVED', 'Core reviewed and approved despite overlap as target years did not clash.', '2026-09-02 14:00:00'
+        WHERE NOT EXISTS (SELECT 1 FROM "EventConflict" WHERE "id" = 'conflict-demo-1');
+      `);
+    } catch (eventsErr) {
+      console.warn('Could not seed historical events, continuing:', eventsErr);
     }
   } finally {
     client.release();

@@ -241,6 +241,7 @@ export const dbService = {
     organizer: string | null;
     status: string;
     conflictFlags: string[];
+    lessonsLearned: string | null;
   }>) {
     await checkInit();
     const fields: string[] = [];
@@ -268,6 +269,15 @@ export const dbService = {
       values
     );
     return this.getEventById(id);
+  },
+
+  async updateEventLessonsLearned(eventId: string, lessonsLearned: string) {
+    await checkInit();
+    await query(
+      `UPDATE "Event" SET "lessonsLearned" = $1, "updatedAt" = NOW() WHERE id = $2`,
+      [lessonsLearned, eventId]
+    );
+    return this.getEventById(eventId);
   },
 
   async setEventConflictFlags(eventId: string, flags: string[]) {
