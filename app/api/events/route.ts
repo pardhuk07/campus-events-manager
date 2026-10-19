@@ -122,9 +122,19 @@ export async function POST(request: NextRequest) {
       return apiError(ErrorCodes.VALIDATION_ERROR, 'Venue cannot exceed 100 characters.', 400);
     }
 
-    // Club ID assignment: Executives must submit for their own club
+    // Club ID assignment: Executives can strictly submit ONLY for their assigned club
     let targetClubId = clubId;
-    if (user.role === UserRole.CLUB_EXEC && user.clubId) {
+    if (user.role === UserRole.CLUB_EXEC) {
+      if (!user.clubId) {
+        return apiError(ErrorCodes.FORBIDDEN, 'Your executive account is not linked to any registered club.', 403);
+      }
+      if (clubId && clubId !== user.clubId) {
+        return apiError(
+          ErrorCodes.FORBIDDEN,
+          'Access Denied: You are only authorized to create and submit events for your own club.',
+          403
+        );
+      }
       targetClubId = user.clubId;
     }
     if (!targetClubId) {

@@ -55,7 +55,89 @@ export const BudgetPeriod = {
 } as const;
 export type BudgetPeriod = (typeof BudgetPeriod)[keyof typeof BudgetPeriod];
 
-// 6. Standard Error Codes
+// 6. Official Campus Clubs
+export interface CampusClub {
+  id: string;
+  name: string;
+  shortName: string;
+  description: string;
+  category: string;
+}
+
+export const CAMPUS_CLUBS: CampusClub[] = [
+  {
+    id: 'club-acm',
+    name: 'ACM',
+    shortName: 'ACM',
+    description: 'Association for Computing Machinery SVNIT Student Chapter',
+    category: 'Technical & Computing',
+  },
+  {
+    id: 'club-ches',
+    name: 'ChES (Chemical Engineering Society of SVNIT Surat)',
+    shortName: 'ChES',
+    description: 'Chemical Engineering Society of SVNIT Surat',
+    category: 'Departmental Society',
+  },
+  {
+    id: 'club-chrd',
+    name: 'CHRD (Dancing, Singing, Arts, Photography)',
+    shortName: 'CHRD',
+    description: 'Center for Human Resource Development (Dancing, Singing, Arts, Photography)',
+    category: 'Cultural & Arts',
+  },
+  {
+    id: 'club-ecell',
+    name: 'E-Cell',
+    shortName: 'E-Cell',
+    description: 'Entrepreneurship Cell SVNIT',
+    category: 'Entrepreneurship & Innovation',
+  },
+  {
+    id: 'club-phoenix',
+    name: 'Phoenix Racing & Phoenix Aero',
+    shortName: 'Phoenix',
+    description: 'Formula Student & Aeromodelling Team SVNIT',
+    category: 'Automotive & Aeronautics',
+  },
+  {
+    id: 'club-drishti',
+    name: 'Drishti',
+    shortName: 'Drishti',
+    description: 'Technical Hobby Club SVNIT (Robotics, IoT, Automation)',
+    category: 'Technical Hobby',
+  },
+  {
+    id: 'club-nexus',
+    name: 'NEXUS',
+    shortName: 'NEXUS',
+    description: 'Electronics & Communication Engineering Society',
+    category: 'Departmental Society',
+  },
+  {
+    id: 'club-gdgc',
+    name: 'GDGC',
+    shortName: 'GDGC',
+    description: 'Google Developer Groups on Campus SVNIT',
+    category: 'Technical & Developers',
+  },
+  {
+    id: 'club-cev',
+    name: 'CEV (Cutting Edge Visionaries)',
+    shortName: 'CEV',
+    description: 'Cutting Edge Visionaries SVNIT',
+    category: 'Technical & Interdisciplinary',
+  },
+  {
+    id: 'club-ces',
+    name: 'CES (Civil Engineering Society)',
+    shortName: 'CES',
+    description: 'Civil Engineering Society SVNIT',
+    category: 'Departmental Society',
+  },
+];
+
+// 7. Standard Error Codes
 export const ErrorCodes = {
   EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
   EVENT_ALREADY_EXISTS: 'EVENT_ALREADY_EXISTS',

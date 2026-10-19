@@ -102,5 +102,28 @@ describe('Auth & Session Security Audit Tests', () => {
       assert.ok('errorResponse' in auth);
       assert.strictEqual(auth.errorResponse.status, 403, 'Executive attempting review must receive 403 Forbidden');
     });
+
+    test('verifies all 10 official SVNIT campus clubs are registered', () => {
+      const { CAMPUS_CLUBS } = require('../lib/constants');
+      assert.strictEqual(CAMPUS_CLUBS.length, 10, 'Must have exactly 10 official clubs');
+      const expectedClubs = [
+        'ACM',
+        'ChES (Chemical Engineering Society of SVNIT Surat)',
+        'CHRD (Dancing, Singing, Arts, Photography)',
+        'E-Cell',
+        'Phoenix Racing & Phoenix Aero',
+        'Drishti',
+        'NEXUS',
+        'GDGC',
+        'CEV (Cutting Edge Visionaries)',
+        'CES (Civil Engineering Society)',
+      ];
+      for (const expected of expectedClubs) {
+        assert.ok(
+          CAMPUS_CLUBS.some((c: any) => c.name === expected),
+          `Club "${expected}" must be present in official clubs list`
+        );
+      }
+    });
   });
 });

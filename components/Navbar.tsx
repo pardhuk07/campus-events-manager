@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { CalendarIcon, RupeeIcon, ShieldCheckIcon } from './Icons';
 import NotificationBell from './NotificationBell';
-import { UserRole } from '@/lib/constants';
+import { UserRole, CAMPUS_CLUBS } from '@/lib/constants';
 
 export interface AuthUser {
   id: string;
@@ -177,7 +177,7 @@ export default function Navbar({
                   {currentUser.role === UserRole.CORE_VERIFIER
                     ? '👑 Core'
                     : currentUser.role === UserRole.CLUB_EXEC
-                    ? '🛡️ Exec'
+                    ? `🛡️ ${CAMPUS_CLUBS.find((c) => c.id === currentUser.clubId)?.shortName || 'Exec'}`
                     : '👤 Public'}
                 </span>
 

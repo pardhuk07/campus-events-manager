@@ -252,16 +252,23 @@ export async function ensureDatabaseTables() {
       CREATE INDEX IF NOT EXISTS "Notification_createdAt_idx" ON "Notification"("createdAt");
     `);
 
-    // Pre-seed Core clubs if not present
+    // Pre-seed all 10 Official SVNIT clubs if not present
     try {
       await client.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS "Club_name_key" ON "Club"("name");
         INSERT INTO "Club" ("id", "name", "description")
         VALUES
-          ('club-acm', 'ACM Student Chapter', 'Association for Computing Machinery student chapter NIT Surat'),
-          ('club-ieee', 'IEEE Student Branch', 'Institute of Electrical and Electronics Engineers student branch'),
-          ('club-csi', 'Computer Society of India (CSI)', 'CSI Student Branch NIT Surat')
-        ON CONFLICT ("name") DO NOTHING;
+          ('club-acm', 'ACM', 'Association for Computing Machinery SVNIT Student Chapter'),
+          ('club-ches', 'ChES (Chemical Engineering Society of SVNIT Surat)', 'Chemical Engineering Society of SVNIT Surat'),
+          ('club-chrd', 'CHRD (Dancing, Singing, Arts, Photography)', 'Center for Human Resource Development (Dancing, Singing, Arts, Photography)'),
+          ('club-ecell', 'E-Cell', 'Entrepreneurship Cell SVNIT'),
+          ('club-phoenix', 'Phoenix Racing & Phoenix Aero', 'Formula Student & Aeromodelling Team SVNIT'),
+          ('club-drishti', 'Drishti', 'Technical Hobby Club SVNIT (Robotics, IoT, Automation)'),
+          ('club-nexus', 'NEXUS', 'Electronics & Communication Engineering Society'),
+          ('club-gdgc', 'GDGC', 'Google Developer Groups on Campus SVNIT'),
+          ('club-cev', 'CEV (Cutting Edge Visionaries)', 'Cutting Edge Visionaries SVNIT'),
+          ('club-ces', 'CES (Civil Engineering Society)', 'Civil Engineering Society SVNIT')
+        ON CONFLICT ("name") DO UPDATE SET "description" = EXCLUDED."description";
       `);
     } catch (clubErr) {
       console.warn('Could not seed clubs, continuing:', clubErr);

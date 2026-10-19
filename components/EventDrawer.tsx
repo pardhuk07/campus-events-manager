@@ -12,7 +12,7 @@ interface EventDrawerProps {
   onClose: () => void;
   clubs: any[];
   currentRole: string;
-  currentUser?: { name?: string; email?: string } | null;
+  currentUser?: { name?: string; email?: string; clubId?: string | null; role?: string } | null;
   onEventCreated: () => void;
   initialDate?: string;
 }
@@ -59,13 +59,19 @@ export default function EventDrawer({
 
   useEffect(() => {
     if (clubs.length > 0 && !clubId) {
-      setClubId(clubs[0].id);
+      if (currentUser?.clubId) {
+        setClubId(currentUser.clubId);
+      } else {
+        setClubId(clubs[0].id);
+      }
+    } else if (currentUser?.clubId && currentRole === UserRole.CLUB_EXEC) {
+      setClubId(currentUser.clubId);
     }
     if (initialDate && !startTime) {
       setStartTime(`${initialDate}T10:00`);
       setEndTime(`${initialDate}T12:00`);
     }
-  }, [clubs, initialDate]);
+  }, [clubs, initialDate, currentUser, currentRole]);
 
   useEffect(() => {
     if (!venue || !startTime || !endTime) {
@@ -189,17 +195,38 @@ export default function EventDrawer({
           <form onSubmit={handleSubmit} className="mt-5 space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Organizing Club</label>
-              <select
-                value={clubId}
-                onChange={(e) => setClubId(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
-              >
-                {clubs.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              {currentRole === UserRole.CLUB_EXEC ? (
+                <div className="bg-indigo-50/80 border border-indigo-200 rounded-xl p-3 flex items-center justify-between shadow-2xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm font-black shrink-0">
+                      🏢
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-900 truncate">
+                        {clubs.find((c) => c.id === (currentUser?.clubId || clubId))?.name || 'Your Assigned Club'}
+                      </div>
+                      <div className="text-[10px] text-indigo-700 font-semibold truncate">
+                        Locked to your assigned society (Executives can only submit events for their club)
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-indigo-100 text-indigo-800 font-extrabold px-2.5 py-1 rounded-full border border-indigo-200 shrink-0 ml-2">
+                    🔒 Locked
+                  </span>
+                </div>
+              ) : (
+                <select
+                  value={clubId}
+                  onChange={(e) => setClubId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
+                >
+                  {clubs.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Organizer Field: Auto-fills from logged-in user's name and can't be edited */}

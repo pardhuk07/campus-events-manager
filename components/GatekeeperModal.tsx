@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ShieldCheckIcon } from './Icons';
 import { AuthUser } from './Navbar';
-import { UserRole } from '@/lib/constants';
+import { UserRole, CAMPUS_CLUBS, CampusClub } from '@/lib/constants';
 
 interface GatekeeperModalProps {
   isOpen: boolean;
@@ -16,8 +16,9 @@ export default function GatekeeperModal({
   onSelectPublic,
   onLoginSuccess,
 }: GatekeeperModalProps) {
-  const [step, setStep] = useState<'select_role' | 'enter_credentials'>('select_role');
+  const [step, setStep] = useState<'select_role' | 'select_club' | 'enter_credentials'>('select_role');
   const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.CORE_VERIFIER);
+  const [selectedClub, setSelectedClub] = useState<CampusClub>(CAMPUS_CLUBS[0]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('password123');
@@ -32,17 +33,27 @@ export default function GatekeeperModal({
       onSelectPublic();
       return;
     }
-    const mappedRole = role === 'CORE_VERIFIER' ? UserRole.CORE_VERIFIER : UserRole.CLUB_EXEC;
-    setSelectedRole(mappedRole);
+
     setErrorMessage('');
     setSuccessMessage('');
+
     if (role === 'CORE_VERIFIER') {
+      setSelectedRole(UserRole.CORE_VERIFIER);
       setEmail('pardhu120907@gmail.com');
       setPassword('password123');
+      setStep('enter_credentials');
     } else {
-      setEmail('acmexec@gmail.com');
-      setPassword('password123');
+      setSelectedRole(UserRole.CLUB_EXEC);
+      setStep('select_club');
     }
+  };
+
+  const handleClubSelected = (club: CampusClub) => {
+    setSelectedClub(club);
+    const slug = club.shortName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    setEmail(`${slug}exec@gmail.com`);
+    setPassword('password123');
+    setErrorMessage('');
     setStep('enter_credentials');
   };
 
@@ -56,7 +67,12 @@ export default function GatekeeperModal({
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, selectedRole }),
+        body: JSON.stringify({
+          email,
+          password,
+          selectedRole,
+          clubId: selectedRole === UserRole.CLUB_EXEC ? selectedClub.id : null,
+        }),
       });
       const json = await res.json();
 
@@ -64,7 +80,7 @@ export default function GatekeeperModal({
         setSuccessMessage(`✓ Verified! Welcome, ${json.data.user.name} (${json.data.user.role})`);
         setTimeout(() => {
           onLoginSuccess(json.data.user);
-        }, 600);
+        }, 500);
       } else {
         setErrorMessage(json.error?.message || 'Authentication failed. Please verify credentials.');
       }
@@ -78,40 +94,40 @@ export default function GatekeeperModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-3 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-8 max-h-[92vh] overflow-y-auto text-slate-900 shadow-2xl relative">
+      <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-xl w-full p-5 sm:p-7 max-h-[92vh] overflow-y-auto text-slate-900 shadow-2xl relative">
         {/* Glow Accent */}
         <div className="absolute -top-20 -left-20 w-44 h-44 bg-violet-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-20 -right-20 w-44 h-44 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
         {/* Header */}
-        <div className="text-center mb-5 sm:mb-6">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-md p-1.5 sm:p-2">
+        <div className="text-center mb-5">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-md p-1.5 sm:p-2">
             <img src="/acm-logo.png" alt="ACM NIT Surat" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
             ACM NIT Surat
           </h2>
-          <p className="text-xs text-slate-500 mt-1 font-medium">
+          <p className="text-xs text-slate-500 mt-0.5 font-medium">
             Campus Events & Fund Management System
           </p>
         </div>
 
         {/* STEP 1: SELECT PERSONA */}
-        {step === 'select_role' ? (
-          <div className="space-y-4">
+        {step === 'select_role' && (
+          <div className="space-y-3 animate-in fade-in duration-150">
             <p className="text-xs text-center text-slate-600 font-semibold uppercase tracking-wider mb-2">
               Who are you accessing this portal as?
             </p>
 
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-2.5">
               {/* Option 1: ACM Core Member */}
               <button
                 type="button"
                 onClick={() => handleRoleChosen('CORE_VERIFIER')}
-                className="group p-4 rounded-2xl bg-slate-50/80 border border-slate-200 hover:border-violet-500 hover:bg-violet-50/30 transition-all text-left flex items-center justify-between shadow-sm"
+                className="group p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200 hover:border-violet-500 hover:bg-violet-50/30 transition-all text-left flex items-center justify-between shadow-xs cursor-pointer"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 border border-purple-200 text-purple-700 flex items-center justify-center font-bold text-lg">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 border border-purple-200 text-purple-700 flex items-center justify-center font-bold text-lg shrink-0">
                     👑
                   </div>
                   <div>
@@ -119,7 +135,7 @@ export default function GatekeeperModal({
                       ACM Core Member (CORE_VERIFIER)
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      Super Admin • Budget override & clash approvals
+                      Super Admin • Full approval, clash review & budget oversight
                     </div>
                   </div>
                 </div>
@@ -130,10 +146,10 @@ export default function GatekeeperModal({
               <button
                 type="button"
                 onClick={() => handleRoleChosen('CLUB_EXEC')}
-                className="group p-4 rounded-2xl bg-slate-50/80 border border-slate-200 hover:border-cyan-500 hover:bg-cyan-50/30 transition-all text-left flex items-center justify-between shadow-sm"
+                className="group p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200 hover:border-cyan-500 hover:bg-cyan-50/30 transition-all text-left flex items-center justify-between shadow-xs cursor-pointer"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-100 border border-cyan-200 text-cyan-800 flex items-center justify-center font-bold text-lg">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-100 border border-cyan-200 text-cyan-800 flex items-center justify-center font-bold text-lg shrink-0">
                     🛡️
                   </div>
                   <div>
@@ -141,21 +157,21 @@ export default function GatekeeperModal({
                       Club Executive (CLUB_EXEC)
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      Club Lead / Treasurer • Submit events & upload receipts
+                      Society Lead • Propose events & submit expenses for your club
                     </div>
                   </div>
                 </div>
                 <span className="text-xs text-slate-400 font-bold group-hover:translate-x-1 group-hover:text-cyan-600 transition">→</span>
               </button>
 
-              {/* Option 3: Public Person (No Login Required) */}
+              {/* Option 3: Public Person */}
               <button
                 type="button"
                 onClick={() => handleRoleChosen('PUBLIC')}
-                className="group p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-400 hover:bg-slate-50 transition-all text-left flex items-center justify-between shadow-sm"
+                className="group p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-slate-400 hover:bg-slate-50 transition-all text-left flex items-center justify-between shadow-xs cursor-pointer"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-lg">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-lg shrink-0">
                     👤
                   </div>
                   <div>
@@ -166,7 +182,7 @@ export default function GatekeeperModal({
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      View live calendar schedule, timelines & budget transparency
+                      Read-only access to approved events and transparent public budget
                     </div>
                   </div>
                 </div>
@@ -174,26 +190,107 @@ export default function GatekeeperModal({
               </button>
             </div>
           </div>
-        ) : (
-          /* STEP 2: CREDENTIAL VERIFICATION FORM */
+        )}
+
+        {/* STEP 2: SELECT CLUB (For Club Executives) */}
+        {step === 'select_club' && (
           <div className="animate-in fade-in duration-150">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">
-                  {selectedRole === UserRole.CORE_VERIFIER ? '👑' : '🛡️'}
-                </span>
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  {selectedRole === UserRole.CORE_VERIFIER ? 'ACM Core Sign In' : 'Club Executive Sign In'}
-                </span>
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                  <span>🏢</span> Select Your Campus Club / Society
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Select which club you represent. You will only be permitted to create events for this club:
+                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setStep('select_role')}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer shrink-0 ml-2"
               >
                 ← Back
               </button>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto pr-1">
+              {CAMPUS_CLUBS.map((club) => (
+                <button
+                  key={club.id}
+                  type="button"
+                  onClick={() => handleClubSelected(club)}
+                  className="p-3 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition group shadow-2xs flex flex-col justify-between cursor-pointer"
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900 group-hover:text-indigo-700">
+                        {club.shortName}
+                      </span>
+                      <span className="text-[9px] bg-slate-100 group-hover:bg-indigo-100 text-slate-600 group-hover:text-indigo-700 px-2 py-0.5 rounded-full font-semibold">
+                        {club.category}
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-medium text-slate-600 mt-1 line-clamp-2">
+                      {club.name}
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-indigo-600 font-bold mt-2 flex items-center gap-1">
+                    Select this Club →
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: CREDENTIAL VERIFICATION FORM */}
+        {step === 'enter_credentials' && (
+          <div className="animate-in fade-in duration-150">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">
+                  {selectedRole === UserRole.CORE_VERIFIER ? '👑' : '🛡️'}
+                </span>
+                <div>
+                  <div className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    {selectedRole === UserRole.CORE_VERIFIER ? 'ACM Core Sign In' : 'Executive Sign In'}
+                  </div>
+                  {selectedRole === UserRole.CLUB_EXEC && (
+                    <div className="text-[11px] font-semibold text-indigo-700">
+                      Representing: {selectedClub.name}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep(selectedRole === UserRole.CLUB_EXEC ? 'select_club' : 'select_role')}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer shrink-0"
+              >
+                ← {selectedRole === UserRole.CLUB_EXEC ? 'Change Club' : 'Back'}
+              </button>
+            </div>
+
+            {selectedRole === UserRole.CLUB_EXEC && (
+              <div className="mb-3 p-2.5 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🏢</span>
+                  <div>
+                    <span className="font-bold">{selectedClub.shortName}</span>
+                    <span className="text-[11px] text-slate-600 block">
+                      Events will be strictly restricted to {selectedClub.name}.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep('select_club')}
+                  className="text-[11px] font-bold text-indigo-700 hover:underline cursor-pointer shrink-0 ml-2"
+                >
+                  Change
+                </button>
+              </div>
+            )}
 
             {errorMessage && (
               <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium">
@@ -210,14 +307,14 @@ export default function GatekeeperModal({
             <form onSubmit={handleLoginSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Gmail / Official Email ID
+                  Gmail / Official Student Email ID
                 </label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. pardhu120907@gmail.com"
+                  placeholder="e.g. chesexec@gmail.com"
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
@@ -231,7 +328,7 @@ export default function GatekeeperModal({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
+                  placeholder="Enter demo password: password123"
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
@@ -239,18 +336,16 @@ export default function GatekeeperModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full btn-primary-gradient disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition shadow-md mt-2 flex items-center justify-center gap-2"
+                className="w-full btn-primary-gradient disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition shadow-md mt-2 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShieldCheckIcon className="w-4 h-4" />
-                <span>{loading ? 'Verifying Member Database...' : 'Confirm Identity & Access'}</span>
+                <span>{loading ? 'Verifying Credentials...' : 'Sign In & Access Club Portal'}</span>
               </button>
             </form>
 
             <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
-              <span>Database Pre-configured:</span>
-              <span className="font-mono text-indigo-600 font-semibold">
-                {selectedRole === UserRole.CORE_VERIFIER ? 'pardhu120907@gmail.com' : 'acmexec@gmail.com'}
-              </span>
+              <span>Demo Password:</span>
+              <span className="font-mono text-indigo-600 font-semibold">password123</span>
             </div>
           </div>
         )}

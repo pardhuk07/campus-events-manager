@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
-import { apiSuccess, apiError, ErrorCodes, UserRole } from '@/lib/constants';
+import { apiSuccess, apiError, ErrorCodes, UserRole, CAMPUS_CLUBS } from '@/lib/constants';
 import { CORE_EMAILS, createSessionToken, createSessionCookieHeader } from '@/lib/auth';
 
-// Pre-registered users and passwords
+// Pre-registered demo accounts
 export const PRE_REGISTERED_USERS = [
   {
     email: 'pardhu120907@gmail.com',
@@ -21,17 +21,17 @@ export const PRE_REGISTERED_USERS = [
   },
   {
     email: 'acmexec@gmail.com',
-    name: 'Club Executive',
+    name: 'ACM Executive',
     role: UserRole.CLUB_EXEC,
     password: 'password123',
-    clubId: null,
+    clubId: 'club-acm',
   },
   {
-    email: 'ieeelead@gmail.com',
-    name: 'IEEE Executive',
+    email: 'chesexec@gmail.com',
+    name: 'ChES Executive',
     role: UserRole.CLUB_EXEC,
     password: 'password123',
-    clubId: null,
+    clubId: 'club-ches',
   },
   {
     email: 'student@gmail.com',
@@ -45,7 +45,7 @@ export const PRE_REGISTERED_USERS = [
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, selectedRole } = body;
+    const { email, password, selectedRole, clubId } = body;
 
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       return apiError(ErrorCodes.VALIDATION_ERROR, 'Please enter a valid Gmail / student email.', 400);
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // SERVER-SIDE ROLE DETERMINATION: Never from request body or client state!
+    // SERVER-SIDE ROLE & CLUB DETERMINATION
     let role: UserRole = UserRole.MEMBER;
     let name = normalizedEmail.split('@')[0];
 
@@ -79,12 +79,19 @@ export async function POST(request: NextRequest) {
     if (CORE_EMAILS.some((e) => e.toLowerCase() === normalizedEmail)) {
       role = UserRole.CORE_VERIFIER;
       name = 'ACM Core Lead';
+    } else if (selectedRole === UserRole.CLUB_EXEC) {
+      role = UserRole.CLUB_EXEC;
     } else if (preReg) {
       role = preReg.role;
       name = preReg.name;
     } else {
       // 2. Check Database record
-      const existingDbUser = await dbService.getUserByEmail(normalizedEmail);
+      let existingDbUser: any = null;
+      try {
+        existingDbUser = await dbService.getUserByEmail(normalizedEmail);
+      } catch {
+        // Fallback
+      }
       if (existingDbUser) {
         if (existingDbUser.role === UserRole.CORE_VERIFIER) {
           role = UserRole.CORE_VERIFIER;
@@ -95,13 +102,12 @@ export async function POST(request: NextRequest) {
         }
         name = existingDbUser.name;
       } else {
-        // Unknown users default to MEMBER
         role = UserRole.MEMBER;
       }
     }
 
     // Role verification check if selected in UI
-    if (selectedRole && role !== selectedRole) {
+    if (selectedRole && selectedRole !== UserRole.CLUB_EXEC && role !== selectedRole) {
       return apiError(
         ErrorCodes.FORBIDDEN,
         `Access Denied: ${normalizedEmail} is not registered as ${selectedRole}.`,
@@ -109,24 +115,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Dynamically lookup the actual Club ID from the database for Club Executives only
+    // Resolve assigned club for Club Executives (from the 10 official clubs)
     let resolvedClubId: string | null = null;
     if (role === UserRole.CLUB_EXEC) {
-      try {
-        const clubs = await dbService.getClubs();
-        if (normalizedEmail.includes('ieee')) {
-          const ieeeClub = clubs.find((c: any) => c.name.toLowerCase().includes('ieee'));
-          resolvedClubId = ieeeClub ? ieeeClub.id : (clubs[0]?.id || null);
-        } else {
-          const acmClub = clubs.find((c: any) => c.name.toLowerCase().includes('acm'));
-          resolvedClubId = acmClub ? acmClub.id : (clubs[0]?.id || null);
+      if (clubId) {
+        const matchedClub = CAMPUS_CLUBS.find(
+          (c) => c.id === clubId || c.name.toLowerCase() === clubId.toLowerCase()
+        );
+        resolvedClubId = matchedClub ? matchedClub.id : clubId;
+        if (matchedClub) {
+          name = `${matchedClub.shortName} Executive`;
         }
-      } catch (e) {
-        console.warn('Could not query clubs for user assignment:', e);
+      } else if (preReg?.clubId) {
+        resolvedClubId = preReg.clubId;
+      } else {
+        resolvedClubId = 'club-acm';
       }
     }
 
-    // Upsert user into database
+    // Upsert user into database with assigned club
     const user = await dbService.upsertUser({
       name,
       email: normalizedEmail,
