@@ -14,7 +14,14 @@ export async function GET(request: NextRequest) {
       return apiSuccess([]);
     }
 
-    const conflicts = await dbService.getConflicts();
+    let conflicts = await dbService.getConflicts();
+    if (userRole === UserRole.CLUB_EXEC) {
+      conflicts = conflicts.filter(
+        (c: any) =>
+          (user?.clubId && c.event?.clubId === user.clubId) ||
+          (user?.clubId && c.conflictingEvent?.clubId === user.clubId)
+      );
+    }
     return apiSuccess(conflicts);
   } catch (error: any) {
     console.error('GET /api/conflicts error:', error);

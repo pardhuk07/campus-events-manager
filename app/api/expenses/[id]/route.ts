@@ -16,10 +16,32 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const user = await getServerUser(request);
+    const userRole = user?.role || UserRole.MEMBER;
+
+    if (!user || userRole === UserRole.MEMBER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Expense details are restricted from member and public access.',
+        403
+      );
+    }
+
     const expense = await dbService.getExpenseById(id);
 
     if (!expense) {
       return apiError(ErrorCodes.EXPENSE_NOT_FOUND, 'Expense record not found.', 404);
+    }
+
+    if (userRole === UserRole.CLUB_EXEC && user.clubId) {
+      const linkedEvent = await dbService.getEventById(expense.eventId);
+      if (linkedEvent && linkedEvent.clubId !== user.clubId) {
+        return apiError(
+          ErrorCodes.FORBIDDEN,
+          'Forbidden: You cannot view expenses from other clubs.',
+          403
+        );
+      }
     }
 
     return apiSuccess(expense);

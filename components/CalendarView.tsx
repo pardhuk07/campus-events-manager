@@ -336,17 +336,19 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span
-                    className={`text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full tracking-wider ${
-                      selectedEventModal.status === 'FLAGGED_CONFLICT'
-                        ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                        : selectedEventModal.status === 'APPROVED'
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                        : 'bg-amber-100 text-amber-800 border border-amber-200'
-                    }`}
-                  >
-                    {selectedEventModal.status}
-                  </span>
+                  {!isMember && (
+                    <span
+                      className={`text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full tracking-wider ${
+                        selectedEventModal.status === 'FLAGGED_CONFLICT'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                          : selectedEventModal.status === 'APPROVED'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}
+                    >
+                      {selectedEventModal.status}
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                     {selectedEventModal.eventType || selectedEventModal.category || 'Workshop'}
                   </span>
@@ -377,10 +379,12 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
             </p>
 
             <div className="space-y-2.5 mt-4 pt-3 border-t border-slate-200 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-400 font-bold">₹</span>
-                <span>Estimated Cost: <strong className="text-emerald-700 font-bold">₹{Number(selectedEventModal.estimatedCost ?? 0).toLocaleString()}</strong></span>
-              </div>
+              {!isMember && selectedEventModal.estimatedCost !== undefined && (
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 font-bold">₹</span>
+                  <span>Estimated Cost: <strong className="text-emerald-700 font-bold">₹{Number(selectedEventModal.estimatedCost ?? 0).toLocaleString()}</strong></span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <MapPinIcon className="w-4 h-4 text-slate-400" />
                 <span>Venue: <strong className="text-slate-900">{selectedEventModal.venue}</strong></span>
@@ -398,7 +402,7 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
               </div>
             </div>
 
-            {((selectedEventModal.flags && selectedEventModal.flags.length > 0) || selectedEventModal.status === 'FLAGGED_CONFLICT') && (
+            {!isMember && ((selectedEventModal.flags && selectedEventModal.flags.length > 0) || selectedEventModal.status === 'FLAGGED_CONFLICT') && (
               <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 space-y-1.5">
                 <div className="flex items-center gap-1.5 font-bold text-rose-900">
                   <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0" />

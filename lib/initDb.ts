@@ -268,7 +268,8 @@ export async function ensureDatabaseTables() {
           ('club-gdgc', 'GDGC', 'Google Developer Groups on Campus SVNIT'),
           ('club-cev', 'CEV (Cutting Edge Visionaries)', 'Cutting Edge Visionaries SVNIT'),
           ('club-ces', 'CES (Civil Engineering Society)', 'Civil Engineering Society SVNIT'),
-          ('club-think-india', 'Think India', 'Think India SVNIT Chapter (National Forum for Students & Youth)')
+          ('club-think-india', 'Think India', 'Think India SVNIT Chapter (National Forum for Students & Youth)'),
+          ('club-staff', 'Staff Club', 'Faculty and Staff Club of SVNIT')
         ON CONFLICT ("name") DO UPDATE SET "description" = EXCLUDED."description";
       `);
     } catch (clubErr) {

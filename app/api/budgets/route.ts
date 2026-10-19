@@ -1,16 +1,26 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
-import { requireCore } from '@/lib/auth';
+import { getServerUser, requireCore } from '@/lib/auth';
 import {
   apiSuccess,
   apiError,
   ErrorCodes,
   BudgetPeriod,
+  UserRole,
 } from '@/lib/constants';
 
-// GET /api/budgets - List budgets with dynamically computed remainingBudget (public summary)
-export async function GET() {
+// GET /api/budgets - List budgets with dynamically computed remainingBudget (Restricted to Execs & Core)
+export async function GET(request: NextRequest) {
   try {
+    const user = await getServerUser(request);
+    if (!user || user.role === UserRole.MEMBER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Budget records are confidential and restricted from public and member access.',
+        403
+      );
+    }
+
     const budgets = await dbService.getBudgets();
     const expenses = await dbService.getExpenses();
 

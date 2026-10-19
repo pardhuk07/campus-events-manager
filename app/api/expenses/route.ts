@@ -19,10 +19,24 @@ export async function GET(request: NextRequest) {
     const user = await getServerUser(request);
     const userRole = user?.role || UserRole.MEMBER;
 
+    // Strict Visibility Enforcement:
+    // - Public / Members: 403 Forbidden (cannot view expenses or budget)
+    // - Club Executives: can only see their own club's expenses
+    // - ACM Core: can see all expenses
+    if (!user || userRole === UserRole.MEMBER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Expense and budget information is restricted from member and public view.',
+        403
+      );
+    }
+
     let expenses = await dbService.getExpenses();
 
-    // Members and unauthenticated visitors can view public expense records
-    // but receipt URLs or internal IDs are kept intact or filtered as needed
+    if (userRole === UserRole.CLUB_EXEC) {
+      expenses = expenses.filter((e: any) => e.event?.clubId === user.clubId);
+    }
+
     if (eventId) {
       expenses = expenses.filter((e: any) => e.eventId === eventId);
     }

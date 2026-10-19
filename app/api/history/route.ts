@@ -90,18 +90,50 @@ export async function GET(request: NextRequest) {
       [semStart, semEnd]
     );
 
-    // Scoped visibility: members only see approved/completed events
+    const sanitizeHistoryEventForPublic = (e: any) => ({
+      id: e.id,
+      title: e.title,
+      clubName: e.clubName,
+      clubId: e.clubId,
+      startTime: e.startTime,
+      endTime: e.endTime,
+      venue: e.venue,
+      eventType: e.eventType || e.category || 'Workshop',
+      status: e.status,
+    });
+
+    // Scoped visibility:
+    // - Regular members & logged-out visitors: only past approved/completed events,
+    //   with NO costs, NO conflict log, NO spending patterns, NO lessons learned or approval comments.
     if (userRole === UserRole.MEMBER) {
-      pastEvents = pastEvents.filter(
-        (e: any) => e.status === 'APPROVED' || e.status === 'COMPLETED'
-      );
-    } else if (userRole === UserRole.CLUB_EXEC) {
-      pastEvents = pastEvents.filter(
-        (e: any) =>
-          e.status === 'APPROVED' ||
-          e.status === 'COMPLETED' ||
-          (user?.clubId && e.clubId === user.clubId)
-      );
+      const sanitizedPastEvents = pastEvents
+        .filter((e: any) => e.status === 'APPROVED' || e.status === 'COMPLETED')
+        .map(sanitizeHistoryEventForPublic);
+
+      return apiSuccess({
+        semesters,
+        selectedSemester,
+        previousSemester,
+        pastEvents: sanitizedPastEvents,
+        conflicts: [],
+        spendingPatterns: null,
+      });
+    }
+
+    if (userRole === UserRole.CLUB_EXEC) {
+      pastEvents = pastEvents
+        .filter(
+          (e: any) =>
+            e.status === 'APPROVED' ||
+            e.status === 'COMPLETED' ||
+            (user?.clubId && e.clubId === user.clubId)
+        )
+        .map((e: any) => {
+          if (user?.clubId && e.clubId === user.clubId) {
+            return e; // Own club's events: full data (costs, lessons learned, approval comments)
+          }
+          return sanitizeHistoryEventForPublic(e); // Other clubs: public fields only
+        });
     }
 
     // 3. Section 2: Conflict Log (Every conflict flagged for events in this semester)
@@ -114,6 +146,7 @@ export async function GET(request: NextRequest) {
           'venue', e1.venue,
           'startTime', e1."startTime",
           'endTime', e1."endTime",
+          'clubId', e1."clubId",
           'clubName', COALESCE(c1.name, 'Club 1'),
           'status', e1.status,
           'reviewDecision', e1."reviewDecision",
@@ -127,6 +160,7 @@ export async function GET(request: NextRequest) {
           'venue', e2.venue,
           'startTime', e2."startTime",
           'endTime', e2."endTime",
+          'clubId', e2."clubId",
           'clubName', COALESCE(c2.name, 'Club 2')
         ) as "conflictingEvent",
         CASE WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', u.name) ELSE NULL END as "reviewedBy"
@@ -270,13 +304,22 @@ export async function GET(request: NextRequest) {
       [semStart, semEnd]
     );
 
-    // Return complete structured payload for all 4 sections
+    let filteredConflicts = normalizedConflicts;
+    if (userRole === UserRole.CLUB_EXEC) {
+      filteredConflicts = normalizedConflicts.filter((c: any) => {
+        const c1 = c.event?.clubId;
+        const c2 = c.conflictingEvent?.clubId;
+        return Boolean(user?.clubId && (c1 === user.clubId || c2 === user.clubId));
+      });
+    }
+
+    // Return complete structured payload for all sections
     return apiSuccess({
       semesters,
       selectedSemester,
       previousSemester,
       pastEvents,
-      conflicts: normalizedConflicts,
+      conflicts: filteredConflicts,
       spendingPatterns: {
         currentTotalSpend,
         prevTotalSpend,

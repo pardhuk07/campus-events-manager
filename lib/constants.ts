@@ -154,19 +154,26 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     category: 'Social & Youth Forum',
     logoUrl: '/clubs/think_india.png',
   },
+  {
+    id: 'club-staff',
+    name: 'Staff Club',
+    shortName: 'Staff Club',
+    description: 'Faculty and Staff Club of SVNIT',
+    category: 'Faculty & Staff',
+  },
 ];
 
 // 7. Official Campus Venues (Single Source of Truth)
 export const CAMPUS_VENUES = [
   'Chemical Department Seminar Hall',
-  'CSE Dept Seminar Hall',
-  'Civil Dept',
-  'Electrical Dept',
+  'CSE Department Seminar Hall',
+  'Civil Department',
+  'Electrical Department',
   'Lecture Theatre (LT1)',
   'Class Room Complex (CRC)',
   'CRC Lawns',
   'Library Basement',
-  'Mech Dept',
+  'Mechanical Department',
 ] as const;
 export type CampusVenue = (typeof CAMPUS_VENUES)[number];
 

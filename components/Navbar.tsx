@@ -120,17 +120,19 @@ export default function Navbar({
                 <span>Events</span>
               </button>
 
-              <button
-                onClick={() => setActiveTab('expenses')}
-                className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
-                  activeTab === 'expenses'
-                    ? 'tab-active-gradient'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-                }`}
-              >
-                <RupeeIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-                <span>Budget</span>
-              </button>
+              {currentUser && currentUser.role !== UserRole.MEMBER && (
+                <button
+                  onClick={() => setActiveTab('expenses')}
+                  className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
+                    activeTab === 'expenses'
+                      ? 'tab-active-gradient'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                  }`}
+                >
+                  <RupeeIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                  <span>Budget</span>
+                </button>
+              )}
 
               <button
                 onClick={() => setActiveTab('history')}

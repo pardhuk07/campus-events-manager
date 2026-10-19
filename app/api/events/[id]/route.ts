@@ -24,13 +24,34 @@ export async function GET(
       return apiError(ErrorCodes.EVENT_NOT_FOUND, 'Event not found with provided ID.', 404);
     }
 
-    // RBAC: If event is not APPROVED, only ACM Core or organizing Club Executive can view it
-    if (event.status !== EventStatus.APPROVED) {
-      const isCore = userRole === UserRole.CORE_VERIFIER;
-      const isClubOwner = userRole === UserRole.CLUB_EXEC && user?.clubId && event.clubId === user.clubId;
-      if (!isCore && !isClubOwner) {
-        return apiError(ErrorCodes.EVENT_NOT_FOUND, 'Event is not approved for public viewing.', 404);
-      }
+    const isCore = userRole === UserRole.CORE_VERIFIER;
+    const isClubOwner = userRole === UserRole.CLUB_EXEC && Boolean(user?.clubId && event.clubId === user.clubId);
+
+    // If event is not approved, only Core and the owning Club Executive can view it
+    if (event.status !== EventStatus.APPROVED && !isCore && !isClubOwner) {
+      return apiError(ErrorCodes.EVENT_NOT_FOUND, 'Event is not approved for public viewing.', 404);
+    }
+
+    // Public / Members and Executives viewing another club's approved event get public fields only
+    if (!isCore && !isClubOwner) {
+      const publicEvent = {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        clubId: event.clubId,
+        club: event.club,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        venue: event.venue,
+        eventType: event.eventType || event.category || 'Workshop',
+        category: event.category,
+        status: event.status,
+        expectedAttendance: event.expectedAttendance,
+        audienceTags: event.audienceTags,
+        createdAt: event.createdAt,
+        updatedAt: event.updatedAt,
+      };
+      return apiSuccess(publicEvent);
     }
 
     return apiSuccess(event);

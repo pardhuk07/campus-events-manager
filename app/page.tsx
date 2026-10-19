@@ -14,6 +14,8 @@ export default function Home() {
   const [eventViewMode, setEventViewMode] = useState<'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews'>('calendar');
   const [targetEventId, setTargetEventId] = useState<string | undefined>();
 
+  const effectiveRole = currentUser?.role || 'MEMBER';
+
   const handleOpenPendingReview = (eventId?: string) => {
     setActiveTab('events');
     setEventViewMode('reviews');
@@ -74,7 +76,12 @@ export default function Home() {
     setShowGatekeeper(true);
   };
 
-  const effectiveRole = currentUser?.role || 'MEMBER';
+  // Restrict expenses tab: regular members and public visitors cannot access budget/expenses
+  useEffect(() => {
+    if (effectiveRole === 'MEMBER' && activeTab === 'expenses') {
+      setActiveTab('events');
+    }
+  }, [effectiveRole, activeTab]);
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-cyan-100 selection:text-cyan-900">
@@ -105,9 +112,11 @@ export default function Home() {
           />
         </div>
 
-        <div className={activeTab === 'expenses' ? 'block' : 'hidden'}>
-          <ExpenseManager currentRole={effectiveRole} currentUser={currentUser} />
-        </div>
+        {effectiveRole !== 'MEMBER' && (
+          <div className={activeTab === 'expenses' ? 'block' : 'hidden'}>
+            <ExpenseManager currentRole={effectiveRole} currentUser={currentUser} />
+          </div>
+        )}
 
         <div className={activeTab === 'history' ? 'block' : 'hidden'}>
           <HistoryView currentRole={effectiveRole} currentUser={currentUser} />

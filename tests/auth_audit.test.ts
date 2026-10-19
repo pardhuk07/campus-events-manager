@@ -117,6 +117,7 @@ describe('Auth & Session Security Audit Tests', () => {
         'GDGC',
         'CEV (Cutting Edge Visionaries)',
         'CES (Civil Engineering Society)',
+        'Staff Club',
       ];
       for (const expected of expectedClubs) {
         assert.ok(
@@ -124,6 +125,15 @@ describe('Auth & Session Security Audit Tests', () => {
           `Club "${expected}" must be present in official clubs list`
         );
       }
+    });
+
+    test('verifies official SVNIT venues use Department instead of Dept', () => {
+      const { CAMPUS_VENUES } = require('../lib/constants');
+      assert.ok(CAMPUS_VENUES.includes('Chemical Department Seminar Hall'));
+      assert.ok(CAMPUS_VENUES.includes('CSE Department Seminar Hall'));
+      assert.ok(CAMPUS_VENUES.includes('Civil Department'));
+      assert.ok(CAMPUS_VENUES.includes('Electrical Department'));
+      assert.ok(CAMPUS_VENUES.includes('Mechanical Department'));
     });
   });
 });

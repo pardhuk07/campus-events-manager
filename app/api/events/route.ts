@@ -26,17 +26,44 @@ export async function GET(request: NextRequest) {
     let events = await dbService.getEvents();
 
     // RBAC VISIBILITY ENFORCEMENT:
-    // - Members / Unauthenticated: can ONLY see APPROVED events
-    // - Club Executives: can see all APPROVED events + their OWN club's pending proposals
-    // - ACM Core: can see all events across all clubs
+    // - Members / Unauthenticated: can ONLY see APPROVED events, with public fields only (no costs, no flags, no comments)
+    // - Club Executives: can see all APPROVED events + their OWN club's pending/rejected events & costs/flags. Other clubs' costs/flags are stripped.
+    // - ACM Core: can see all events across all clubs with full details
+    const sanitizeEventForPublic = (e: any) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      clubId: e.clubId,
+      club: e.club,
+      startTime: e.startTime,
+      endTime: e.endTime,
+      venue: e.venue,
+      eventType: e.eventType || e.category || 'Workshop',
+      category: e.category,
+      status: e.status,
+      expectedAttendance: e.expectedAttendance,
+      audienceTags: e.audienceTags,
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt,
+    });
+
     if (userRole === UserRole.MEMBER) {
-      events = events.filter((e: any) => e.status === EventStatus.APPROVED);
+      events = events
+        .filter((e: any) => e.status === EventStatus.APPROVED)
+        .map(sanitizeEventForPublic);
     } else if (userRole === UserRole.CLUB_EXEC) {
-      events = events.filter(
-        (e: any) =>
-          e.status === EventStatus.APPROVED ||
-          (user?.clubId && e.clubId === user.clubId)
-      );
+      events = events
+        .filter(
+          (e: any) =>
+            e.status === EventStatus.APPROVED ||
+            (user?.clubId && e.clubId === user.clubId)
+        )
+        .map((e: any) => {
+          if (user?.clubId && e.clubId === user.clubId) {
+            return e; // Own club: full access to pending/rejected, flags, estimated cost, expenses
+          }
+          return sanitizeEventForPublic(e); // Other clubs: public fields only
+        });
     }
 
     if (status && status !== 'ALL') {

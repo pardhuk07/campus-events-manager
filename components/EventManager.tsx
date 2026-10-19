@@ -386,17 +386,19 @@ export default function EventManager({
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                             {ev.eventType || ev.category || 'Workshop'}
                           </span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                              ev.status === 'APPROVED'
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                : ev.status === 'REJECTED'
-                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                                : 'bg-amber-100 text-amber-800 border border-amber-200'
-                            }`}
-                          >
-                            {ev.status}
-                          </span>
+                          {!isMember && (
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                ev.status === 'APPROVED'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : ev.status === 'REJECTED'
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                  : 'bg-amber-100 text-amber-800 border border-amber-200'
+                              }`}
+                            >
+                              {ev.status}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <p className={`text-xs font-semibold ${clubTheme.text}`}>{ev.club?.name}</p>
@@ -437,10 +439,12 @@ export default function EventManager({
                     </p>
 
                     <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
-                      {/* Estimated Cost Display */}
-                      <div className="flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-xs">
-                        <span>₹{Number(ev.estimatedCost ?? 0).toLocaleString()} est.</span>
-                      </div>
+                      {/* Estimated Cost Display - Execs and Core only */}
+                      {!isMember && ev.estimatedCost !== undefined && (
+                        <div className="flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-xs">
+                          <span>₹{Number(ev.estimatedCost ?? 0).toLocaleString()} est.</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5">
                         <MapPinIcon className="w-3.5 h-3.5 text-slate-400" />
                         <span className="font-medium text-slate-700">{ev.venue}</span>

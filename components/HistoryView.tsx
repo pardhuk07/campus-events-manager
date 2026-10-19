@@ -41,7 +41,8 @@ export default function HistoryView({ currentRole, currentUser }: HistoryViewPro
 
   const isCore = currentRole === UserRole.CORE_VERIFIER || currentRole === 'ACM_CORE';
   const isExec = currentRole === UserRole.CLUB_EXEC;
-  const canEditHandover = isCore || isExec; // Editable by Executives and Core, read-only for members
+  const isMember = !isCore && !isExec;
+  const canEditHandover = isCore || isExec;
 
   const fetchHistory = async (semesterId?: string) => {
     setLoading(true);
@@ -248,18 +249,19 @@ export default function HistoryView({ currentRole, currentUser }: HistoryViewPro
               <thead>
                 <tr className="text-slate-400 border-b border-slate-200 uppercase tracking-wider text-[10px]">
                   <th className="pb-3 font-bold">Event & Club</th>
-                  <th className="pb-3 font-bold">Organizer</th>
                   <th className="pb-3 font-bold">Date & Venue</th>
                   <th className="pb-3 font-bold">Type</th>
-                  <th className="pb-3 font-bold">Status</th>
-                  <th className="pb-3 font-bold">Approval Comment</th>
-                  <th className="pb-3 font-bold text-right">Actual Spend</th>
+                  {!isMember && <th className="pb-3 font-bold">Organizer</th>}
+                  {!isMember && <th className="pb-3 font-bold">Status</th>}
+                  {!isMember && <th className="pb-3 font-bold">Approval Comment</th>}
+                  {!isMember && <th className="pb-3 font-bold text-right">Actual Spend</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredPastEvents.map((ev) => {
                   const clubTheme = getClubTheme(ev.clubName);
                   const actualSpend = parseFloat(ev.actualSpend) || 0;
+                  const canSeePrivate = isCore || (isExec && ev.clubId === currentUser?.clubId);
 
                   return (
                     <tr key={ev.id} className="hover:bg-slate-50/70 transition">
@@ -269,11 +271,6 @@ export default function HistoryView({ currentRole, currentUser }: HistoryViewPro
                         <div className={`text-[11px] font-semibold ${clubTheme.text}`}>
                           {ev.clubName || 'General Campus'}
                         </div>
-                      </td>
-
-                      {/* Organizer */}
-                      <td className="py-3.5 pr-3 whitespace-nowrap text-slate-700 font-medium">
-                        {ev.organizer || ev.submitterName || 'Club Lead'}
                       </td>
 
                       {/* Date & Venue */}
@@ -291,34 +288,47 @@ export default function HistoryView({ currentRole, currentUser }: HistoryViewPro
                         </span>
                       </td>
 
-                      {/* Status */}
-                      <td className="py-3.5 pr-3 whitespace-nowrap">
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                            ev.status === 'COMPLETED' || ev.status === 'APPROVED'
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              : ev.status === 'REJECTED'
-                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                              : 'bg-amber-100 text-amber-800 border border-amber-200'
-                          }`}
-                        >
-                          {ev.status}
-                        </span>
-                      </td>
+                      {!isMember && (
+                        <>
+                          {/* Organizer */}
+                          <td className="py-3.5 pr-3 whitespace-nowrap text-slate-700 font-medium">
+                            {canSeePrivate ? (ev.organizer || ev.submitterName || 'Club Lead') : '—'}
+                          </td>
 
-                      {/* Approval Comment */}
-                      <td className="py-3.5 pr-3 max-w-[220px]">
-                        <p className="line-clamp-2 text-slate-600 text-[11px]" title={ev.reviewComment || ''}>
-                          {ev.reviewComment ? `"${ev.reviewComment}"` : '—'}
-                        </p>
-                      </td>
+                          {/* Status */}
+                          <td className="py-3.5 pr-3 whitespace-nowrap">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                ev.status === 'COMPLETED' || ev.status === 'APPROVED'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : ev.status === 'REJECTED'
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                  : 'bg-amber-100 text-amber-800 border border-amber-200'
+                              }`}
+                            >
+                              {ev.status}
+                            </span>
+                          </td>
 
-                      {/* Actual Spend */}
-                      <td className="py-3.5 text-right font-black text-slate-900 whitespace-nowrap">
-                        <span className="text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
-                          ₹{actualSpend.toLocaleString('en-IN')}
-                        </span>
-                      </td>
+                          {/* Approval Comment */}
+                          <td className="py-3.5 pr-3 max-w-[220px]">
+                            <p className="line-clamp-2 text-slate-600 text-[11px]" title={ev.reviewComment || ''}>
+                              {canSeePrivate && ev.reviewComment ? `"${ev.reviewComment}"` : '—'}
+                            </p>
+                          </td>
+
+                          {/* Actual Spend */}
+                          <td className="py-3.5 text-right font-black text-slate-900 whitespace-nowrap">
+                            {canSeePrivate ? (
+                              <span className="text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                                ₹{actualSpend.toLocaleString('en-IN')}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-normal text-xs">—</span>
+                            )}
+                          </td>
+                        </>
+                      )}
                     </tr>
                   );
                 })}
@@ -328,8 +338,10 @@ export default function HistoryView({ currentRole, currentUser }: HistoryViewPro
         )}
       </div>
 
-      {/* 3. SECTION 2: CONFLICT LOG */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+      {/* 3. SECTION 2: CONFLICT LOG (Restricted to Executives & Core) */}
+      {!isMember && (
+        <>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
         <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -610,13 +622,15 @@ export default function HistoryView({ currentRole, currentUser }: HistoryViewPro
           </div>
         </div>
 
-        {pastEvents.length === 0 ? (
+        {pastEvents.filter((ev) => isCore || (isExec && ev.clubId === currentUser?.clubId)).length === 0 ? (
           <div className="py-10 text-center text-slate-400 text-xs italic">
             No completed events available for handover notes in this semester.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {pastEvents.map((ev) => {
+            {pastEvents
+              .filter((ev) => isCore || (isExec && ev.clubId === currentUser?.clubId))
+              .map((ev) => {
               const notes = handoverNotes[ev.id] ?? (ev.lessonsLearned || '');
               const isSaving = savingNotes[ev.id];
               const isSuccess = savedSuccess[ev.id];
@@ -695,6 +709,8 @@ export default function HistoryView({ currentRole, currentUser }: HistoryViewPro
           </div>
         )}
       </div>
-    </div>
-  );
+    </>
+  )}
+</div>
+);
 }
