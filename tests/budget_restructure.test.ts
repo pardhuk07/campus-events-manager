@@ -12,6 +12,7 @@ import { GET as getBudgetSingle } from '../app/api/budget/route';
 import { POST as createEvent } from '../app/api/events/route';
 import { GET as getPendingEvents } from '../app/api/events/pending/route';
 import { POST as reviewEvent } from '../app/api/events/[id]/review/route';
+import { POST as postExpense } from '../app/api/expenses/route';
 
 describe('Club Semester Budget System Restructure Tests', () => {
   // Ensure DB tables, safe migration, and seeds are loaded
@@ -472,6 +473,48 @@ describe('Club Semester Budget System Restructure Tests', () => {
 
       // Clean up event
       await dbService.deleteEvent(eventId);
+    });
+
+    test('adds expense by typing event name by default and verifies updatedAt is stored', async () => {
+      const clubs = await dbService.getClubs();
+      const acm = clubs.find((c: any) => c.name.toLowerCase().includes('acm'));
+      assert.ok(acm);
+
+      // Create an expense with typed eventName (no eventId provided)
+      const expenseReq = new NextRequest('http://localhost:3000/api/expenses', {
+        method: 'POST',
+        headers: {
+          'x-user-email': 'acmexec@gmail.com',
+          'x-user-role': 'CLUB_EXEC',
+        },
+        body: JSON.stringify({
+          eventName: 'Orientation Freshers Kit Distribution',
+          amount: 1500,
+          category: 'PRINTING',
+          description: 'Custom badges and stickers for orientation',
+          expenseDate: '2026-09-15',
+          receiptUrl: 'https://example.com/receipt.jpg',
+        }),
+      });
+
+      const res = await postExpense(expenseReq);
+      assert.strictEqual(res.status, 201);
+      const json = await res.json();
+      assert.ok(json.success, 'Expense creation should succeed');
+      assert.ok(json.data.expense, 'Response must return created expense');
+      assert.strictEqual(json.data.expense.amount, 1500);
+      assert.ok(json.data.expense.updatedAt, 'Expense record must have updatedAt timestamp');
+      assert.ok(json.data.expense.eventId, 'Expense must be linked to an eventId');
+
+      // Verify the auto-created event exists and is approved
+      const linkedEvent = await dbService.getEventById(json.data.expense.eventId);
+      assert.ok(linkedEvent, 'Linked event must exist in database');
+      assert.strictEqual(linkedEvent.title, 'Orientation Freshers Kit Distribution');
+      assert.strictEqual(linkedEvent.status, 'APPROVED');
+
+      // Cleanup expense and event
+      await dbService.deleteExpense(json.data.expense.id);
+      await dbService.deleteEvent(linkedEvent.id);
     });
   });
 });

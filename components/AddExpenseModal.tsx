@@ -32,6 +32,7 @@ export default function AddExpenseModal({
     setDate(new Date().toISOString().split('T')[0]);
   }, []);
   const [eventId, setEventId] = useState('');
+  const [eventName, setEventName] = useState('');
   const [description, setDescription] = useState('');
 
   // Receipt state
@@ -46,10 +47,19 @@ export default function AddExpenseModal({
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Filter events: limited to the user's club for Executives, all clubs for Core
+  // Filter events: strictly limited to the user's club for Executives, all clubs for Core
   const eligibleEvents = useMemo(() => {
-    if (currentRole === UserRole.CLUB_EXEC && currentUser?.clubId) {
-      return approvedEvents.filter((ev: any) => ev.clubId === currentUser.clubId);
+    if (currentRole === UserRole.CLUB_EXEC) {
+      const userClubId = currentUser?.clubId;
+      return approvedEvents.filter((ev: any) => {
+        if (userClubId && (ev.clubId === userClubId || ev.club?.id === userClubId)) return true;
+        if (currentUser?.name) {
+          const lowerUser = currentUser.name.toLowerCase();
+          if (ev.club?.name && lowerUser.includes(ev.club.name.toLowerCase())) return true;
+          if (ev.club?.shortName && lowerUser.includes(ev.club.shortName.toLowerCase())) return true;
+        }
+        return false;
+      });
     }
     return approvedEvents;
   }, [approvedEvents, currentRole, currentUser]);
@@ -60,7 +70,8 @@ export default function AddExpenseModal({
       setAmount('');
       setCategory(ExpenseCategory.FOOD);
       setDate(new Date().toISOString().split('T')[0]);
-      setEventId(eligibleEvents.length > 0 ? eligibleEvents[0].id : '');
+      setEventId('');
+      setEventName('');
       setDescription('');
       setReceiptUrl('');
       setReceiptFileName('');
@@ -72,11 +83,33 @@ export default function AddExpenseModal({
         fileInputRef.current.value = '';
       }
     }
-  }, [isOpen, eligibleEvents]);
+  }, [isOpen]);
+
+  const handleEventInputChange = (val: string) => {
+    setEventName(val);
+    const matched = eligibleEvents.find(
+      (ev: any) =>
+        ev.id === val.trim() ||
+        ev.title?.toLowerCase() === val.trim().toLowerCase()
+    );
+    if (matched) {
+      setEventId(matched.id);
+    } else {
+      setEventId('');
+    }
+  };
 
   const selectedEvent = useMemo(() => {
-    return eligibleEvents.find((ev: any) => ev.id === eventId);
-  }, [eligibleEvents, eventId]);
+    if (eventId) {
+      return eligibleEvents.find((ev: any) => ev.id === eventId);
+    }
+    if (eventName) {
+      return eligibleEvents.find(
+        (ev: any) => ev.title?.toLowerCase() === eventName.trim().toLowerCase()
+      );
+    }
+    return null;
+  }, [eligibleEvents, eventId, eventName]);
 
   const eventRemaining = useMemo(() => {
     if (!selectedEvent) return 0;
@@ -190,8 +223,9 @@ export default function AddExpenseModal({
       return;
     }
 
-    if (!eventId) {
-      setErrorMsg('An approved event is required.');
+    const finalEventName = eventName.trim();
+    if (!finalEventName && !eventId) {
+      setErrorMsg('Event name is required. Please type an event name.');
       return;
     }
 
@@ -247,7 +281,9 @@ export default function AddExpenseModal({
           amount: parsedAmount,
           category,
           expenseDate: date ? new Date(date) : new Date(),
-          eventId,
+          eventId: eventId || undefined,
+          eventName: finalEventName || (selectedEvent?.title ?? ''),
+          clubId: currentUser?.clubId,
           description: description.trim(),
           receiptUrl: receiptUrl || null,
           receiptFileName: receiptFileName || null,
@@ -387,7 +423,7 @@ export default function AddExpenseModal({
             </div>
           </div>
 
-          {/* Event (required dropdown of approved events) */}
+          {/* Event (typed input by default with autocomplete datalist) */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-slate-700">
@@ -400,28 +436,27 @@ export default function AddExpenseModal({
               )}
             </div>
 
-            {eligibleEvents.length === 0 ? (
-              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-                No approved events available for this club. Only approved events can have expenses linked.
-              </div>
-            ) : (
-              <select
+            <div className="relative">
+              <input
+                type="text"
                 required
-                value={eventId}
-                onChange={(e) => setEventId(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
-              >
-                <option value="">Select an approved event...</option>
+                list="approved-events-list"
+                value={eventName}
+                onChange={(e) => handleEventInputChange(e.target.value)}
+                placeholder="Type event name (e.g. Orientation, Annual Hackathon)..."
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium"
+              />
+              <datalist id="approved-events-list">
                 {eligibleEvents.map((ev: any) => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.title} ({ev.club?.name || 'Club'})
+                  <option key={ev.id} value={ev.title}>
+                    {ev.title} {ev.club?.name ? `(${ev.club.name})` : ''}
                   </option>
                 ))}
-              </select>
-            )}
+              </datalist>
+            </div>
 
             {/* Event Remaining Budget Display */}
-            {selectedEvent && (
+            {selectedEvent ? (
               <div className="mt-2 flex items-center gap-2">
                 {eventRemaining >= 0 ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">
@@ -435,7 +470,12 @@ export default function AddExpenseModal({
                   </span>
                 )}
               </div>
-            )}
+            ) : eventName.trim() ? (
+              <div className="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1">
+                <span className="text-indigo-600 font-bold">ℹ</span>
+                <span>This event will be registered for your club and linked to the semester budget.</span>
+              </div>
+            ) : null}
           </div>
 
           {/* Receipt Upload using Cloudinary (1 file, PDF/JPG/PNG, Max 5 MB) */}

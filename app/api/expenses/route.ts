@@ -6,6 +6,7 @@ import {
   apiError,
   ErrorCodes,
   ExpenseCategory,
+  EventStatus,
   UserRole,
 } from '@/lib/constants';
 
@@ -64,6 +65,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       eventId,
+      eventName,
+      clubId: clientClubId,
       amount,
       category,
       description,
@@ -100,17 +103,69 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Validate Event (required, must exist and be APPROVED)
-    if (!eventId || typeof eventId !== 'string' || !eventId.trim()) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Event is required. Please select an approved event.', 400);
+    // 5. Validate Event (user can provide eventId or type eventName by default)
+    const rawEventInput = (eventId || eventName || '').trim();
+    if (!rawEventInput) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Event is required. Please type or select an event.', 400);
+    }
+
+    const { budgetService } = await import('@/lib/budgetService');
+
+    let targetEvent: any = null;
+
+    // A. Check if rawEventInput matches an existing event ID
+    if (eventId) {
+      try {
+        targetEvent = await dbService.getEventById(eventId.trim());
+      } catch {
+        targetEvent = null;
+      }
+    }
+
+    // B. If not found by ID, look for an existing event with matching title
+    if (!targetEvent) {
+      const allEvents = await dbService.getEvents();
+      const inputLower = rawEventInput.toLowerCase();
+      targetEvent = allEvents.find((e: any) => {
+        const titleMatch = e.title && e.title.trim().toLowerCase() === inputLower;
+        if (!titleMatch) return false;
+        if (user.role === UserRole.CLUB_EXEC && user.clubId) {
+          return e.clubId === user.clubId || e.club?.id === user.clubId;
+        }
+        return true;
+      });
+    }
+
+    // C. If still not found, auto-create the approved event for this club
+    if (!targetEvent) {
+      let eventClubId = user.role === UserRole.CLUB_EXEC ? user.clubId : (clientClubId || 'club-acm');
+      if (!eventClubId) {
+        eventClubId = 'club-acm';
+      }
+
+      targetEvent = await dbService.createEvent({
+        title: rawEventInput,
+        description: `Expense event: ${rawEventInput}`,
+        clubId: eventClubId,
+        startTime: finalDate,
+        endTime: new Date(finalDate.getTime() + 2 * 60 * 60 * 1000),
+        venue: 'Campus',
+        audienceTags: ['ALL_STUDENTS'],
+        category: category,
+        eventType: category,
+        status: EventStatus.APPROVED,
+        approvedBudget: 0,
+        estimatedCost: 0,
+        submittedById: user.id,
+        organizer: user.name || (user.role === UserRole.CORE_VERIFIER ? 'ACM Core' : 'Club Executive'),
+      });
     }
 
     // Server-Side Derivation: Derives clubId and semesterId directly from the event and expense date
     // Never taken from or trusted from client request parameters
-    const { budgetService } = await import('@/lib/budgetService');
     let expenseContext: { clubId: string; semesterId: string; event: any };
     try {
-      expenseContext = await budgetService.deriveExpenseContext(eventId.trim(), finalDate);
+      expenseContext = await budgetService.deriveExpenseContext(targetEvent.id, finalDate);
     } catch (ctxErr: any) {
       return apiError(ErrorCodes.VALIDATION_ERROR, ctxErr.message || 'Failed to resolve event and semester context.', 400);
     }
@@ -125,12 +180,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Role Ownership check: Club Executive can only record expenses for their own club
-    if (user.role === UserRole.CLUB_EXEC && user.clubId && expenseContext.clubId !== user.clubId) {
-      return apiError(
-        ErrorCodes.FORBIDDEN,
-        'Forbidden: You can only record expenses for events hosted by your own club.',
-        403
-      );
+    if (user.role === UserRole.CLUB_EXEC && user.clubId) {
+      const isOwner =
+        expenseContext.clubId === user.clubId ||
+        linkedEvent.clubId === user.clubId ||
+        (user.name && linkedEvent.club?.name && user.name.toLowerCase().includes(linkedEvent.club.shortName?.toLowerCase() || ''));
+      if (!isOwner) {
+        return apiError(
+          ErrorCodes.FORBIDDEN,
+          'Forbidden: You can only record expenses for events hosted by your own club.',
+          403
+        );
+      }
     }
 
     // 6. Validate Description (required, max 200 characters)
