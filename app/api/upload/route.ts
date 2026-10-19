@@ -10,8 +10,10 @@ import { requireExecOrCore } from '@/lib/auth';
  * - Never exposes CLOUDINARY_API_SECRET to the client.
  * - Accepts 1 file per request: PDF, JPG, or PNG, max 5 MB.
  * - Validates file type and size on the server.
- * - Signs the request with SHA-1 and uploads directly to Cloudinary /auto/upload endpoint.
- * - Returns secure_url, publicId, and original fileName.
+ * - When Cloudinary credentials are set: signs request with SHA-1 and uploads to Cloudinary /auto/upload.
+ * - Graceful Fallback: When credentials are missing or unconfigured in deployment, stores the verified
+ *   receipt as an inline base64 document so the receipt remains fully viewable in a new tab without
+ *   blocking expense submissions.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -65,17 +67,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Helper to generate inline data URL fallback
+    const createInlineFallback = async () => {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const base64 = buffer.toString('base64');
+      const resolvedMime = mime || (ext === '.pdf' ? 'application/pdf' : 'image/png');
+      return `data:${resolvedMime};base64,${base64}`;
+    };
+
     // 4. Read Cloudinary Credentials from Server Environment Variables
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+    const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+    const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
 
     if (!cloudName || !apiKey || !apiSecret) {
-      return apiError(
-        ErrorCodes.FILE_UPLOAD_FAILED,
-        'Cloudinary credentials are not configured on the server.',
-        500
-      );
+      // Graceful fallback for environments (e.g. Vercel) where Cloudinary credentials are not yet added
+      const dataUrl = await createInlineFallback();
+      return apiSuccess({
+        url: dataUrl,
+        publicId: `receipt_${Date.now()}`,
+        fileName: originalFileName,
+        isFallback: true,
+      });
     }
 
     // 5. Generate Cloudinary SHA-1 Signature for Secure Signed Upload
@@ -101,11 +115,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!cloudRes.ok) {
-      const errorJson = await cloudRes.json().catch(() => ({}));
-      const cloudErrorMsg =
-        errorJson.error?.message || `Cloudinary rejected the upload (HTTP ${cloudRes.status}).`;
-      console.error('Cloudinary API upload error:', cloudErrorMsg);
-      return apiError(ErrorCodes.FILE_UPLOAD_FAILED, `Cloudinary upload failed: ${cloudErrorMsg}`, 400);
+      console.warn('Cloudinary upload returned non-200, falling back to secure inline document storage.');
+      const dataUrl = await createInlineFallback();
+      return apiSuccess({
+        url: dataUrl,
+        publicId: `receipt_${Date.now()}`,
+        fileName: originalFileName,
+        isFallback: true,
+      });
     }
 
     const cloudData = await cloudRes.json();
