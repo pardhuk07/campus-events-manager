@@ -1,15 +1,14 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
+import { requireCore } from '@/lib/auth';
 import {
   apiSuccess,
   apiError,
   ErrorCodes,
   BudgetPeriod,
-  UserRole,
 } from '@/lib/constants';
 
-// GET /api/budgets - List budgets with dynamically computed remainingBudget
-// Rule 4: remainingBudget = budget.amount - totalExpensesForPeriod (NOT stored in DB)
+// GET /api/budgets - List budgets with dynamically computed remainingBudget (public summary)
 export async function GET() {
   try {
     const budgets = await dbService.getBudgets();
@@ -44,30 +43,38 @@ export async function GET() {
   }
 }
 
-// POST /api/budgets - Create a budget period
+// POST /api/budgets - Create a budget period (ACM Core only)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, amount, periodType, startDate, endDate, userRole } = body;
-
     // RBAC: Only CORE_VERIFIER can create budgets
-    if (userRole !== UserRole.CORE_VERIFIER) {
-      return apiError(ErrorCodes.FORBIDDEN, 'Only Core Verifiers can manage budgets.', 403);
+    const auth = await requireCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
     }
 
-    if (!name || amount === undefined || !startDate || !endDate) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Name, amount, startDate, and endDate are required.');
+    const body = await request.json();
+    const { name, amount, periodType, startDate, endDate } = body;
+
+    if (!name || typeof name !== 'string' || !name.trim() || name.trim().length > 100) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Budget name is required (max 100 characters).', 400);
+    }
+    if (amount === undefined || amount === null) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Amount is required.', 400);
     }
 
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount < 0) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Amount must be greater than or equal to 0.');
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Amount must be greater than or equal to 0.', 400);
+    }
+
+    if (!startDate || !endDate) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'startDate and endDate are required.', 400);
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'startDate must be before endDate.');
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'startDate must be valid and before endDate.', 400);
     }
 
     const budget = await dbService.createBudget({

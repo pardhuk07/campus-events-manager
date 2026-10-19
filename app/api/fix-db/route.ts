@@ -1,7 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db';
+import { requireCore } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // STRICT SECURITY CHECK: Only ACM Core administrators can execute DB schema fixes
+  const auth = await requireCore(request);
+  if ('errorResponse' in auth) {
+    return auth.errorResponse;
+  }
+
   const client = await pgPool.connect();
   try {
     // 1. Universal drop of all foreign key constraints across tables
@@ -74,7 +81,7 @@ export async function GET() {
          OR ("clubId" IS NOT NULL AND "clubId" NOT IN (SELECT "id" FROM "Club"));
     `);
 
-    // 4. Ensure demo users exist and are valid
+    // 5. Ensure demo users exist and are valid
     await client.query(`
       INSERT INTO "User" ("id", "name", "email", "role", "clubId")
       VALUES
@@ -86,7 +93,7 @@ export async function GET() {
       ON CONFLICT ("email") DO UPDATE SET "role" = EXCLUDED."role", "clubId" = EXCLUDED."clubId";
     `);
 
-    // 5. Query and return current state
+    // 6. Query and return current state
     const usersRes = await client.query('SELECT "id", "name", "email", "role", "clubId" FROM "User" ORDER BY "email" ASC');
     const clubsRes = await client.query('SELECT "id", "name" FROM "Club" ORDER BY "name" ASC');
 

@@ -1,19 +1,24 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
+import { requireCore, requireExecOrCore } from '@/lib/auth';
 import {
   apiSuccess,
   apiError,
   ErrorCodes,
   ConflictStatus,
-  UserRole,
 } from '@/lib/constants';
 
-// GET /api/conflicts/:id - View single conflict record
+// GET /api/conflicts/:id - View single conflict record (Execs and Core)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireExecOrCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
+    }
+
     const { id } = await params;
     const conflict = await dbService.getConflictById(id);
 
@@ -28,38 +33,40 @@ export async function GET(
   }
 }
 
-// PATCH /api/conflicts/:id - Resolve, dismiss, or review conflict (Store human resolution note)
+// PATCH /api/conflicts/:id - Resolve, dismiss, or review conflict (ACM Core only)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await request.json();
-    const { status, reviewedById, resolutionNote, userRole } = body;
-
     // RBAC: Only CORE_VERIFIER can review, dismiss, or resolve conflicts
-    if (userRole !== UserRole.CORE_VERIFIER) {
-      return apiError(
-        ErrorCodes.FORBIDDEN,
-        'Only ACM Core / CORE_VERIFIER can review and resolve conflicts.',
-        403
-      );
+    const auth = await requireCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
     }
+    const user = auth.user;
 
+    const { id } = await params;
     const existing = await dbService.getConflictById(id);
     if (!existing) {
       return apiError(ErrorCodes.CONFLICT_NOT_FOUND, 'Conflict record not found.', 404);
     }
 
+    const body = await request.json();
+    const { status, resolutionNote } = body;
+
     if (status && !Object.values(ConflictStatus).includes(status)) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, `Invalid conflict status: ${status}.`);
+      return apiError(ErrorCodes.VALIDATION_ERROR, `Invalid conflict status: ${status}.`, 400);
+    }
+
+    if (resolutionNote && typeof resolutionNote === 'string' && resolutionNote.length > 1000) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Resolution note cannot exceed 1000 characters.', 400);
     }
 
     const updated = await dbService.updateConflict(id, {
       status,
-      reviewedById: reviewedById || 'user-pardhu',
-      resolutionNote: resolutionNote || null,
+      reviewedById: user.id,
+      resolutionNote: resolutionNote ? String(resolutionNote).trim() : null,
     });
 
     return apiSuccess(updated);

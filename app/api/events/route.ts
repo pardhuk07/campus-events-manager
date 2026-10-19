@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
 import { checkEventConflicts } from '@/services/conflictEngine';
+import { getServerUser } from '@/lib/auth';
 import {
   apiSuccess,
   apiError,
@@ -17,29 +18,42 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const venue = searchParams.get('venue');
     const query = searchParams.get('query');
-    const userRole = searchParams.get('userRole');
+
+    // Server-verified user session (never trust client-supplied role)
+    const user = await getServerUser(request);
+    const userRole = user?.role || UserRole.MEMBER;
 
     let events = await dbService.getEvents();
 
-    // Public users and general members can ONLY see APPROVED events
-    const isPublicUser = !userRole || userRole === UserRole.MEMBER || userRole === 'PUBLIC' || userRole === 'GUEST';
-    if (isPublicUser) {
+    // RBAC VISIBILITY ENFORCEMENT:
+    // - Members / Unauthenticated: can ONLY see APPROVED events
+    // - Club Executives: can see all APPROVED events + their OWN club's pending proposals
+    // - ACM Core: can see all events across all clubs
+    if (userRole === UserRole.MEMBER) {
       events = events.filter((e: any) => e.status === EventStatus.APPROVED);
-    } else if (status && status !== 'ALL') {
+    } else if (userRole === UserRole.CLUB_EXEC) {
+      events = events.filter(
+        (e: any) =>
+          e.status === EventStatus.APPROVED ||
+          (user?.clubId && e.clubId === user.clubId)
+      );
+    }
+
+    if (status && status !== 'ALL') {
       events = events.filter((e: any) => e.status === status);
     }
     if (clubId) {
       events = events.filter((e: any) => e.clubId === clubId);
     }
     if (venue) {
-      events = events.filter((e: any) => e.venue.toLowerCase().includes(venue.toLowerCase()));
+      events = events.filter((e: any) => e.venue?.toLowerCase().includes(venue.toLowerCase()));
     }
     if (query) {
       const q = query.toLowerCase();
       events = events.filter(
         (e: any) =>
-          e.title.toLowerCase().includes(q) ||
-          e.venue.toLowerCase().includes(q) ||
+          e.title?.toLowerCase().includes(q) ||
+          e.venue?.toLowerCase().includes(q) ||
           (e.club?.name && e.club.name.toLowerCase().includes(q))
       );
     }
@@ -54,6 +68,25 @@ export async function GET(request: NextRequest) {
 // POST /api/events - Create new event proposal & trigger conflict detection
 export async function POST(request: NextRequest) {
   try {
+    // 1. Server-side session verification
+    const user = await getServerUser(request);
+    if (!user) {
+      return apiError(
+        ErrorCodes.UNAUTHORIZED,
+        'Authentication required. Please sign in to submit event proposals.',
+        401
+      );
+    }
+
+    // 2. RBAC: Only Club Executives and ACM Core can submit proposals
+    if (user.role !== UserRole.CLUB_EXEC && user.role !== UserRole.CORE_VERIFIER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Regular members cannot submit events. Only Club Executives and Core Verifiers are permitted.',
+        403
+      );
+    }
+
     const body = await request.json();
     const {
       title,
@@ -68,78 +101,92 @@ export async function POST(request: NextRequest) {
       eventType,
       estimatedCost,
       organizer,
-      submittedById,
-      userRole,
     } = body;
 
-    // RBAC: Only CLUB_EXEC and CORE_VERIFIER can submit events
-    if (userRole === UserRole.MEMBER) {
-      return apiError(
-        ErrorCodes.FORBIDDEN,
-        'Regular members cannot submit events. Only Club Executives and Core Verifiers are permitted.',
-        403
-      );
+    // 3. Strict Server-Side Input Validation
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Event title is required.', 400);
+    }
+    if (title.trim().length > 100) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Event title cannot exceed 100 characters.', 400);
     }
 
-    // Required field validation according to Section 21
-    if (!title || !title.trim()) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Event title is required.');
+    if (description && (typeof description !== 'string' || description.trim().length > 1000)) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Description cannot exceed 1000 characters.', 400);
     }
-    if (!clubId) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Organizing club is required.');
+
+    if (!venue || typeof venue !== 'string' || !venue.trim()) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Venue is required.', 400);
     }
-    if (!venue || !venue.trim()) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Venue is required.');
+    if (venue.trim().length > 100) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Venue cannot exceed 100 characters.', 400);
     }
+
+    // Club ID assignment: Executives must submit for their own club
+    let targetClubId = clubId;
+    if (user.role === UserRole.CLUB_EXEC && user.clubId) {
+      targetClubId = user.clubId;
+    }
+    if (!targetClubId) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Organizing club is required.', 400);
+    }
+
+    // Date validation
     if (!startTime || !endTime) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Start time and end time are required.');
-    }
-
-    const costNum = Number(estimatedCost);
-    if (estimatedCost === undefined || estimatedCost === null || isNaN(costNum) || costNum < 0) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Estimated Cost (₹) is required and must be minimum 0.');
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Start time and end time are required.', 400);
     }
 
     const start = new Date(startTime);
     const end = new Date(endTime);
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return apiError(ErrorCodes.INVALID_EVENT_TIME, 'Invalid date or time format.');
+      return apiError(ErrorCodes.INVALID_EVENT_TIME, 'Invalid date or time format.', 400);
     }
     if (end <= start) {
-      return apiError(ErrorCodes.INVALID_EVENT_TIME, 'End time must be strictly after start time.');
+      return apiError(ErrorCodes.INVALID_EVENT_TIME, 'End time must be strictly after start time.', 400);
     }
 
-    const tags = Array.isArray(audienceTags) && audienceTags.length > 0 ? audienceTags : ['ALL_STUDENTS'];
-
-    // Resolve submitting user id
-    let finalSubmitterId = submittedById;
-    if (!finalSubmitterId) {
-      const defaultUser = await dbService.getUserByEmail('pardhu120907@gmail.com');
-      finalSubmitterId = defaultUser ? defaultUser.id : 'user-pardhu';
+    // Number validation
+    const costNum = Number(estimatedCost);
+    if (estimatedCost === undefined || estimatedCost === null || isNaN(costNum) || costNum < 0) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Estimated Cost (₹) is required and must be minimum 0.', 400);
     }
 
-    const finalEventType = eventType || category || 'Workshop';
+    let parsedAttendance = 50;
+    if (expectedAttendance !== undefined && expectedAttendance !== null) {
+      const attNum = parseInt(expectedAttendance, 10);
+      if (isNaN(attNum) || attNum < 0 || attNum > 100000) {
+        return apiError(ErrorCodes.VALIDATION_ERROR, 'Expected attendance must be a valid non-negative number.', 400);
+      }
+      parsedAttendance = attNum;
+    }
 
-    // 1. Create the event initially with PENDING status
+    const tags = Array.isArray(audienceTags) && audienceTags.length > 0
+      ? audienceTags.map((t: any) => String(t).slice(0, 50))
+      : ['ALL_STUDENTS'];
+
+    const finalEventType = (eventType || category || 'Workshop').slice(0, 50);
+    const finalOrganizer = organizer ? String(organizer).trim().slice(0, 100) : user.name;
+
+    // 4. Create the event with PENDING status linked to verified user
     const createdEvent = await dbService.createEvent({
       title: title.trim(),
-      description: description || null,
-      clubId,
+      description: description ? description.trim() : null,
+      clubId: targetClubId,
       startTime: start,
       endTime: end,
       venue: venue.trim(),
       audienceTags: tags,
-      expectedAttendance: expectedAttendance ? parseInt(expectedAttendance) : 50,
+      expectedAttendance: parsedAttendance,
       category: finalEventType,
       eventType: finalEventType,
       estimatedCost: costNum,
-      organizer: organizer ? organizer.trim() : 'Club Organizer',
+      organizer: finalOrganizer,
       status: EventStatus.PENDING,
-      submittedById: finalSubmitterId,
+      submittedById: user.id,
     });
 
-    // 2. Trigger Person 2 Conflict Detection Engine
+    // 5. Trigger Conflict Detection Engine
     let conflictResult: any = { hasConflict: false, flags: [], conflicts: [] };
     try {
       conflictResult = await checkEventConflicts({
@@ -156,7 +203,7 @@ export async function POST(request: NextRequest) {
 
     const refreshedEvent = (await dbService.getEventById(createdEvent.id)) || createdEvent;
 
-    // 3. Generate ACM Core Notifications
+    // 6. Generate ACM Core Notifications
     try {
       const clubName = refreshedEvent.club?.name || 'Club';
 
@@ -197,7 +244,6 @@ export async function POST(request: NextRequest) {
       console.error('Non-blocking notification error:', notifErr);
     }
 
-    // Rule: A conflict is a WARNING, NEVER an automatic rejection. Event stays PENDING, flags stored on event.
     return apiSuccess(
       {
         event: refreshedEvent,

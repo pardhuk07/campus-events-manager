@@ -1,20 +1,15 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
-import { apiSuccess, apiError, ErrorCodes, UserRole } from '@/lib/constants';
+import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
+import { requireCore } from '@/lib/auth';
 
 // GET /api/notifications - ACM Core Only
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userRole = searchParams.get('userRole') || request.headers.get('x-user-role');
-
     // STRICT RBAC ENFORCEMENT: ACM Core role only
-    if (userRole !== UserRole.CORE_VERIFIER && userRole !== 'ACM_CORE') {
-      return apiError(
-        ErrorCodes.FORBIDDEN,
-        'Access denied: The notification feed is strictly restricted to ACM Core members.',
-        403
-      );
+    const auth = await requireCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
     }
 
     const data = await dbService.getNotifications(50);
@@ -28,17 +23,14 @@ export async function GET(request: NextRequest) {
 // PATCH /api/notifications - Mark as read / Mark all as read (ACM Core Only)
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { id, all, userRole } = body;
-
-    const effectiveRole = userRole || request.headers.get('x-user-role');
-    if (effectiveRole !== UserRole.CORE_VERIFIER && effectiveRole !== 'ACM_CORE') {
-      return apiError(
-        ErrorCodes.FORBIDDEN,
-        'Access denied: The notification feed is strictly restricted to ACM Core members.',
-        403
-      );
+    // STRICT RBAC ENFORCEMENT: ACM Core role only
+    const auth = await requireCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
     }
+
+    const body = await request.json();
+    const { id, all } = body;
 
     if (all) {
       await dbService.markAllNotificationsAsRead();
@@ -47,12 +39,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (id) {
+      if (typeof id !== 'string') {
+        return apiError(ErrorCodes.VALIDATION_ERROR, 'Invalid notification ID.', 400);
+      }
       const updated = await dbService.markNotificationAsRead(id);
       const data = await dbService.getNotifications(50);
       return apiSuccess({ message: 'Notification marked as read', updated, ...data });
     }
 
-    return apiError(ErrorCodes.VALIDATION_ERROR, 'Notification ID or "all: true" is required.');
+    return apiError(ErrorCodes.VALIDATION_ERROR, 'Notification ID or "all: true" is required.', 400);
   } catch (error: any) {
     console.error('PATCH /api/notifications error:', error);
     return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Failed to update notification', 500);

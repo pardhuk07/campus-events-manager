@@ -1,10 +1,19 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
-import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
+import { getServerUser } from '@/lib/auth';
+import { apiSuccess, apiError, ErrorCodes, UserRole } from '@/lib/constants';
 
-// GET /api/conflicts - List all event conflicts
-export async function GET() {
+// GET /api/conflicts - List all event conflicts (Executives and Core)
+export async function GET(request: NextRequest) {
   try {
+    const user = await getServerUser(request);
+    const userRole = user?.role || UserRole.MEMBER;
+
+    // Members cannot view internal active conflict queues
+    if (userRole === UserRole.MEMBER) {
+      return apiSuccess([]);
+    }
+
     const conflicts = await dbService.getConflicts();
     return apiSuccess(conflicts);
   } catch (error: any) {

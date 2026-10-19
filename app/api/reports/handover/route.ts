@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/dbService';
+import { requireExecOrCore } from '@/lib/auth';
 import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
 
 export async function GET(request: NextRequest) {
   try {
+    // Only Club Executives and ACM Core can export full handover audit reports
+    const auth = await requireExecOrCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
+    }
+
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'json';
 

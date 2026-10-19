@@ -20,22 +20,36 @@ export default function Home() {
     setTargetEventId(eventId);
   };
 
-  // Check saved session on mount
+  // Check saved session on mount & sync with server cookie
   useEffect(() => {
-    const saved = localStorage.getItem('acm_auth_user');
-    if (saved) {
-      try {
-        setCurrentUser(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
+    fetch('/api/auth/session')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data?.user) {
+          setCurrentUser(data.data.user);
+          localStorage.setItem('acm_auth_user', JSON.stringify(data.data.user));
+          setShowGatekeeper(false);
+        } else {
+          const saved = localStorage.getItem('acm_auth_user');
+          if (saved) {
+            try {
+              setCurrentUser(JSON.parse(saved));
+            } catch (e) {
+              console.error(e);
+              setShowGatekeeper(true);
+            }
+          } else {
+            setShowGatekeeper(true);
+          }
+        }
+      })
+      .catch(() => {
         setShowGatekeeper(true);
-      }
-    } else {
-      setShowGatekeeper(true);
-    }
+      });
   }, []);
 
   const handleSelectPublic = () => {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(console.error);
     const publicUser: AuthUser = {
       id: 'guest-public',
       name: 'Public Guest',
@@ -54,6 +68,7 @@ export default function Home() {
   };
 
   const handleLogout = () => {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(console.error);
     setCurrentUser(null);
     localStorage.removeItem('acm_auth_user');
     setShowGatekeeper(true);

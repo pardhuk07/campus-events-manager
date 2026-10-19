@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
-import { apiSuccess, apiError, ErrorCodes, UserRole } from '@/lib/constants';
+import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
+import { requireCore } from '@/lib/auth';
 
 // POST /api/events/:id/review - Core review decision endpoint
 export async function POST(
@@ -9,18 +10,13 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
-    const { decision, comment, reviewerName, userRole } = body;
 
-    // 1. STRICT RBAC ENFORCEMENT IN API ROUTE
-    const effectiveRole = userRole || request.headers.get('x-user-role');
-    if (effectiveRole !== UserRole.CORE_VERIFIER && effectiveRole !== 'ACM_CORE') {
-      return apiError(
-        ErrorCodes.FORBIDDEN,
-        'Access denied: Only ACM Core members (CORE_VERIFIER) can review proposals and render decisions.',
-        403
-      );
+    // 1. STRICT SERVER-SIDE SESSION & RBAC ENFORCEMENT: ACM Core only
+    const auth = await requireCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
     }
+    const reviewer = auth.user;
 
     // 2. Validate Event Exists
     const existing = await dbService.getEventById(id);
@@ -28,12 +24,16 @@ export async function POST(
       return apiError(ErrorCodes.EVENT_NOT_FOUND, 'Event proposal not found with provided ID.', 404);
     }
 
+    const body = await request.json();
+    const { decision, comment } = body;
+
     // 3. Validate Decision Type
     const validDecisions = ['APPROVE', 'REJECT', 'RESCHEDULE_REQUESTED'];
-    if (!decision || !validDecisions.includes(decision.toUpperCase())) {
+    if (!decision || typeof decision !== 'string' || !validDecisions.includes(decision.toUpperCase())) {
       return apiError(
         ErrorCodes.VALIDATION_ERROR,
-        `Invalid decision '${decision}'. Allowed: APPROVE, REJECT, RESCHEDULE_REQUESTED.`
+        `Invalid decision '${decision}'. Allowed: APPROVE, REJECT, RESCHEDULE_REQUESTED.`,
+        400
       );
     }
 
@@ -41,13 +41,18 @@ export async function POST(
 
     // 4. Strict Comment Validation for Reject and Reschedule
     if (normDecision === 'REJECT' || normDecision === 'RESCHEDULE_REQUESTED') {
-      if (!comment || !comment.trim()) {
+      if (!comment || typeof comment !== 'string' || !comment.trim()) {
         const actionLabel = normDecision === 'REJECT' ? 'rejecting' : 'requesting a reschedule';
         return apiError(
           ErrorCodes.VALIDATION_ERROR,
-          `A review comment is strictly required when ${actionLabel} an event proposal.`
+          `A review comment is strictly required when ${actionLabel} an event proposal.`,
+          400
         );
       }
+    }
+
+    if (comment && typeof comment === 'string' && comment.trim().length > 1000) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Comment cannot exceed 1000 characters.', 400);
     }
 
     // 5. Persist Decision, Comment, Reviewer, and Timestamp on the Event
@@ -55,7 +60,7 @@ export async function POST(
       eventId: id,
       decision: normDecision,
       comment: comment ? comment.trim() : null,
-      reviewerName: reviewerName || 'ACM Core Verifier',
+      reviewerName: reviewer.name || 'ACM Core Verifier',
     });
 
     return apiSuccess({

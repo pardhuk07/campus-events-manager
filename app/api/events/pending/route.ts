@@ -1,21 +1,16 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
-import { apiSuccess, apiError, ErrorCodes, UserRole } from '@/lib/constants';
+import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
 import { query } from '@/lib/db';
+import { requireCore } from '@/lib/auth';
 
 // GET /api/events/pending - Restricted to ACM Core role
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userRole = searchParams.get('userRole') || request.headers.get('x-user-role');
-
-    // STRICT RBAC ENFORCEMENT IN API ROUTE
-    if (userRole !== UserRole.CORE_VERIFIER && userRole !== 'ACM_CORE') {
-      return apiError(
-        ErrorCodes.FORBIDDEN,
-        'Access denied: The Pending Review queue is strictly restricted to ACM Core members.',
-        403
-      );
+    // STRICT RBAC ENFORCEMENT: ACM Core only
+    const auth = await requireCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
     }
 
     // List all events with status 'PENDING', newest first

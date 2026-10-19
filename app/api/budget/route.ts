@@ -1,28 +1,25 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
-import { UserRole } from '@/lib/constants';
+import { requireCore } from '@/lib/auth';
+import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { amount, totalAllocated, userRole } = body;
-
     // RBAC Security Check: Only ACM Core Verifiers can adjust the semester budget
-    if (userRole !== UserRole.CORE_VERIFIER && userRole !== 'ACM_CORE') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Forbidden: Only ACM Core Verifiers have permission to modify the semester budget.',
-        },
-        { status: 403 }
-      );
+    const auth = await requireCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
     }
+
+    const body = await request.json();
+    const { amount, totalAllocated } = body;
 
     const parsedBudget = parseFloat(amount || totalAllocated);
     if (isNaN(parsedBudget) || parsedBudget <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Budget amount must be a positive number.' },
-        { status: 400 }
+      return apiError(
+        ErrorCodes.VALIDATION_ERROR,
+        'Budget amount must be a positive number.',
+        400
       );
     }
 
@@ -30,19 +27,15 @@ export async function PATCH(request: Request) {
     const active = budgets[0];
     if (active) {
       const updated = await dbService.updateBudget(active.id, { amount: parsedBudget });
-      return NextResponse.json({
-        success: true,
+      return apiSuccess({
         message: `Semester budget successfully updated to ₹${parsedBudget.toLocaleString()}`,
         budget: updated,
       });
     }
 
-    return NextResponse.json({ success: false, error: 'No active budget found' }, { status: 404 });
-  } catch (error) {
+    return apiError(ErrorCodes.BUDGET_NOT_FOUND, 'No active budget found', 404);
+  } catch (error: any) {
     console.error('Error updating budget:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Server error', 500);
   }
 }

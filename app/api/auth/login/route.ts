@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
 import { apiSuccess, apiError, ErrorCodes, UserRole } from '@/lib/constants';
+import { CORE_EMAILS, createSessionToken, createSessionCookieHeader } from '@/lib/auth';
 
-// Pre-registered users and passwords per hackathon requirement
+// Pre-registered users and passwords
 export const PRE_REGISTERED_USERS = [
   {
     email: 'pardhu120907@gmail.com',
@@ -46,8 +47,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password, selectedRole } = body;
 
-    if (!email || !email.includes('@')) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Please enter a valid Gmail / student email.');
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Please enter a valid Gmail / student email.', 400);
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -70,18 +71,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SERVER-SIDE ROLE DETERMINATION: Never from request body or client state!
     let role: UserRole = UserRole.MEMBER;
     let name = normalizedEmail.split('@')[0];
 
-    if (preReg) {
+    // 1. Check Core Email Allowlist
+    if (CORE_EMAILS.some((e) => e.toLowerCase() === normalizedEmail)) {
+      role = UserRole.CORE_VERIFIER;
+      name = 'ACM Core Lead';
+    } else if (preReg) {
       role = preReg.role;
       name = preReg.name;
-    } else if (normalizedEmail.includes('core') || normalizedEmail === 'pardhu120907@gmail.com') {
-      role = UserRole.CORE_VERIFIER;
-    } else if (normalizedEmail.includes('exec') || normalizedEmail.includes('lead')) {
-      role = UserRole.CLUB_EXEC;
-    } else if (selectedRole) {
-      role = selectedRole as UserRole;
+    } else {
+      // 2. Check Database record
+      const existingDbUser = await dbService.getUserByEmail(normalizedEmail);
+      if (existingDbUser) {
+        if (existingDbUser.role === UserRole.CORE_VERIFIER) {
+          role = UserRole.CORE_VERIFIER;
+        } else if (existingDbUser.role === UserRole.CLUB_EXEC) {
+          role = UserRole.CLUB_EXEC;
+        } else {
+          role = UserRole.MEMBER;
+        }
+        name = existingDbUser.name;
+      } else {
+        // Unknown users default to MEMBER
+        role = UserRole.MEMBER;
+      }
     }
 
     // Role verification check if selected in UI
@@ -118,8 +134,12 @@ export async function POST(request: NextRequest) {
       clubId: resolvedClubId,
     });
 
-    return apiSuccess({
-      message: `Verified successfully as ${role}`,
+    // Create cryptographically signed HTTP-only session token
+    const token = createSessionToken(user.email);
+    const cookieHeader = createSessionCookieHeader(token);
+
+    const response = apiSuccess({
+      message: `Verified successfully as ${user.role}`,
       user: {
         id: user.id,
         name: user.name,
@@ -128,6 +148,9 @@ export async function POST(request: NextRequest) {
         clubId: user.clubId,
       },
     });
+
+    response.headers.set('Set-Cookie', cookieHeader);
+    return response;
   } catch (error: any) {
     console.error('POST /api/auth/login error:', error);
     return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Login failed', 500);

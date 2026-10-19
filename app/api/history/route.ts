@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { query } from '@/lib/db';
 import { dbService } from '@/lib/dbService';
-import { apiSuccess, apiError, ErrorCodes, ExpenseCategory } from '@/lib/constants';
+import { getServerUser } from '@/lib/auth';
+import { apiSuccess, apiError, ErrorCodes, ExpenseCategory, UserRole } from '@/lib/constants';
 
 interface SemesterDef {
   id: string;
@@ -65,9 +66,12 @@ export async function GET(request: NextRequest) {
     const semStart = new Date(selectedSemester.startDate);
     const semEnd = new Date(selectedSemester.endDate);
 
+    const user = await getServerUser(request);
+    const userRole = user?.role || UserRole.MEMBER;
+
     // 2. Section 1: Past Events (Completed events with end date in the past, within semester)
     // Query events with club, organizer, date, venue, type, status, approval comment, and actual spend
-    const pastEvents = await query(
+    let pastEvents = await query(
       `
       SELECT e.*,
         c.name as "clubName",
@@ -85,6 +89,20 @@ export async function GET(request: NextRequest) {
     `,
       [semStart, semEnd]
     );
+
+    // Scoped visibility: members only see approved/completed events
+    if (userRole === UserRole.MEMBER) {
+      pastEvents = pastEvents.filter(
+        (e: any) => e.status === 'APPROVED' || e.status === 'COMPLETED'
+      );
+    } else if (userRole === UserRole.CLUB_EXEC) {
+      pastEvents = pastEvents.filter(
+        (e: any) =>
+          e.status === 'APPROVED' ||
+          e.status === 'COMPLETED' ||
+          (user?.clubId && e.clubId === user.clubId)
+      );
+    }
 
     // 3. Section 2: Conflict Log (Every conflict flagged for events in this semester)
     const conflicts = await query(

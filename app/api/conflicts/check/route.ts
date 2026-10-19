@@ -2,17 +2,25 @@ import { NextRequest } from 'next/server';
 import { checkEventConflicts } from '@/services/conflictEngine';
 import { query } from '@/lib/db';
 import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
+import { requireExecOrCore } from '@/lib/auth';
 
 // POST /api/conflicts/check - Perform real-time pre-submission check for time/venue/audience overlaps
 export async function POST(request: NextRequest) {
   try {
+    // Only Club Executives and ACM Core need to run pre-submission checks
+    const auth = await requireExecOrCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
+    }
+
     const body = await request.json();
     const { startTime, endTime, venue, audienceTags, excludeEventId } = body;
 
     if (!startTime || !endTime || !venue) {
       return apiError(
         ErrorCodes.VALIDATION_ERROR,
-        'startTime, endTime, and venue are required for conflict checking.'
+        'startTime, endTime, and venue are required for conflict checking.',
+        400
       );
     }
 
@@ -20,7 +28,7 @@ export async function POST(request: NextRequest) {
     const end = new Date(endTime);
 
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      return apiError(ErrorCodes.INVALID_EVENT_TIME, 'End time must be after start time.');
+      return apiError(ErrorCodes.INVALID_EVENT_TIME, 'End time must be after start time.', 400);
     }
 
     const tags = Array.isArray(audienceTags) ? audienceTags : ['ALL_STUDENTS'];
@@ -28,7 +36,7 @@ export async function POST(request: NextRequest) {
     const report = await checkEventConflicts({
       startTime: start,
       endTime: end,
-      venue: venue.trim(),
+      venue: String(venue).trim().slice(0, 100),
       audienceTags: tags,
       excludeEventId,
     });
@@ -44,7 +52,7 @@ export async function POST(request: NextRequest) {
        WHERE venue = $1 AND status IN ('PENDING', 'APPROVED')
          AND "startTime" >= $2 AND "startTime" < $3
        ORDER BY "startTime" ASC`,
-      [venue.trim(), dayStart, dayEnd]
+      [String(venue).trim(), dayStart, dayEnd]
     );
 
     const durationMs = end.getTime() - start.getTime();

@@ -1,10 +1,12 @@
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
+import { requireExecOrCore } from '@/lib/auth';
 
 /**
  * Cloudinary receipt upload API route
- * - Reads CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET from environment variables.
+ * - Enforces server session & RBAC: Club Executives & ACM Core only.
+ * - Reads CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET from server environment variables.
  * - Never exposes CLOUDINARY_API_SECRET to the client.
  * - Accepts 1 file per request: PDF, JPG, or PNG, max 5 MB.
  * - Validates file type and size on the server.
@@ -13,6 +15,12 @@ import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
  */
 export async function POST(request: NextRequest) {
   try {
+    // 1. STRICT SERVER-SIDE RBAC: Only Club Executives and ACM Core can upload receipts
+    const auth = await requireExecOrCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
@@ -20,7 +28,7 @@ export async function POST(request: NextRequest) {
       return apiError(ErrorCodes.VALIDATION_ERROR, 'No file provided for upload.', 400);
     }
 
-    // 1. Validate File Size: Max 5 MB
+    // 2. Validate File Size: Max 5 MB
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB in bytes
     if (file.size > MAX_FILE_SIZE) {
       const sizeInMb = (file.size / (1024 * 1024)).toFixed(2);
@@ -31,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Validate File Type: PDF, JPG, or PNG
+    // 3. Validate File Type: PDF, JPG, or PNG
     const originalFileName = file.name || 'receipt';
     const lastDotIndex = originalFileName.lastIndexOf('.');
     const ext = lastDotIndex !== -1 ? originalFileName.substring(lastDotIndex).toLowerCase() : '';
@@ -57,7 +65,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Read Cloudinary Credentials from Server Environment Variables
+    // 4. Read Cloudinary Credentials from Server Environment Variables
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -65,20 +73,19 @@ export async function POST(request: NextRequest) {
     if (!cloudName || !apiKey || !apiSecret) {
       return apiError(
         ErrorCodes.FILE_UPLOAD_FAILED,
-        'Cloudinary credentials are not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file.',
+        'Cloudinary credentials are not configured on the server.',
         500
       );
     }
 
-    // 4. Generate Cloudinary SHA-1 Signature for Secure Signed Upload
+    // 5. Generate Cloudinary SHA-1 Signature for Secure Signed Upload
     const timestamp = Math.floor(Date.now() / 1000);
     const folder = 'campus_receipts';
 
-    // Cloudinary signature parameters must be in alphabetical order
     const paramsToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
     const signature = crypto.createHash('sha1').update(paramsToSign).digest('hex');
 
-    // 5. Send Upload Request to Cloudinary REST API (/auto/upload handles both images and PDFs)
+    // 6. Send Upload Request to Cloudinary REST API
     const cloudFormData = new FormData();
     cloudFormData.append('file', file);
     cloudFormData.append('api_key', apiKey);

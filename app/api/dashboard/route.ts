@@ -1,9 +1,22 @@
+import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
-import { apiSuccess, apiError, ErrorCodes, EventStatus, ConflictStatus, ExpenseCategory } from '@/lib/constants';
+import { getServerUser } from '@/lib/auth';
+import {
+  apiSuccess,
+  apiError,
+  ErrorCodes,
+  EventStatus,
+  ConflictStatus,
+  ExpenseCategory,
+  UserRole,
+} from '@/lib/constants';
 
 // GET /api/dashboard - Centralized dashboard reading real data from events, conflicts, expenses, and budgets
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const user = await getServerUser(request);
+    const userRole = user?.role || UserRole.MEMBER;
+
     const [events, conflicts, expenses, budgets] = await Promise.all([
       dbService.getEvents(),
       dbService.getConflicts(),
@@ -13,18 +26,26 @@ export async function GET() {
 
     const now = new Date();
 
-    // 1. Upcoming Events
+    // 1. Upcoming Approved Events (visible to all)
     const upcomingEvents = events
       .filter((e: any) => new Date(e.startTime) >= now && e.status === EventStatus.APPROVED)
       .slice(0, 5);
 
-    // 2. Pending Events awaiting approval
-    const pendingEvents = events.filter((e: any) => e.status === EventStatus.PENDING);
+    // 2. Pending Events awaiting approval (RBAC-scoped)
+    let pendingEvents: any[] = [];
+    if (userRole === UserRole.CORE_VERIFIER) {
+      pendingEvents = events.filter((e: any) => e.status === EventStatus.PENDING);
+    } else if (userRole === UserRole.CLUB_EXEC && user?.clubId) {
+      pendingEvents = events.filter((e: any) => e.status === EventStatus.PENDING && e.clubId === user.clubId);
+    }
 
-    // 3. Potential Conflicts flagged
-    const flaggedConflicts = conflicts.filter((c: any) => c.status === ConflictStatus.FLAGGED);
+    // 3. Potential Conflicts flagged (Core only)
+    let flaggedConflicts: any[] = [];
+    if (userRole === UserRole.CORE_VERIFIER) {
+      flaggedConflicts = conflicts.filter((c: any) => c.status === ConflictStatus.FLAGGED);
+    }
 
-    // 4. Financial Calculations
+    // 4. Financial Calculations (Public Budget Summary)
     const activeBudget = budgets[0] || {
       name: 'Fall 2026 Semester Budget',
       amount: 50000,
@@ -43,6 +64,16 @@ export async function GET() {
       if (categorySpending[ex.category] !== undefined) {
         categorySpending[ex.category] += parseFloat(ex.amount);
       }
+    }
+
+    // 6. Recent Activity (Scoped)
+    let visibleEvents = events;
+    if (userRole === UserRole.MEMBER) {
+      visibleEvents = events.filter((e: any) => e.status === EventStatus.APPROVED);
+    } else if (userRole === UserRole.CLUB_EXEC) {
+      visibleEvents = events.filter(
+        (e: any) => e.status === EventStatus.APPROVED || (user?.clubId && e.clubId === user.clubId)
+      );
     }
 
     return apiSuccess({
@@ -66,7 +97,7 @@ export async function GET() {
       },
       categorySpending,
       recentActivity: {
-        latestEvents: events.slice(0, 5),
+        latestEvents: visibleEvents.slice(0, 5),
         latestExpenses: expenses.slice(0, 5),
       },
     });

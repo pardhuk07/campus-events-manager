@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
+import { getServerUser, requireExecOrCore } from '@/lib/auth';
 import {
   apiSuccess,
   apiError,
@@ -15,8 +16,13 @@ export async function GET(request: NextRequest) {
     const eventId = searchParams.get('eventId');
     const category = searchParams.get('category');
 
+    const user = await getServerUser(request);
+    const userRole = user?.role || UserRole.MEMBER;
+
     let expenses = await dbService.getExpenses();
 
+    // Members and unauthenticated visitors can view public expense records
+    // but receipt URLs or internal IDs are kept intact or filtered as needed
     if (eventId) {
       expenses = expenses.filter((e: any) => e.eventId === eventId);
     }
@@ -34,6 +40,13 @@ export async function GET(request: NextRequest) {
 // POST /api/expenses - Add an expense linked to an approved event, category, and date
 export async function POST(request: NextRequest) {
   try {
+    // 1. STRICT SERVER-SIDE RBAC ENFORCEMENT: Club Executives & ACM Core only
+    const auth = await requireExecOrCore(request);
+    if ('errorResponse' in auth) {
+      return auth.errorResponse;
+    }
+    const user = auth.user;
+
     const body = await request.json();
     const {
       eventId,
@@ -44,40 +57,23 @@ export async function POST(request: NextRequest) {
       receiptUrl,
       receiptPublicId,
       receiptFileName,
-      submittedById,
-      addedByName,
-      userRole,
     } = body;
-
-    // 1. STRICT RBAC ENFORCEMENT: Visible and permitted to Club Executive and ACM Core roles only
-    const effectiveRole = userRole || request.headers.get('x-user-role');
-    const isAllowed =
-      effectiveRole === UserRole.CLUB_EXEC ||
-      effectiveRole === UserRole.CORE_VERIFIER ||
-      effectiveRole === 'ACM_CORE';
-
-    if (!isAllowed) {
-      return apiError(
-        ErrorCodes.FORBIDDEN,
-        'Access denied: Only Club Executives and ACM Core members are permitted to record expenses.',
-        403
-      );
-    }
 
     // 2. Validate Amount (₹, required, strictly greater than 0)
     if (amount === undefined || amount === null || amount === '') {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Amount (₹) is required.');
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Amount (₹) is required.', 400);
     }
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Amount (₹) must be a number greater than 0.');
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Amount (₹) must be a number greater than 0.', 400);
     }
 
     // 3. Validate Category (the existing 8 categories)
     if (!category || !Object.values(ExpenseCategory).includes(category as any)) {
       return apiError(
         ErrorCodes.VALIDATION_ERROR,
-        `Category is required and must be one of: ${Object.values(ExpenseCategory).join(', ')}.`
+        `Category is required and must be one of: ${Object.values(ExpenseCategory).join(', ')}.`,
+        400
       );
     }
 
@@ -86,13 +82,13 @@ export async function POST(request: NextRequest) {
     if (expenseDate) {
       finalDate = new Date(expenseDate);
       if (isNaN(finalDate.getTime())) {
-        return apiError(ErrorCodes.VALIDATION_ERROR, 'A valid expense date is required.');
+        return apiError(ErrorCodes.VALIDATION_ERROR, 'A valid expense date is required.', 400);
       }
     }
 
     // 5. Validate Event (required dropdown of approved events, save linked to event)
-    if (!eventId || !eventId.trim()) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Event is required. Please select an approved event.');
+    if (!eventId || typeof eventId !== 'string' || !eventId.trim()) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Event is required. Please select an approved event.', 400);
     }
     const linkedEvent = await dbService.getEventById(eventId.trim());
     if (!linkedEvent) {
@@ -101,24 +97,26 @@ export async function POST(request: NextRequest) {
     if (linkedEvent.status !== 'APPROVED') {
       return apiError(
         ErrorCodes.VALIDATION_ERROR,
-        `Expenses can only be recorded for approved events. Selected event has status '${linkedEvent.status}'.`
+        `Expenses can only be recorded for approved events. Selected event has status '${linkedEvent.status}'.`,
+        400
       );
     }
 
     // 6. Validate Description (required, max 200 characters)
-    if (!description || !description.trim()) {
-      return apiError(ErrorCodes.VALIDATION_ERROR, 'Description is required.');
+    if (!description || typeof description !== 'string' || !description.trim()) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Description is required.', 400);
     }
     if (description.trim().length > 200) {
       return apiError(
         ErrorCodes.VALIDATION_ERROR,
-        `Description cannot exceed 200 characters. Currently ${description.trim().length} characters.`
+        `Description cannot exceed 200 characters. Currently ${description.trim().length} characters.`,
+        400
       );
     }
 
     // 7. Validate Receipt requirement (Required for expenses over ₹500, optional below that)
     if (numAmount > 500) {
-      if (!receiptUrl || !receiptUrl.trim()) {
+      if (!receiptUrl || typeof receiptUrl !== 'string' || !receiptUrl.trim()) {
         return apiError(
           ErrorCodes.VALIDATION_ERROR,
           'Receipt upload is required for any expense over ₹500.',
@@ -128,7 +126,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 8. Check semester budget impact (₹50,000 threshold)
-    // "If an expense would push the total spent above ₹50,000, still allow it but show a red warning: ‘This exceeds the semester budget by ₹X’."
     const existingExpenses = await dbService.getExpenses();
     const currentTotalSpent = existingExpenses.reduce(
       (sum: number, ex: any) => sum + (parseFloat(ex.amount) || 0),
@@ -141,31 +138,18 @@ export async function POST(request: NextRequest) {
       budgetWarning = `This exceeds the semester budget by ₹${excess.toLocaleString('en-IN')}`;
     }
 
-    // 9. Resolve Submitter & Added By Name
-    let finalSubmitterId = submittedById;
-    if (!finalSubmitterId) {
-      const defaultUser = await dbService.getUserByEmail('pardhu120907@gmail.com');
-      finalSubmitterId = defaultUser ? defaultUser.id : 'user-pardhu';
-    }
-
-    const finalAddedByName =
-      addedByName ||
-      (effectiveRole === UserRole.CORE_VERIFIER || effectiveRole === 'ACM_CORE'
-        ? 'ACM Core'
-        : 'Club Executive');
-
-    // 10. Persist Expense in database linked to event and receipt
+    // 9. Persist Expense in database linked to event and receipt, using server-verified user identity
     const createdExpense = await dbService.createExpense({
       eventId: linkedEvent.id,
       amount: numAmount,
       category,
       description: description.trim(),
       expenseDate: finalDate,
-      receiptUrl: receiptUrl || null,
-      receiptPublicId: receiptPublicId || null,
-      receiptFileName: receiptFileName || null,
-      submittedById: finalSubmitterId,
-      addedByName: finalAddedByName,
+      receiptUrl: receiptUrl ? String(receiptUrl).trim() : null,
+      receiptPublicId: receiptPublicId ? String(receiptPublicId).trim() : null,
+      receiptFileName: receiptFileName ? String(receiptFileName).trim() : null,
+      submittedById: user.id,
+      addedByName: user.name || (user.role === UserRole.CORE_VERIFIER ? 'ACM Core' : 'Club Executive'),
     });
 
     return apiSuccess(
