@@ -147,6 +147,7 @@ export const dbService = {
     decision: 'APPROVE' | 'REJECT' | 'RESCHEDULE_REQUESTED';
     comment?: string | null;
     reviewerName?: string | null;
+    approvedBudget?: number | null;
   }) {
     await checkInit();
     const status =
@@ -156,16 +157,23 @@ export const dbService = {
         ? EventStatus.REJECTED
         : EventStatus.RESCHEDULE_REQUESTED;
 
+    const existing = await this.getEventById(data.eventId);
+    let finalBudget = existing?.approvedBudget ?? Math.round(Number(existing?.estimatedCost || 0));
+    if (data.approvedBudget !== undefined && data.approvedBudget !== null) {
+      finalBudget = Math.round(Number(data.approvedBudget));
+    }
+
     await query(
       `UPDATE "Event"
        SET "status" = $1,
            "reviewDecision" = $2,
            "reviewComment" = $3,
            "reviewedByName" = $4,
+           "approvedBudget" = $5,
            "reviewedAt" = NOW(),
            "updatedAt" = NOW()
-       WHERE id = $5`,
-      [status, data.decision, data.comment || null, data.reviewerName || 'ACM Core Verifier', data.eventId]
+       WHERE id = $6`,
+      [status, data.decision, data.comment || null, data.reviewerName || 'ACM Core Verifier', finalBudget, data.eventId]
     );
 
     return this.getEventById(data.eventId);
@@ -183,6 +191,7 @@ export const dbService = {
     category?: string | null;
     eventType?: string | null;
     estimatedCost?: number | null;
+    approvedBudget?: number | null;
     organizer?: string | null;
     status?: string;
     conflictFlags?: string[];
@@ -193,16 +202,25 @@ export const dbService = {
     const flags = data.conflictFlags || [];
     const eventType = data.eventType || data.category || 'Workshop';
     const estimatedCost = data.estimatedCost !== undefined && data.estimatedCost !== null ? Number(data.estimatedCost) : 0;
+    const approvedBudget = data.approvedBudget !== undefined && data.approvedBudget !== null ? Math.round(Number(data.approvedBudget)) : Math.round(estimatedCost);
     const organizer = data.organizer || 'Club Organizer';
+
+    // Match semester based on startTime
+    const semRows = await query(
+      `SELECT id FROM "Semester" WHERE $1 >= "startDate" AND $1 <= "endDate" ORDER BY "startDate" DESC LIMIT 1`,
+      [data.startTime]
+    );
+    const semesterId = semRows[0]?.id || null;
+
     const rows = await query(
       `
       INSERT INTO "Event" (
         "id", "title", "description", "clubId", "startTime", "endTime",
         "venue", "audienceTags", "expectedAttendance", "category",
-        "eventType", "estimatedCost", "organizer",
+        "eventType", "estimatedCost", "approvedBudget", "semesterId", "organizer",
         "status", "conflictFlags", "flags", "submittedById", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15, $16, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17, $18, NOW())
       RETURNING *
     `,
       [
@@ -218,6 +236,8 @@ export const dbService = {
         data.category || eventType,
         eventType,
         estimatedCost,
+        approvedBudget,
+        semesterId,
         organizer,
         data.status || EventStatus.PENDING,
         flags,
@@ -461,6 +481,8 @@ export const dbService = {
 
   async createExpense(data: {
     eventId?: string | null;
+    clubId?: string | null;
+    semesterId?: string | null;
     amount: number;
     category: string;
     description?: string | null;
@@ -473,19 +495,22 @@ export const dbService = {
   }) {
     await checkInit();
     const expenseId = randomUUID();
+    const roundedAmount = Math.round(Number(data.amount));
     const rows = await query(
       `
       INSERT INTO "Expense" (
-        "id", "eventId", "amount", "category", "description", "expenseDate",
+        "id", "eventId", "clubId", "semesterId", "amount", "category", "description", "expenseDate",
         "receiptUrl", "receiptPublicId", "receiptFileName", "submittedById", "addedByName", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
       RETURNING *
     `,
       [
         expenseId,
         data.eventId || null,
-        data.amount,
+        data.clubId || null,
+        data.semesterId || null,
+        roundedAmount,
         data.category,
         data.description || null,
         data.expenseDate || new Date(),

@@ -13,6 +13,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const user = await getServerUser(request);
+    // Public and members get 403 on every budget route
     if (!user || user.role === UserRole.MEMBER) {
       return apiError(
         ErrorCodes.FORBIDDEN,
@@ -21,20 +22,72 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { budgetService } = await import('@/lib/budgetService');
+    const { searchParams } = new URL(request.url);
+    const requestedClubId = searchParams.get('clubId');
+    const requestedSemesterId = searchParams.get('semesterId');
+
+    const activeSem = requestedSemesterId 
+      ? await budgetService.getSemesterById(requestedSemesterId)
+      : await budgetService.getActiveSemester();
+
+    // 1. Executive View: Strictly restricted to their own club
+    if (user.role === UserRole.CLUB_EXEC) {
+      if (!user.clubId) {
+        return apiError(ErrorCodes.FORBIDDEN, 'Executive account is not linked to any campus club.', 403);
+      }
+      if (requestedClubId && requestedClubId !== user.clubId) {
+        return apiError(ErrorCodes.FORBIDDEN, 'Executives can only view their own club budget.', 403);
+      }
+
+      if (activeSem) {
+        const clubDetails = await budgetService.getClubBudgetDetails(user.clubId, activeSem.id);
+        return apiSuccess([
+          {
+            id: `budget-${clubDetails.club.id}-${clubDetails.semester.id}`,
+            name: `${clubDetails.club.name} (${clubDetails.semester.name})`,
+            amount: clubDetails.allocated,
+            totalSpent: clubDetails.spent,
+            remainingBudget: clubDetails.remaining,
+            committed: clubDetails.committed,
+            availableToPlan: clubDetails.availableToPlan,
+            percentSpent: clubDetails.allocated > 0 ? Math.round((clubDetails.spent / clubDetails.allocated) * 1000) / 10 : 0,
+            perEventRows: clubDetails.perEventRows,
+            monthlySpending: clubDetails.monthlySpending,
+            changeLogs: clubDetails.changeLogs,
+            startDate: clubDetails.semester.startDate,
+            endDate: clubDetails.semester.endDate,
+            club: clubDetails.club,
+            semester: clubDetails.semester,
+          },
+        ]);
+      }
+    }
+
+    // 2. Core View: Sees all clubs
     const budgets = await dbService.getBudgets();
     const expenses = await dbService.getExpenses();
+
+    let allClubsOverview: any = null;
+    if (activeSem) {
+      try {
+        allClubsOverview = await budgetService.getAllClubsSummary(activeSem.id);
+      } catch (e) {
+        console.warn('Could not compute all clubs summary:', e);
+      }
+    }
 
     const budgetsWithCalculations = budgets.map((b: any) => {
       const budgetStart = new Date(b.startDate).getTime();
       const budgetEnd = new Date(b.endDate).getTime();
-      const allocated = parseFloat(b.amount);
+      const allocated = Math.round(parseFloat(b.amount) || 0);
 
       const periodExpenses = expenses.filter((ex: any) => {
         const exTime = new Date(ex.expenseDate).getTime();
         return exTime >= budgetStart && exTime <= budgetEnd;
       });
 
-      const totalSpent = periodExpenses.reduce((sum: number, ex: any) => sum + parseFloat(ex.amount), 0);
+      const totalSpent = periodExpenses.reduce((sum: number, ex: any) => sum + Math.round(parseFloat(ex.amount) || 0), 0);
       const remainingBudget = allocated - totalSpent;
 
       return {
@@ -43,6 +96,7 @@ export async function GET(request: NextRequest) {
         totalSpent,
         remainingBudget,
         percentSpent: allocated > 0 ? Math.round((totalSpent / allocated) * 1000) / 10 : 0,
+        clubsOverview: allClubsOverview,
       };
     });
 

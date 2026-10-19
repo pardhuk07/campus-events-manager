@@ -100,19 +100,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Validate Event (required dropdown of approved events, save linked to event)
+    // 5. Validate Event (required, must exist and be APPROVED)
     if (!eventId || typeof eventId !== 'string' || !eventId.trim()) {
       return apiError(ErrorCodes.VALIDATION_ERROR, 'Event is required. Please select an approved event.', 400);
     }
-    const linkedEvent = await dbService.getEventById(eventId.trim());
-    if (!linkedEvent) {
-      return apiError(ErrorCodes.EVENT_NOT_FOUND, 'The selected event was not found in the database.', 404);
+
+    // Server-Side Derivation: Derives clubId and semesterId directly from the event and expense date
+    // Never taken from or trusted from client request parameters
+    const { budgetService } = await import('@/lib/budgetService');
+    let expenseContext: { clubId: string; semesterId: string; event: any };
+    try {
+      expenseContext = await budgetService.deriveExpenseContext(eventId.trim(), finalDate);
+    } catch (ctxErr: any) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, ctxErr.message || 'Failed to resolve event and semester context.', 400);
     }
-    if (linkedEvent.status !== 'APPROVED') {
+
+    const linkedEvent = expenseContext.event;
+    if (linkedEvent.status !== 'APPROVED' && linkedEvent.status !== 'COMPLETED') {
       return apiError(
         ErrorCodes.VALIDATION_ERROR,
         `Expenses can only be recorded for approved events. Selected event has status '${linkedEvent.status}'.`,
         400
+      );
+    }
+
+    // Role Ownership check: Club Executive can only record expenses for their own club
+    if (user.role === UserRole.CLUB_EXEC && user.clubId && expenseContext.clubId !== user.clubId) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: You can only record expenses for events hosted by your own club.',
+        403
       );
     }
 
@@ -129,7 +146,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Validate Receipt requirement (Required for expenses over ₹500, optional below that)
-    if (numAmount > 500) {
+    const intAmount = Math.round(numAmount);
+    if (intAmount > 500) {
       if (!receiptUrl || typeof receiptUrl !== 'string' || !receiptUrl.trim()) {
         return apiError(
           ErrorCodes.VALIDATION_ERROR,
@@ -139,23 +157,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 8. Check semester budget impact (₹50,000 threshold)
-    const existingExpenses = await dbService.getExpenses();
-    const currentTotalSpent = existingExpenses.reduce(
-      (sum: number, ex: any) => sum + (parseFloat(ex.amount) || 0),
-      0
-    );
-    const projectedTotalSpent = currentTotalSpent + numAmount;
+    // 8. Check club semester budget impact using integer rupees
     let budgetWarning: string | null = null;
-    if (projectedTotalSpent > 50000) {
-      const excess = projectedTotalSpent - 50000;
-      budgetWarning = `This exceeds the semester budget by ₹${excess.toLocaleString('en-IN')}`;
+    try {
+      const budgetDetails = await budgetService.getClubBudgetDetails(expenseContext.clubId, expenseContext.semesterId);
+      const projectedSpent = budgetDetails.spent + intAmount;
+      if (budgetDetails.allocated > 0 && projectedSpent > budgetDetails.allocated) {
+        const excess = projectedSpent - budgetDetails.allocated;
+        budgetWarning = `Warning: This expense exceeds ${budgetDetails.club.name}'s semester budget by ₹${excess.toLocaleString('en-IN')}`;
+      }
+    } catch (e) {
+      // Non-blocking warning check
     }
 
-    // 9. Persist Expense in database linked to event and receipt, using server-verified user identity
+    // 9. Persist Expense in database linked to event, with server-derived clubId & semesterId
     const createdExpense = await dbService.createExpense({
       eventId: linkedEvent.id,
-      amount: numAmount,
+      clubId: expenseContext.clubId,
+      semesterId: expenseContext.semesterId,
+      amount: intAmount,
       category,
       description: description.trim(),
       expenseDate: finalDate,
@@ -170,7 +190,8 @@ export async function POST(request: NextRequest) {
       {
         expense: createdExpense,
         warning: budgetWarning,
-        totalSpent: projectedTotalSpent,
+        clubId: expenseContext.clubId,
+        semesterId: expenseContext.semesterId,
       },
       201
     );

@@ -25,7 +25,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { decision, comment } = body;
+    const { decision, comment, approvedBudget } = body;
 
     // 3. Validate Decision Type
     const validDecisions = ['APPROVE', 'REJECT', 'RESCHEDULE_REQUESTED'];
@@ -55,12 +55,26 @@ export async function POST(
       return apiError(ErrorCodes.VALIDATION_ERROR, 'Comment cannot exceed 1000 characters.', 400);
     }
 
-    // 5. Persist Decision, Comment, Reviewer, and Timestamp on the Event
+    // 5. Validate approvedBudget if provided (integer in rupees >= 0)
+    let parsedApprovedBudget: number | null = null;
+    if (approvedBudget !== undefined && approvedBudget !== null && approvedBudget !== '') {
+      const b = parseFloat(approvedBudget);
+      if (isNaN(b) || b < 0) {
+        return apiError(ErrorCodes.VALIDATION_ERROR, 'Approved budget must be a positive integer in rupees.', 400);
+      }
+      parsedApprovedBudget = Math.round(b);
+    } else if (normDecision === 'APPROVE') {
+      // Default to estimatedCost as integer
+      parsedApprovedBudget = Math.round(Number(existing.estimatedCost || 0));
+    }
+
+    // 6. Persist Decision, Comment, Reviewer, Timestamp, and approvedBudget on the Event
     const updatedEvent = await dbService.reviewEvent({
       eventId: id,
       decision: normDecision,
       comment: comment ? comment.trim() : null,
       reviewerName: reviewer.name || 'ACM Core Verifier',
+      approvedBudget: parsedApprovedBudget,
     });
 
     return apiSuccess({

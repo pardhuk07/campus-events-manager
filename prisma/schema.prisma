@@ -76,8 +76,10 @@ model Club {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  users  User[]
-  events Event[]
+  users       User[]
+  events      Event[]
+  clubBudgets ClubBudget[]
+  expenses    Expense[]
 }
 
 model Event {
@@ -86,6 +88,8 @@ model Event {
   description        String?
   clubId             String
   club               Club         @relation(fields: [clubId], references: [id])
+  semesterId         String?
+  semester           Semester?    @relation(fields: [semesterId], references: [id])
   startTime          DateTime
   endTime            DateTime
   venue              String
@@ -94,6 +98,7 @@ model Event {
   category           String?
   eventType          String?
   estimatedCost      Decimal?     @default(0) @db.Decimal(10, 2)
+  approvedBudget     Int?         // Integer in rupees, defaults to estimated cost
   organizer          String?
   conflictFlags      String[]     @default([])
   flags              String[]     @default([])
@@ -140,7 +145,11 @@ model Expense {
   id              String          @id @default(uuid())
   eventId         String?
   event           Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  amount          Decimal         @db.Decimal(10, 2)
+  clubId          String?
+  club            Club?           @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  semesterId      String?
+  semester        Semester?       @relation(fields: [semesterId], references: [id], onDelete: SetNull)
+  amount          Int             // Integer in rupees
   category        ExpenseCategory
   description     String?
   expenseDate     DateTime        @default(now())
@@ -154,7 +163,57 @@ model Expense {
   updatedAt       DateTime        @updatedAt
 
   @@index([eventId])
+  @@index([clubId])
+  @@index([semesterId])
   @@index([expenseDate])
+}
+
+model Semester {
+  id        String   @id @default(uuid())
+  name      String   @unique // e.g., 'Fall 2026', 'Spring 2026'
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clubBudgets ClubBudget[]
+  events      Event[]
+  expenses    Expense[]
+
+  @@index([startDate, endDate])
+}
+
+model ClubBudget {
+  id              String   @id @default(uuid())
+  clubId          String
+  club            Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  semesterId      String
+  semester        Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  allocatedAmount Int      @default(0) // Integer in rupees
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  changeLogs BudgetChangeLog[]
+
+  @@unique([clubId, semesterId])
+  @@index([clubId])
+  @@index([semesterId])
+}
+
+model BudgetChangeLog {
+  id           String     @id @default(uuid())
+  clubBudgetId String
+  clubBudget   ClubBudget @relation(fields: [clubBudgetId], references: [id], onDelete: Cascade)
+  oldAmount    Int        // Integer in rupees
+  newAmount    Int        // Integer in rupees
+  reason       String
+  changedBy    String?    // User name
+  changedById  String?    // User ID
+  timestamp    DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+
+  @@index([clubBudgetId])
+  @@index([timestamp])
 }
 
 model Budget {

@@ -3,6 +3,36 @@ import { dbService } from '@/lib/dbService';
 import { requireCore } from '@/lib/auth';
 import { apiSuccess, apiError, ErrorCodes } from '@/lib/constants';
 
+import { getServerUser } from '@/lib/auth';
+import { UserRole } from '@/lib/constants';
+
+// GET /api/budgets/:id
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getServerUser(request);
+    if (!user || user.role === UserRole.MEMBER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Budget records are confidential and restricted from public and member access.',
+        403
+      );
+    }
+
+    const { id } = await params;
+    const budget = await dbService.getBudgetById(id);
+    if (!budget) {
+      return apiError(ErrorCodes.BUDGET_NOT_FOUND, 'Budget not found.', 404);
+    }
+    return apiSuccess(budget);
+  } catch (error: any) {
+    console.error('GET /api/budgets/:id error:', error);
+    return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Server error', 500);
+  }
+}
+
 // PATCH /api/budgets/:id - Modify budget (ACM Core only)
 export async function PATCH(
   request: NextRequest,

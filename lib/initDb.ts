@@ -103,6 +103,12 @@ export async function ensureDatabaseTables() {
         END LOOP;
       END $$;
 
+      -- Safely drop NOT NULL on legacy title in Expense if exists
+      DO $$ BEGIN
+        ALTER TABLE "Expense" ALTER COLUMN "title" DROP NOT NULL;
+      EXCEPTION WHEN undefined_column THEN null;
+      END $$;
+
       -- Standardize column types to TEXT to prevent enum mismatches
       ALTER TABLE "User" ALTER COLUMN "role" TYPE TEXT;
       ALTER TABLE "Event" ALTER COLUMN "status" TYPE TEXT;
@@ -138,6 +144,8 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "category" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "eventType" TEXT DEFAULT 'Workshop';
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "estimatedCost" NUMERIC(10, 2) DEFAULT 0;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "approvedBudget" INTEGER;
+      ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "semesterId" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "organizer" TEXT;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
       ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "conflictFlags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
@@ -177,6 +185,8 @@ export async function ensureDatabaseTables() {
       CREATE TABLE IF NOT EXISTS "Expense" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "eventId" TEXT REFERENCES "Event"("id") ON DELETE SET NULL,
+        "clubId" TEXT,
+        "semesterId" TEXT,
         "amount" NUMERIC(10, 2) NOT NULL,
         "category" "ExpenseCategory" NOT NULL,
         "description" TEXT,
@@ -189,13 +199,54 @@ export async function ensureDatabaseTables() {
       );
 
       -- Add missing columns to Expense if table existed
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "clubId" TEXT;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "semesterId" TEXT;
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "receiptPublicId" TEXT;
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "submittedById" TEXT REFERENCES "User"("id") ON DELETE SET NULL;
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "expenseDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "addedByName" TEXT;
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "receiptFileName" TEXT;
 
-      -- Budget Table
+      -- Semester Table
+      CREATE TABLE IF NOT EXISTS "Semester" (
+        "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        "name" TEXT UNIQUE NOT NULL,
+        "startDate" TIMESTAMP(3) NOT NULL,
+        "endDate" TIMESTAMP(3) NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "Semester_startDate_endDate_idx" ON "Semester"("startDate", "endDate");
+
+      -- ClubBudget Table (Fixed budget per club per semester, unique constraint)
+      CREATE TABLE IF NOT EXISTS "ClubBudget" (
+        "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        "clubId" TEXT NOT NULL,
+        "semesterId" TEXT NOT NULL,
+        "allocatedAmount" INTEGER NOT NULL DEFAULT 0,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS "ClubBudget_clubId_semesterId_key" ON "ClubBudget"("clubId", "semesterId");
+      CREATE INDEX IF NOT EXISTS "ClubBudget_clubId_idx" ON "ClubBudget"("clubId");
+      CREATE INDEX IF NOT EXISTS "ClubBudget_semesterId_idx" ON "ClubBudget"("semesterId");
+
+      -- BudgetChangeLog Table (Audits every change with mandatory reason and author)
+      CREATE TABLE IF NOT EXISTS "BudgetChangeLog" (
+        "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        "clubBudgetId" TEXT NOT NULL,
+        "oldAmount" INTEGER NOT NULL DEFAULT 0,
+        "newAmount" INTEGER NOT NULL DEFAULT 0,
+        "reason" TEXT NOT NULL,
+        "changedBy" TEXT,
+        "changedById" TEXT,
+        "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "BudgetChangeLog_clubBudgetId_idx" ON "BudgetChangeLog"("clubBudgetId");
+      CREATE INDEX IF NOT EXISTS "BudgetChangeLog_timestamp_idx" ON "BudgetChangeLog"("timestamp");
+
+      -- Budget Table (Legacy semester overview)
       CREATE TABLE IF NOT EXISTS "Budget" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "name" TEXT NOT NULL,
@@ -235,6 +286,8 @@ export async function ensureDatabaseTables() {
       CREATE INDEX IF NOT EXISTS "Event_venue_idx" ON "Event"("venue");
       CREATE INDEX IF NOT EXISTS "EventConflict_status_idx" ON "EventConflict"("status");
       CREATE INDEX IF NOT EXISTS "Expense_eventId_idx" ON "Expense"("eventId");
+      CREATE INDEX IF NOT EXISTS "Expense_clubId_idx" ON "Expense"("clubId");
+      CREATE INDEX IF NOT EXISTS "Expense_semesterId_idx" ON "Expense"("semesterId");
       CREATE INDEX IF NOT EXISTS "Expense_expenseDate_idx" ON "Expense"("expenseDate");
 
       -- Notification Table for ACM Core Notifications
@@ -292,15 +345,152 @@ export async function ensureDatabaseTables() {
       console.warn('Could not seed demo users, continuing:', userErr);
     }
 
-    // Pre-seed current and previous semester Budgets
+    // Pre-seed Semesters: Spring 2026 (Jan 1 to Jun 30, 2026) and Fall 2026 (Jul 1 to Dec 31, 2026)
+    try {
+      await client.query(`
+        INSERT INTO "Semester" ("id", "name", "startDate", "endDate")
+        VALUES
+          ('sem-spring-2026', 'Spring 2026', '2026-01-01 00:00:00', '2026-06-30 23:59:59'),
+          ('sem-fall-2026', 'Fall 2026', '2026-07-01 00:00:00', '2026-12-31 23:59:59')
+        ON CONFLICT ("name") DO UPDATE
+        SET "startDate" = EXCLUDED."startDate", "endDate" = EXCLUDED."endDate";
+      `);
+    } catch (semErr) {
+      console.warn('Could not seed semesters, continuing:', semErr);
+    }
+
+    // Safe Data Migration:
+    // 1. Assign existing events to their matching semester and set approvedBudget = estimatedCost if not set
+    // 2. Assign existing expenses to their club (derived from event) and to the semester matching their dates
+    try {
+      await client.query(`
+        -- 1. Backfill approvedBudget and semesterId on Event
+        UPDATE "Event"
+        SET "approvedBudget" = ROUND(COALESCE("estimatedCost", 0))::INTEGER
+        WHERE "approvedBudget" IS NULL;
+
+        UPDATE "Event" e
+        SET "semesterId" = s.id
+        FROM "Semester" s
+        WHERE e."startTime" >= s."startDate" AND e."startTime" <= s."endDate"
+          AND (e."semesterId" IS NULL OR e."semesterId" != s.id);
+
+        -- 2. Backfill clubId and semesterId on Expense
+        UPDATE "Expense" ex
+        SET "clubId" = ev."clubId"
+        FROM "Event" ev
+        WHERE ex."eventId" = ev.id
+          AND (ex."clubId" IS NULL OR ex."clubId" != ev."clubId");
+
+        UPDATE "Expense" ex
+        SET "semesterId" = s.id
+        FROM "Semester" s
+        WHERE ex."expenseDate" >= s."startDate" AND ex."expenseDate" <= s."endDate"
+          AND (ex."semesterId" IS NULL OR ex."semesterId" != s.id);
+
+        UPDATE "Expense" ex
+        SET "semesterId" = ev."semesterId"
+        FROM "Event" ev
+        WHERE ex."eventId" = ev.id
+          AND ex."semesterId" IS NULL
+          AND ev."semesterId" IS NOT NULL;
+      `);
+    } catch (migErr) {
+      console.warn('Safe migration backfill warning:', migErr);
+    }
+
+    // Pre-seed Demo Club Allocations for Fall 2026 with Audit Change Logs:
+    // ACM ₹50,000, ChES ₹30,000, CHRD ₹25,000, E-Cell ₹40,000, Phoenix ₹35,000, Drishti ₹20,000, GDGC ₹25,000, CEV ₹20,000
+    try {
+      await client.query(`
+        DO $$
+        DECLARE
+          fall_sem_id TEXT;
+          spring_sem_id TEXT;
+          rec RECORD;
+          new_budget_id TEXT;
+          existing_id TEXT;
+        BEGIN
+          SELECT "id" INTO fall_sem_id FROM "Semester" WHERE "name" = 'Fall 2026' LIMIT 1;
+          SELECT "id" INTO spring_sem_id FROM "Semester" WHERE "name" = 'Spring 2026' LIMIT 1;
+
+          IF fall_sem_id IS NOT NULL THEN
+            FOR rec IN (
+              SELECT c.id as club_id, c.name, alloc.amt
+              FROM (
+                VALUES
+                  ('ACM', 50000),
+                  ('ChES', 30000),
+                  ('CHRD', 25000),
+                  ('E-Cell', 40000),
+                  ('Phoenix', 35000),
+                  ('Drishti', 20000),
+                  ('GDGC', 25000),
+                  ('CEV', 20000)
+              ) AS alloc(club_pat, amt)
+              JOIN "Club" c ON (c.name ILIKE ('%' || alloc.club_pat || '%') OR c.id ILIKE ('%' || alloc.club_pat || '%'))
+            ) LOOP
+              SELECT "id" INTO existing_id
+              FROM "ClubBudget"
+              WHERE "clubId" = rec.club_id AND "semesterId" = fall_sem_id;
+
+              IF existing_id IS NULL THEN
+                new_budget_id := gen_random_uuid()::text;
+                INSERT INTO "ClubBudget" ("id", "clubId", "semesterId", "allocatedAmount", "updatedAt")
+                VALUES (new_budget_id, rec.club_id, fall_sem_id, rec.amt, CURRENT_TIMESTAMP);
+
+                INSERT INTO "BudgetChangeLog" ("id", "clubBudgetId", "oldAmount", "newAmount", "reason", "changedBy", "changedById")
+                VALUES (gen_random_uuid()::text, new_budget_id, 0, rec.amt, 'Initial demo allocation for Fall 2026', 'ACM Core Verifier', 'user-core-admin');
+              END IF;
+            END LOOP;
+          END IF;
+
+          -- Also ensure Spring 2026 has baseline allocations for demonstration
+          IF spring_sem_id IS NOT NULL THEN
+            FOR rec IN (
+              SELECT c.id as club_id, c.name, alloc.amt
+              FROM (
+                VALUES
+                  ('ACM', 45000),
+                  ('ChES', 25000),
+                  ('CHRD', 20000),
+                  ('E-Cell', 35000),
+                  ('Phoenix', 30000),
+                  ('Drishti', 20000),
+                  ('GDGC', 20000),
+                  ('CEV', 15000)
+              ) AS alloc(club_pat, amt)
+              JOIN "Club" c ON (c.name ILIKE ('%' || alloc.club_pat || '%') OR c.id ILIKE ('%' || alloc.club_pat || '%'))
+            ) LOOP
+              SELECT "id" INTO existing_id
+              FROM "ClubBudget"
+              WHERE "clubId" = rec.club_id AND "semesterId" = spring_sem_id;
+
+              IF existing_id IS NULL THEN
+                new_budget_id := gen_random_uuid()::text;
+                INSERT INTO "ClubBudget" ("id", "clubId", "semesterId", "allocatedAmount", "updatedAt")
+                VALUES (new_budget_id, rec.club_id, spring_sem_id, rec.amt, CURRENT_TIMESTAMP);
+
+                INSERT INTO "BudgetChangeLog" ("id", "clubBudgetId", "oldAmount", "newAmount", "reason", "changedBy", "changedById")
+                VALUES (gen_random_uuid()::text, new_budget_id, 0, rec.amt, 'Initial demo allocation for Spring 2026', 'ACM Core Verifier', 'user-core-admin');
+              END IF;
+            END LOOP;
+          END IF;
+        END $$;
+      `);
+    } catch (allocErr) {
+      console.warn('Could not seed demo club allocations, continuing:', allocErr);
+    }
+
+    // Pre-seed current and previous semester Budgets (Legacy support)
     try {
       await client.query(`
         INSERT INTO "Budget" ("id", "name", "amount", "periodType", "startDate", "endDate")
-        SELECT 'budget-fall-2026', 'Fall 2026 Semester Budget', 50000.00, 'SEMESTER', '2026-08-01 00:00:00', '2026-12-31 23:59:59'
+        SELECT 'budget-fall-2026', 'Fall 2026 Semester Budget', 50000.00, 'SEMESTER', '2026-07-01 00:00:00', '2026-12-31 23:59:59'
         WHERE NOT EXISTS (SELECT 1 FROM "Budget" WHERE "name" = 'Fall 2026 Semester Budget');
 
         INSERT INTO "Budget" ("id", "name", "amount", "periodType", "startDate", "endDate")
-        SELECT 'budget-spring-2026', 'Spring 2026 Semester Budget', 45000.00, 'SEMESTER', '2026-01-01 00:00:00', '2026-05-31 23:59:59'
+        SELECT 'budget-spring-2026', 'Spring 2026 Semester Budget', 45000.00, 'SEMESTER', '2026-01-01 00:00:00', '2026-06-30 23:59:59'
         WHERE NOT EXISTS (SELECT 1 FROM "Budget" WHERE "name" = 'Spring 2026 Semester Budget');
       `);
     } catch (budgetErr) {
