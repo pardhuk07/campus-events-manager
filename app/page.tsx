@@ -5,12 +5,10 @@ import Navbar, { AuthUser } from '../components/Navbar';
 import EventManager from '../components/EventManager';
 import ExpenseManager from '../components/ExpenseManager';
 import HistoryView from '../components/HistoryView';
-import GatekeeperModal from '../components/GatekeeperModal';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'events' | 'expenses' | 'history'>('events');
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [showGatekeeper, setShowGatekeeper] = useState(false);
   const [eventViewMode, setEventViewMode] = useState<'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews'>('calendar');
   const [targetEventId, setTargetEventId] = useState<string | undefined>();
 
@@ -30,7 +28,6 @@ export default function Home() {
         if (data.success && data.data?.user) {
           setCurrentUser(data.data.user);
           localStorage.setItem('acm_auth_user', JSON.stringify(data.data.user));
-          setShowGatekeeper(false);
         } else {
           const saved = localStorage.getItem('acm_auth_user');
           if (saved) {
@@ -38,42 +35,28 @@ export default function Home() {
               setCurrentUser(JSON.parse(saved));
             } catch (e) {
               console.error(e);
-              setShowGatekeeper(true);
+              setCurrentUser(null);
             }
           } else {
-            setShowGatekeeper(true);
+            setCurrentUser(null);
           }
         }
       })
       .catch(() => {
-        setShowGatekeeper(true);
+        setCurrentUser(null);
       });
   }, []);
-
-  const handleSelectPublic = () => {
-    fetch('/api/auth/logout', { method: 'POST' }).catch(console.error);
-    const publicUser: AuthUser = {
-      id: 'guest-public',
-      name: 'Public Guest',
-      email: 'public@student.nit.ac.in',
-      role: 'MEMBER',
-    };
-    setCurrentUser(publicUser);
-    localStorage.setItem('acm_auth_user', JSON.stringify(publicUser));
-    setShowGatekeeper(false);
-  };
 
   const handleLoginSuccess = (user: AuthUser) => {
     setCurrentUser(user);
     localStorage.setItem('acm_auth_user', JSON.stringify(user));
-    setShowGatekeeper(false);
   };
 
   const handleLogout = () => {
     fetch('/api/auth/logout', { method: 'POST' }).catch(console.error);
     setCurrentUser(null);
     localStorage.removeItem('acm_auth_user');
-    setShowGatekeeper(true);
+    window.location.href = '/login';
   };
 
   // Restrict expenses tab: regular members and public visitors cannot access budget/expenses
@@ -85,12 +68,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-cyan-100 selection:text-cyan-900">
-      {/* First-Visit Gatekeeper Modal */}
-      <GatekeeperModal
-        isOpen={showGatekeeper}
-        onSelectPublic={handleSelectPublic}
-        onLoginSuccess={handleLoginSuccess}
-      />
 
       <Navbar
         activeTab={activeTab}

@@ -46,3 +46,9 @@ powershell.cmd
 # nested external workspace
 Incursion/
 
+# Backups & metadata
+.git_backup/
+.git_backup
+*.metadata.json
+
+
