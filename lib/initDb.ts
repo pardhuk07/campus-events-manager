@@ -208,6 +208,28 @@ export async function ensureDatabaseTables() {
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "receiptFileName" TEXT;
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
       ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "isVoided" BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "voidedAt" TIMESTAMP(3);
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "voidedBy" TEXT;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "voidReason" TEXT;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "onBehalfOfClub" TEXT;
+
+      -- ExpenseChangeLog Table (Immutable audit trail for expense edits and voids)
+      CREATE TABLE IF NOT EXISTS "ExpenseChangeLog" (
+        "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        "expenseId" TEXT NOT NULL,
+        "action" TEXT NOT NULL,
+        "performedBy" TEXT NOT NULL,
+        "performedById" TEXT,
+        "onBehalfOfClub" TEXT,
+        "reason" TEXT NOT NULL,
+        "oldValues" JSONB,
+        "newValues" JSONB,
+        "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "ExpenseChangeLog_expenseId_idx" ON "ExpenseChangeLog"("expenseId");
+      CREATE INDEX IF NOT EXISTS "ExpenseChangeLog_timestamp_idx" ON "ExpenseChangeLog"("timestamp");
 
       -- Semester Table
       CREATE TABLE IF NOT EXISTS "Semester" (

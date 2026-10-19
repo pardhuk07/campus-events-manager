@@ -44,6 +44,16 @@ export default function AddExpenseModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [semestersList, setSemestersList] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/semesters')
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) setSemestersList(json.data);
+      })
+      .catch(() => {});
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -127,6 +137,34 @@ export default function AddExpenseModal({
   const isReceiptRequired = numAmount > 500;
   const exceedsEventRemaining = selectedEvent && numAmount > 0 && numAmount > eventRemaining;
   const eventExcessAmount = exceedsEventRemaining ? numAmount - eventRemaining : 0;
+
+  const dateSemesterWarning = useMemo(() => {
+    if (!selectedEvent || !date || semestersList.length === 0) return null;
+    const expD = new Date(date);
+    if (isNaN(expD.getTime())) return null;
+
+    let eventSem = semestersList.find((s) => s.id === selectedEvent.semesterId);
+    if (!eventSem && selectedEvent.startTime) {
+      const evD = new Date(selectedEvent.startTime);
+      eventSem = semestersList.find((s) => {
+        const start = new Date(s.startDate);
+        const end = new Date(s.endDate);
+        end.setHours(23, 59, 59, 999);
+        return evD >= start && evD <= end;
+      });
+    }
+
+    if (!eventSem) return null;
+
+    const start = new Date(eventSem.startDate);
+    const end = new Date(eventSem.endDate);
+    end.setHours(23, 59, 59, 999);
+
+    if (expD < start || expD > end) {
+      return `Warning: Selected expense date (${date}) is outside this event's semester (${eventSem.name}).`;
+    }
+    return null;
+  }, [selectedEvent, date, semestersList]);
 
   // Client-side file validation and upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -351,6 +389,21 @@ export default function AddExpenseModal({
               </p>
               <p className="mt-0.5 text-amber-700">
                 This expense of ₹{Math.round(numAmount).toLocaleString('en-IN')} exceeds the event&apos;s remaining budget (₹{eventRemaining.toLocaleString('en-IN')} left) by ₹{Math.round(eventExcessAmount).toLocaleString('en-IN')}. You may still proceed with saving.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Live Warning if Expense Date is outside selected event's semester */}
+        {dateSemesterWarning && (
+          <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
+            <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-800">
+                Date Warning: Outside event semester
+              </p>
+              <p className="mt-0.5 text-amber-700">
+                {dateSemesterWarning} This expense will be flagged in ACM Core&apos;s Needs Attention panel.
               </p>
             </div>
           </div>

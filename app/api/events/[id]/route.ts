@@ -83,13 +83,20 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, title, description, venue, startTime, endTime, audienceTags, expectedAttendance, category } = body;
+    const { status, title, description, venue, startTime, endTime, audienceTags, expectedAttendance, category, approvedBudget } = body;
 
     // RBAC RULES:
     // Executives can only edit their own club's pending/reschedule proposals
     if (user.role === UserRole.CLUB_EXEC) {
       if (user.clubId && existingEvent.clubId !== user.clubId) {
         return apiError(ErrorCodes.FORBIDDEN, 'Forbidden: You can only edit proposals belonging to your club.', 403);
+      }
+      if (approvedBudget !== undefined) {
+        return apiError(
+          ErrorCodes.FORBIDDEN,
+          'Forbidden: Executives cannot edit event approved budgets. Only ACM Core can set or edit event budgets.',
+          403
+        );
       }
       if (existingEvent.status !== EventStatus.PENDING && existingEvent.status !== EventStatus.RESCHEDULE_REQUESTED) {
         return apiError(
@@ -124,6 +131,17 @@ export async function PATCH(
     // Input Validation
     const updates: any = {};
     if (status) updates.status = status;
+
+    if (approvedBudget !== undefined) {
+      if (user.role !== UserRole.CORE_VERIFIER) {
+        return apiError(ErrorCodes.FORBIDDEN, 'Only ACM Core can edit approved budgets.', 403);
+      }
+      const numBudget = Number(approvedBudget);
+      if (isNaN(numBudget) || numBudget < 0) {
+        return apiError(ErrorCodes.VALIDATION_ERROR, 'Approved budget must be a non-negative number.', 400);
+      }
+      updates.approvedBudget = Math.round(numBudget);
+    }
 
     if (title !== undefined) {
       if (typeof title !== 'string' || !title.trim() || title.trim().length > 100) {

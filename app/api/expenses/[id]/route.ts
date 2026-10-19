@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
-import { getServerUser, requireExecOrCore } from '@/lib/auth';
+import { budgetService } from '@/lib/budgetService';
+import { getServerUser } from '@/lib/auth';
 import {
   apiSuccess,
   apiError,
@@ -28,14 +29,12 @@ export async function GET(
     }
 
     const expense = await dbService.getExpenseById(id);
-
     if (!expense) {
       return apiError(ErrorCodes.EXPENSE_NOT_FOUND, 'Expense record not found.', 404);
     }
 
     if (userRole === UserRole.CLUB_EXEC && user.clubId) {
-      const linkedEvent = await dbService.getEventById(expense.eventId);
-      if (linkedEvent && linkedEvent.clubId !== user.clubId) {
+      if (expense.clubId && expense.clubId !== user.clubId) {
         return apiError(
           ErrorCodes.FORBIDDEN,
           'Forbidden: You cannot view expenses from other clubs.',
@@ -52,76 +51,95 @@ export async function GET(
 }
 
 // PATCH /api/expenses/:id
+// Core can edit an existing expense (amount, category, date, description, event within the same club, replace receipt) with a required reason.
+// Executives cannot edit expenses.
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const user = await getServerUser(request);
 
-    // RBAC: Only Executives and Core can modify expenses
-    const auth = await requireExecOrCore(request);
-    if ('errorResponse' in auth) {
-      return auth.errorResponse;
+    if (!user || user.role === UserRole.MEMBER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Public and members cannot modify expenses.',
+        403
+      );
     }
-    const user = auth.user;
+
+    // Executives cannot edit expenses
+    if (user.role === UserRole.CLUB_EXEC) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Executives cannot edit existing expenses. Only ACM Core can edit expenses.',
+        403
+      );
+    }
+
+    if (user.role !== UserRole.CORE_VERIFIER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Only ACM Core can edit expenses.',
+        403
+      );
+    }
 
     const existing = await dbService.getExpenseById(id);
     if (!existing) {
       return apiError(ErrorCodes.EXPENSE_NOT_FOUND, 'Expense record not found.', 404);
     }
 
-    // If Club Executive, verify they own the expense or the linked event belongs to their club
-    if (user.role === UserRole.CLUB_EXEC && user.clubId) {
-      const linkedEvent = await dbService.getEventById(existing.eventId);
-      if (linkedEvent && linkedEvent.clubId !== user.clubId && existing.submittedById !== user.id) {
-        return apiError(
-          ErrorCodes.FORBIDDEN,
-          'Access denied: You cannot modify expenses belonging to another club.',
-          403
-        );
-      }
+    if (existing.isVoided) {
+      return apiError(
+        ErrorCodes.VALIDATION_ERROR,
+        'Cannot edit an expense that has already been voided.',
+        400
+      );
     }
 
-    const body = await request.json();
-    const { amount, category, description, expenseDate, receiptUrl, receiptPublicId, eventId } = body;
+    const body = await request.json().catch(() => ({}));
+    const { amount, category, description, expenseDate, receiptUrl, receiptPublicId, receiptFileName, eventId, reason } = body;
 
-    const updates: any = {};
-    if (amount !== undefined) {
-      const numAmount = parseFloat(amount);
-      if (isNaN(numAmount) || numAmount <= 0) {
-        return apiError(ErrorCodes.INVALID_EXPENSE_AMOUNT, 'Amount must be greater than zero.', 400);
-      }
-      updates.amount = numAmount;
+    if (!reason || typeof reason !== 'string' || !reason.trim()) {
+      return apiError(
+        ErrorCodes.VALIDATION_ERROR,
+        'A reason is strictly required to edit an expense.',
+        400
+      );
     }
 
-    if (category) {
-      if (!Object.values(ExpenseCategory).includes(category)) {
-        return apiError(ErrorCodes.VALIDATION_ERROR, 'Invalid category.', 400);
-      }
-      updates.category = category;
+    if (category && !Object.values(ExpenseCategory).includes(category)) {
+      return apiError(ErrorCodes.VALIDATION_ERROR, 'Invalid category.', 400);
     }
 
-    if (description !== undefined) {
-      if (typeof description !== 'string' || !description.trim() || description.trim().length > 200) {
-        return apiError(ErrorCodes.VALIDATION_ERROR, 'Description must be between 1 and 200 characters.', 400);
-      }
-      updates.description = description.trim();
+    let clubName = existing.onBehalfOfClub;
+    if (!clubName && existing.clubId) {
+      const club = await dbService.getClubById(existing.clubId);
+      clubName = club?.name || existing.clubId;
     }
 
-    if (expenseDate) {
-      const d = new Date(expenseDate);
-      if (isNaN(d.getTime())) {
-        return apiError(ErrorCodes.VALIDATION_ERROR, 'Invalid expense date.', 400);
+    const updated = await budgetService.editExpense(
+      id,
+      {
+        amount: amount !== undefined ? Number(amount) : undefined,
+        category,
+        description,
+        expenseDate,
+        eventId,
+        receiptUrl,
+        receiptPublicId,
+        receiptFileName,
+      },
+      {
+        performedBy: user.name || 'ACM Core',
+        performedById: user.id,
+        reason: reason.trim(),
+        onBehalfOfClub: clubName,
       }
-      updates.expenseDate = d;
-    }
+    );
 
-    if (receiptUrl !== undefined) updates.receiptUrl = receiptUrl;
-    if (receiptPublicId !== undefined) updates.receiptPublicId = receiptPublicId;
-    if (eventId !== undefined) updates.eventId = eventId;
-
-    const updated = await dbService.updateExpense(id, updates);
     return apiSuccess(updated);
   } catch (error: any) {
     console.error('PATCH /api/expenses/:id error:', error);
@@ -130,42 +148,91 @@ export async function PATCH(
 }
 
 // DELETE /api/expenses/:id
+// Core can void an expense with a required reason. Never hard-delete.
+// Executives cannot void anything.
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const user = await getServerUser(request);
 
-    // RBAC: Only Executives and Core can delete expenses
-    const auth = await requireExecOrCore(request);
-    if ('errorResponse' in auth) {
-      return auth.errorResponse;
+    if (!user || user.role === UserRole.MEMBER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Public and members cannot void expenses.',
+        403
+      );
     }
-    const user = auth.user;
+
+    if (user.role === UserRole.CLUB_EXEC) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Executives cannot void or delete expenses. Only ACM Core can void expenses.',
+        403
+      );
+    }
+
+    if (user.role !== UserRole.CORE_VERIFIER) {
+      return apiError(
+        ErrorCodes.FORBIDDEN,
+        'Forbidden: Only ACM Core can void expenses.',
+        403
+      );
+    }
 
     const existing = await dbService.getExpenseById(id);
     if (!existing) {
       return apiError(ErrorCodes.EXPENSE_NOT_FOUND, 'Expense record not found.', 404);
     }
 
-    if (user.role === UserRole.CLUB_EXEC && user.clubId) {
-      const linkedEvent = await dbService.getEventById(existing.eventId);
-      if (linkedEvent && linkedEvent.clubId !== user.clubId && existing.submittedById !== user.id) {
-        return apiError(
-          ErrorCodes.FORBIDDEN,
-          'Access denied: You cannot delete expenses belonging to another club.',
-          403
-        );
-      }
+    if (existing.isVoided) {
+      return apiError(
+        ErrorCodes.VALIDATION_ERROR,
+        'Expense is already voided.',
+        400
+      );
     }
 
-    const deleted = await dbService.deleteExpense(id);
-    if (!deleted) {
-      return apiError(ErrorCodes.EXPENSE_NOT_FOUND, 'Expense record not found.', 404);
+    // Try reading reason from body or query params
+    let reason = '';
+    try {
+      const body = await request.json();
+      reason = body?.reason || '';
+    } catch {
+      // Body might be empty in DELETE, try query param
+      const url = new URL(request.url);
+      reason = url.searchParams.get('reason') || '';
     }
 
-    return apiSuccess({ id, deleted: true });
+    if (!reason || !reason.trim()) {
+      return apiError(
+        ErrorCodes.VALIDATION_ERROR,
+        'A reason is strictly required to void an expense.',
+        400
+      );
+    }
+
+    let clubName = existing.onBehalfOfClub;
+    if (!clubName && existing.clubId) {
+      const club = await dbService.getClubById(existing.clubId);
+      clubName = club?.name || existing.clubId;
+    }
+
+    const voidedExpense = await budgetService.voidExpense(id, {
+      performedBy: user.name || 'ACM Core',
+      performedById: user.id,
+      reason: reason.trim(),
+      onBehalfOfClub: clubName,
+    });
+
+    return apiSuccess({
+      id,
+      voided: true,
+      deleted: true, // For backward compatibility
+      expense: voidedExpense,
+    });
   } catch (error: any) {
     console.error('DELETE /api/expenses/:id error:', error);
     return apiError(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Server error', 500);

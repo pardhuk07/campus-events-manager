@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
+import { budgetService, isDateInSemester } from '@/lib/budgetService';
 import { getServerUser, requireExecOrCore } from '@/lib/auth';
 import {
   apiSuccess,
@@ -218,18 +219,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 8. Check club semester budget impact using integer rupees
+    // 8. Check club semester budget impact using integer rupees & semester alignment
     let budgetWarning: string | null = null;
     try {
+      const allSemesters = await budgetService.getSemesters();
+      let eventSem = allSemesters.find(s => s.id === linkedEvent.semesterId);
+      if (!eventSem && linkedEvent.startTime) {
+        eventSem = allSemesters.find(s => isDateInSemester(linkedEvent.startTime, s));
+      }
+      
       const budgetDetails = await budgetService.getClubBudgetDetails(expenseContext.clubId, expenseContext.semesterId);
       const projectedSpent = budgetDetails.spent + intAmount;
       if (budgetDetails.allocated > 0 && projectedSpent > budgetDetails.allocated) {
         const excess = projectedSpent - budgetDetails.allocated;
         budgetWarning = `Warning: This expense exceeds ${budgetDetails.club.name}'s semester budget by ₹${excess.toLocaleString('en-IN')}`;
       }
+
+      // Check if expense date matches event's semester
+      if (eventSem && expenseContext.semesterId !== eventSem.id) {
+        const semWarn = `Warning: Expense date is outside the linked event's semester (${eventSem.name}).`;
+        budgetWarning = budgetWarning ? `${budgetWarning}. ${semWarn}` : semWarn;
+      }
     } catch (e) {
       // Non-blocking warning check
     }
+
+    const club = await dbService.getClubById(expenseContext.clubId);
+    const onBehalfOfClub = user.role === UserRole.CORE_VERIFIER ? (club?.name || expenseContext.clubId) : null;
 
     // 9. Persist Expense in database linked to event, with server-derived clubId & semesterId
     const createdExpense = await dbService.createExpense({
@@ -245,7 +261,30 @@ export async function POST(request: NextRequest) {
       receiptFileName: receiptFileName ? String(receiptFileName).trim() : null,
       submittedById: user.id,
       addedByName: user.name || (user.role === UserRole.CORE_VERIFIER ? 'ACM Core' : 'Club Executive'),
+      onBehalfOfClub,
     });
+
+    // Write initial ExpenseChangeLog
+    try {
+      await budgetService.logExpenseChange({
+        expenseId: createdExpense.id,
+        action: 'CREATED',
+        performedBy: user.name || (user.role === UserRole.CORE_VERIFIER ? 'ACM Core' : 'Club Executive'),
+        performedById: user.id,
+        onBehalfOfClub,
+        reason: 'Initial expense entry',
+        oldValues: null,
+        newValues: {
+          amount: intAmount,
+          category,
+          description: description.trim(),
+          expenseDate: finalDate.toISOString(),
+          eventId: linkedEvent.id,
+        },
+      });
+    } catch (logErr) {
+      console.error('Failed to log expense creation:', logErr);
+    }
 
     return apiSuccess(
       {

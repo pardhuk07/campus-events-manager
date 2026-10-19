@@ -9,8 +9,8 @@ import {
   CalendarIcon,
   ReceiptIcon,
 } from './Icons';
-import { CATEGORY_COLORS } from '@/lib/colors';
-import { UserRole } from '@/lib/constants';
+import { CATEGORY_COLORS, getClubTheme } from '@/lib/colors';
+import { ExpenseCategory, UserRole } from '@/lib/constants';
 
 interface Semester {
   id: string;
@@ -46,6 +46,16 @@ interface PerEventRow {
   expenses: any[];
 }
 
+interface NeedsAttentionItem {
+  expenseId: string;
+  title: string;
+  amount: number;
+  expenseDate: string;
+  eventTitle?: string;
+  eventId?: string;
+  reason: string;
+}
+
 interface ClubDetailData {
   club: {
     id: string;
@@ -71,7 +81,9 @@ interface ClubDetailData {
     spent: number;
     expenseCount: number;
   }>;
-  changeLogs: any[];
+  expenses: any[];
+  needsAttention: NeedsAttentionItem[];
+  changeLogs?: any[];
 }
 
 export default function ExpenseManager({
@@ -90,6 +102,9 @@ export default function ExpenseManager({
 
   // Selected club for detail view (Core can switch; Exec locked to own club)
   const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
+
+  // Available clubs list for Core switcher
+  const [availableClubs, setAvailableClubs] = useState<Array<{ id: string; name: string }>>([]);
 
   // Data states
   const [loading, setLoading] = useState(true);
@@ -112,22 +127,55 @@ export default function ExpenseManager({
   // All events (for Add Expense modal and global reference)
   const [allEvents, setAllEvents] = useState<any[]>([]);
 
-  // Edit Budget Modal (Core only)
+  // Edit Club Budget Modal (Core only)
   const [editingClub, setEditingClub] = useState<{ id: string; name: string; currentAllocated: number } | null>(null);
   const [newBudgetAmount, setNewBudgetAmount] = useState('');
   const [budgetReason, setBudgetReason] = useState('');
   const [savingBudget, setSavingBudget] = useState(false);
   const [editBudgetError, setEditBudgetError] = useState<string | null>(null);
+  const [confirmClubBudgetPrompt, setConfirmClubBudgetPrompt] = useState(false);
+
+  // Edit Event Budget Modal (Core only)
+  const [editingEventBudget, setEditingEventBudget] = useState<{ id: string; title: string; currentBudget: number } | null>(null);
+  const [newEventBudgetAmount, setNewEventBudgetAmount] = useState('');
+  const [savingEventBudget, setSavingEventBudget] = useState(false);
+  const [eventBudgetError, setEventBudgetError] = useState<string | null>(null);
+  const [confirmEventBudgetPrompt, setConfirmEventBudgetPrompt] = useState(false);
+
+  // Edit Expense Modal (Core only)
+  const [editingExpense, setEditingExpense] = useState<any | null>(null);
+  const [editExpAmount, setEditExpAmount] = useState('');
+  const [editExpCategory, setEditExpCategory] = useState<string>(ExpenseCategory.FOOD);
+  const [editExpDate, setEditExpDate] = useState('');
+  const [editExpDescription, setEditExpDescription] = useState('');
+  const [editExpEventId, setEditExpEventId] = useState('');
+  const [editExpReceiptUrl, setEditExpReceiptUrl] = useState('');
+  const [editExpReason, setEditExpReason] = useState('');
+  const [editExpError, setEditExpError] = useState<string | null>(null);
+  const [savingExpenseEdit, setSavingExpenseEdit] = useState(false);
+  const [confirmExpenseEditPrompt, setConfirmExpenseEditPrompt] = useState(false);
+
+  // Void Expense Modal (Core only)
+  const [voidingExpense, setVoidingExpense] = useState<any | null>(null);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidError, setVoidError] = useState<string | null>(null);
+  const [isVoiding, setIsVoiding] = useState(false);
+
+  // History Modal
+  const [historyExpense, setHistoryExpense] = useState<any | null>(null);
+  const [expenseHistoryRecords, setExpenseHistoryRecords] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Ledger controls: Semester vs Month, and Show Voided toggle
+  const [viewPeriod, setViewPeriod] = useState<'SEMESTER' | 'MONTH'>('SEMESTER');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [showVoided, setShowVoided] = useState<boolean>(false);
 
   // Event Expenses Panel (opened upon clicking an event row)
   const [activeEventPanel, setActiveEventPanel] = useState<PerEventRow | null>(null);
 
   // Add Expense Modal
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
-
-  // Semester vs. Month view mode in Club Detail
-  const [viewPeriod, setViewPeriod] = useState<'SEMESTER' | 'MONTH'>('SEMESTER');
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
 
   const isExpenseInMonth = useCallback(
     (expDate: string | Date, monthStr: string) => {
@@ -159,6 +207,31 @@ export default function ExpenseManager({
     }
   }, [clubDetail, selectedMonth]);
 
+  // URL Query Sync: store ?club=... in URL for Core
+  const handleClubSelect = useCallback((clubId: string | null) => {
+    setSelectedClubId(clubId);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (clubId) {
+        url.searchParams.set('club', clubId);
+      } else {
+        url.searchParams.delete('club');
+      }
+      window.history.pushState({}, '', url.toString());
+    }
+  }, []);
+
+  // Sync club from URL on mount for Core
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isCore) {
+      const params = new URLSearchParams(window.location.search);
+      const clubParam = params.get('club');
+      if (clubParam) {
+        setSelectedClubId(clubParam);
+      }
+    }
+  }, [isCore]);
+
   // 1. Load Semesters on Mount
   useEffect(() => {
     async function loadSemesters() {
@@ -168,7 +241,6 @@ export default function ExpenseManager({
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           setSemesters(json.data);
 
-          // Find semester containing today
           const now = new Date();
           const currentSem = json.data.find((s: Semester) => {
             const start = new Date(s.startDate);
@@ -176,7 +248,6 @@ export default function ExpenseManager({
             return now >= start && now <= end;
           });
 
-          // Default to the semester containing today, or first semester
           setSelectedSemesterId(currentSem ? currentSem.id : json.data[0].id);
         }
       } catch (err) {
@@ -186,7 +257,23 @@ export default function ExpenseManager({
     loadSemesters();
   }, []);
 
-  // 2. Fetch events
+  // 2. Load Clubs for Dropdown
+  useEffect(() => {
+    async function loadClubs() {
+      try {
+        const res = await fetch('/api/clubs');
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setAvailableClubs(json.data.map((c: any) => ({ id: c.id, name: c.name })));
+        }
+      } catch (err) {
+        console.error('Failed to load clubs:', err);
+      }
+    }
+    loadClubs();
+  }, []);
+
+  // 3. Fetch events
   const fetchEvents = useCallback(async () => {
     try {
       const res = await fetch(`/api/events?userRole=${encodeURIComponent(currentRole)}`);
@@ -203,14 +290,13 @@ export default function ExpenseManager({
     fetchEvents();
   }, [fetchEvents]);
 
-  // 3. Fetch Budget Data based on active semester and role
+  // 4. Fetch Budget Data based on active semester and role
   const fetchBudgetData = useCallback(async () => {
     if (!selectedSemesterId) return;
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      // Executive always goes straight to their own club detail
       if (isExec) {
         if (!currentUser?.clubId) {
           setErrorMsg('Your executive account is not associated with an SVNIT club.');
@@ -218,7 +304,11 @@ export default function ExpenseManager({
           return;
         }
 
-        const res = await fetch(`/api/club-budgets?semesterId=${encodeURIComponent(selectedSemesterId)}&clubId=${encodeURIComponent(currentUser.clubId)}`);
+        const res = await fetch(
+          `/api/club-budgets?semesterId=${encodeURIComponent(selectedSemesterId)}&clubId=${encodeURIComponent(
+            currentUser.clubId
+          )}`
+        );
         const json = await res.json();
         if (json.success && json.data) {
           setClubDetail(json.data);
@@ -227,10 +317,12 @@ export default function ExpenseManager({
           setErrorMsg(json.error?.message || 'Failed to load club budget details.');
         }
       } else if (isCore) {
-        // Core View
         if (selectedClubId) {
-          // Fetch specific club detail
-          const res = await fetch(`/api/club-budgets?semesterId=${encodeURIComponent(selectedSemesterId)}&clubId=${encodeURIComponent(selectedClubId)}`);
+          const res = await fetch(
+            `/api/club-budgets?semesterId=${encodeURIComponent(selectedSemesterId)}&clubId=${encodeURIComponent(
+              selectedClubId
+            )}`
+          );
           const json = await res.json();
           if (json.success && json.data) {
             setClubDetail(json.data);
@@ -238,7 +330,6 @@ export default function ExpenseManager({
             setErrorMsg(json.error?.message || 'Failed to load club budget details.');
           }
         } else {
-          // Fetch overview of all clubs
           const res = await fetch(`/api/club-budgets?semesterId=${encodeURIComponent(selectedSemesterId)}`);
           const json = await res.json();
           if (json.success && json.data) {
@@ -261,9 +352,10 @@ export default function ExpenseManager({
     fetchBudgetData();
   }, [fetchBudgetData]);
 
-  // 4. Handle Edit Budget Submission (Core only)
-  const handleSaveBudget = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // --- ACTIONS (CORE ONLY) ---
+
+  // 1. Save Club Semester Allocation
+  const handleSaveClubBudget = async () => {
     if (!editingClub || !selectedSemesterId) return;
 
     setEditBudgetError(null);
@@ -299,7 +391,7 @@ export default function ExpenseManager({
         setEditingClub(null);
         setNewBudgetAmount('');
         setBudgetReason('');
-        // Refresh all numbers without a page reload
+        setConfirmClubBudgetPrompt(false);
         await fetchBudgetData();
         await fetchEvents();
       } else {
@@ -312,8 +404,174 @@ export default function ExpenseManager({
     }
   };
 
-  // Helper function for progress bar color threshold:
-  // green below 75%, amber from 75%, red from 90%
+  // 2. Save Event Approved Budget
+  const handleSaveEventBudget = async () => {
+    if (!editingEventBudget) return;
+
+    setEventBudgetError(null);
+    const parsedAmt = parseFloat(newEventBudgetAmount);
+    if (isNaN(parsedAmt) || parsedAmt < 0) {
+      setEventBudgetError('Please enter a valid non-negative approved budget amount.');
+      return;
+    }
+
+    setSavingEventBudget(true);
+    try {
+      const res = await fetch(`/api/events/${editingEventBudget.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': UserRole.CORE_VERIFIER,
+        },
+        body: JSON.stringify({
+          approvedBudget: Math.round(parsedAmt),
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setEditingEventBudget(null);
+        setNewEventBudgetAmount('');
+        setConfirmEventBudgetPrompt(false);
+        await fetchBudgetData();
+        await fetchEvents();
+      } else {
+        setEventBudgetError(json.error?.message || 'Failed to update event approved budget.');
+      }
+    } catch (err: any) {
+      setEventBudgetError(err.message || 'Network error updating event budget.');
+    } finally {
+      setSavingEventBudget(false);
+    }
+  };
+
+  // 3. Open Edit Expense Modal
+  const openEditExpenseModal = (ex: any) => {
+    setEditingExpense(ex);
+    setEditExpAmount(String(Math.round(Number(ex.amount || 0))));
+    setEditExpCategory(ex.category || ExpenseCategory.FOOD);
+    setEditExpDate(ex.expenseDate ? new Date(ex.expenseDate).toISOString().split('T')[0] : '');
+    setEditExpDescription(ex.description || '');
+    setEditExpEventId(ex.eventId || '');
+    setEditExpReceiptUrl(ex.receiptUrl || '');
+    setEditExpReason('');
+    setEditExpError(null);
+    setConfirmExpenseEditPrompt(false);
+  };
+
+  // 4. Save Edited Expense
+  const handleSaveExpenseEdit = async () => {
+    if (!editingExpense) return;
+
+    setEditExpError(null);
+    const parsedAmt = parseFloat(editExpAmount);
+    if (isNaN(parsedAmt) || parsedAmt <= 0) {
+      setEditExpError('Please enter a valid expense amount greater than 0.');
+      return;
+    }
+
+    if (!editExpReason.trim()) {
+      setEditExpError('A reason is strictly required to modify an existing expense.');
+      return;
+    }
+
+    setSavingExpenseEdit(true);
+    try {
+      const res = await fetch(`/api/expenses/${editingExpense.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': UserRole.CORE_VERIFIER,
+        },
+        body: JSON.stringify({
+          amount: Math.round(parsedAmt),
+          category: editExpCategory,
+          expenseDate: editExpDate ? new Date(editExpDate) : undefined,
+          description: editExpDescription.trim(),
+          eventId: editExpEventId || undefined,
+          receiptUrl: editExpReceiptUrl.trim() || null,
+          reason: editExpReason.trim(),
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setEditingExpense(null);
+        setConfirmExpenseEditPrompt(false);
+        await fetchBudgetData();
+        await fetchEvents();
+      } else {
+        setEditExpError(json.error?.message || 'Failed to edit expense.');
+      }
+    } catch (err: any) {
+      setEditExpError(err.message || 'Network error editing expense.');
+    } finally {
+      setSavingExpenseEdit(false);
+    }
+  };
+
+  // 5. Void Expense
+  const handleVoidExpense = async () => {
+    if (!voidingExpense) return;
+
+    setVoidError(null);
+    if (!voidReason.trim()) {
+      setVoidError('A reason is strictly required to void an expense.');
+      return;
+    }
+
+    setIsVoiding(true);
+    try {
+      const res = await fetch(`/api/expenses/${voidingExpense.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': UserRole.CORE_VERIFIER,
+        },
+        body: JSON.stringify({
+          reason: voidReason.trim(),
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setVoidingExpense(null);
+        setVoidReason('');
+        await fetchBudgetData();
+        await fetchEvents();
+      } else {
+        setVoidError(json.error?.message || 'Failed to void expense.');
+      }
+    } catch (err: any) {
+      setVoidError(err.message || 'Network error voiding expense.');
+    } finally {
+      setIsVoiding(false);
+    }
+  };
+
+  // 6. View Expense History
+  const openExpenseHistory = async (ex: any) => {
+    setHistoryExpense(ex);
+    setLoadingHistory(true);
+    setExpenseHistoryRecords([]);
+    try {
+      const res = await fetch(`/api/expenses/${ex.id}/history`, {
+        headers: {
+          'x-user-role': currentRole,
+        },
+      });
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data?.history)) {
+        setExpenseHistoryRecords(json.data.history);
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Helper for progress bar color threshold
   const getProgressColor = (percent: number) => {
     if (percent < 75) {
       return {
@@ -340,27 +598,53 @@ export default function ExpenseManager({
   const currentPanelEvent = useMemo(() => {
     if (!activeEventPanel || !clubDetail) return null;
     const found = clubDetail.perEventRows.find((r) => r.id === activeEventPanel.id) || activeEventPanel;
-    if (viewPeriod === 'MONTH') {
-      const filteredExpenses = (found.expenses || []).filter((ex: any) =>
-        isExpenseInMonth(ex.expenseDate, selectedMonth)
-      );
-      const filteredSpent = filteredExpenses.reduce(
-        (sum: number, ex: any) => sum + Math.round(Number(ex.amount || 0)),
-        0
-      );
-      return {
-        ...found,
-        spent: filteredSpent,
-        left: found.budget - filteredSpent,
-        expenses: filteredExpenses,
-      };
+    let evExpenses = found.expenses || [];
+    if (!showVoided) {
+      evExpenses = evExpenses.filter((ex: any) => !ex.isVoided);
     }
-    return found;
-  }, [activeEventPanel, clubDetail, viewPeriod, selectedMonth, isExpenseInMonth]);
+    if (viewPeriod === 'MONTH') {
+      evExpenses = evExpenses.filter((ex: any) => isExpenseInMonth(ex.expenseDate, selectedMonth));
+    }
+    const filteredSpent = evExpenses
+      .filter((ex: any) => !ex.isVoided)
+      .reduce((sum: number, ex: any) => sum + Math.round(Number(ex.amount || 0)), 0);
+
+    return {
+      ...found,
+      spent: filteredSpent,
+      left: found.budget - filteredSpent,
+      expenses: evExpenses,
+    };
+  }, [activeEventPanel, clubDetail, viewPeriod, selectedMonth, showVoided, isExpenseInMonth]);
+
+  // Ledger expenses based on viewPeriod and showVoided
+  const filteredLedgerExpenses = useMemo(() => {
+    if (!clubDetail) return [];
+    let list = clubDetail.expenses || [];
+
+    if (viewPeriod === 'MONTH' && selectedMonth) {
+      list = list.filter((ex: any) => isExpenseInMonth(ex.expenseDate, selectedMonth));
+    }
+
+    if (!showVoided) {
+      list = list.filter((ex: any) => !ex.isVoided);
+    }
+
+    return list;
+  }, [clubDetail, viewPeriod, selectedMonth, showVoided, isExpenseInMonth]);
+
+  // Events filtered for "Add Expense" modal: limited to selected club when Core is in club mode
+  const addExpenseApprovedEvents = useMemo(() => {
+    const approved = allEvents.filter((e) => e.status === 'APPROVED' || e.status === 'COMPLETED');
+    if (isCore && selectedClubId) {
+      return approved.filter((e) => e.clubId === selectedClubId || e.club?.id === selectedClubId);
+    }
+    return approved;
+  }, [allEvents, isCore, selectedClubId]);
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Semester Selector */}
+      {/* Top Header & Selectors */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
         <div>
           <div className="flex items-center gap-2.5">
@@ -379,23 +663,40 @@ export default function ExpenseManager({
                 {isExec
                   ? 'Official fixed semester allocation and verified event expense ledger'
                   : selectedClubId
-                  ? 'Deep-dive event audit and expense tracking'
+                  ? 'Deep-dive event audit and expense tracking (Core mode)'
                   : 'Centralized semester fund monitoring for all SVNIT campus clubs'}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Semester Selector Dropdown */}
-        <div className="flex items-center gap-3">
+        {/* Action Controls: Club Switcher (Core only), Semester Selector & Add Expense */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Core Club Switcher */}
+          {isCore && (
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-2xl px-3 py-2 shadow-2xs">
+              <span className="text-[10px] font-black uppercase text-indigo-700 tracking-wider">Club:</span>
+              <select
+                value={selectedClubId || ''}
+                onChange={(e) => handleClubSelect(e.target.value || null)}
+                className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+              >
+                <option value="">All clubs (overview)</option>
+                {availableClubs.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Semester Selector Dropdown */}
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-2xl px-3 py-2 shadow-2xs">
             <CalendarIcon className="w-4 h-4 text-slate-500" />
             <select
               value={selectedSemesterId}
-              onChange={(e) => {
-                setSelectedSemesterId(e.target.value);
-                // Keep selectedClubId if drilled in, data refreshes automatically
-              }}
+              onChange={(e) => setSelectedSemesterId(e.target.value)}
               className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
             >
               {semesters.map((s) => (
@@ -407,7 +708,7 @@ export default function ExpenseManager({
             </select>
           </div>
 
-          {/* Add Expense Action Button */}
+          {/* Add Expense Button */}
           <button
             onClick={() => setIsAddExpenseOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700 text-white rounded-2xl font-bold text-xs shadow-xs transition cursor-pointer"
@@ -448,10 +749,7 @@ export default function ExpenseManager({
             </div>
             <div className="text-right">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Total Campus Budget:{' '}
-              </span>
-              <span className="text-sm font-black text-indigo-700">
-                ₹{allClubsData.totalAllocated.toLocaleString('en-IN')}
+                {allClubsData.clubs.length} Registered Clubs
               </span>
             </div>
           </div>
@@ -465,7 +763,7 @@ export default function ExpenseManager({
                   <th className="py-3.5 px-4 text-right">Committed</th>
                   <th className="py-3.5 px-4 text-right">Spent</th>
                   <th className="py-3.5 px-4 text-right">Remaining</th>
-                  <th className="py-3.5 px-5 w-44">% Used</th>
+                  <th className="py-3.5 px-5 w-48">% Used</th>
                   <th className="py-3.5 px-5 text-center">Action</th>
                 </tr>
               </thead>
@@ -477,23 +775,26 @@ export default function ExpenseManager({
                   return (
                     <tr
                       key={c.clubId}
-                      onClick={() => setSelectedClubId(c.clubId)}
+                      onClick={() => handleClubSelect(c.clubId)}
                       className="hover:bg-slate-50/80 transition cursor-pointer group"
                     >
                       <td className="py-4 px-5">
-                        <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                          {c.clubName}
+                        <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition flex items-center gap-2">
+                          <span>{c.clubName}</span>
+                          <span className="text-[10px] text-slate-400 group-hover:translate-x-1 transition font-medium">
+                            →
+                          </span>
                         </div>
-                        <div className="text-[11px] text-slate-500">
-                          {c.approvedEventsCount} approved {c.approvedEventsCount === 1 ? 'event' : 'events'}
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          {c.approvedEventsCount} approved event{c.approvedEventsCount === 1 ? '' : 's'}
                         </div>
                       </td>
 
-                      <td className="py-4 px-4 text-right font-bold text-slate-900">
+                      <td className="py-4 px-4 text-right font-black text-slate-900">
                         ₹{c.allocated.toLocaleString('en-IN')}
                       </td>
 
-                      <td className="py-4 px-4 text-right font-medium text-slate-600">
+                      <td className="py-4 px-4 text-right font-medium text-slate-700">
                         ₹{c.committed.toLocaleString('en-IN')}
                       </td>
 
@@ -528,6 +829,7 @@ export default function ExpenseManager({
                             setNewBudgetAmount(String(c.allocated));
                             setBudgetReason('');
                             setEditBudgetError(null);
+                            setConfirmClubBudgetPrompt(false);
                           }}
                           className="px-3 py-1.5 rounded-xl border border-slate-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700 font-bold text-[11px] transition shadow-2xs"
                         >
@@ -585,27 +887,105 @@ export default function ExpenseManager({
         </div>
       )}
 
-      {/* VIEW B: CLUB DETAIL VIEW (Executive for their own club, or Core drilled down) */}
+      {/* VIEW B: CLUB DETAIL VIEW (Executive for own club, or Core drilled down) */}
       {!loading && clubDetail && (
         <div className="space-y-6">
-          {/* Top Bar of Club Detail: Breadcrumbs / Club Title (Left) and Semester|Month Toggle & Month Selector (Right) */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-3xl p-5 shadow-xs">
-            <div className="flex items-center gap-3 flex-wrap">
-              {isCore && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedClubId(null)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:text-indigo-600 hover:border-indigo-300 text-xs font-bold transition shadow-2xs cursor-pointer"
+          {/* Managing Banner (Core Mode) in Club Color */}
+          {isCore && (
+            (() => {
+              const theme = getClubTheme(clubDetail.club.name);
+              return (
+                <div
+                  className={`p-4 rounded-3xl border ${theme.bg} ${theme.border} ${theme.text} flex items-center justify-between shadow-xs`}
                 >
-                  <span>←</span>
-                  <span>Back to All Clubs</span>
-                </button>
-              )}
-              {isCore && <span className="text-slate-300 text-xs">•</span>}
-              <div className="text-xs font-semibold text-slate-600">
-                Club: <strong className="text-slate-900 font-bold">{clubDetail.club.name}</strong>
-                <span className="text-slate-400 font-normal ml-1">({clubDetail.semester.name})</span>
+                  <div className="flex items-center gap-3">
+                    <span className={`w-3.5 h-3.5 rounded-full ${theme.dot}`} />
+                    <span className="font-black text-sm tracking-tight">
+                      Managing: {clubDetail.club.name} (Core mode)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingClub({
+                          id: clubDetail.club.id,
+                          name: clubDetail.club.name,
+                          currentAllocated: clubDetail.allocated,
+                        });
+                        setNewBudgetAmount(String(clubDetail.allocated));
+                        setBudgetReason('');
+                        setEditBudgetError(null);
+                        setConfirmClubBudgetPrompt(false);
+                      }}
+                      className="text-xs font-bold px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-indigo-700 border border-slate-200 transition shadow-2xs"
+                    >
+                      Edit Club Budget
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleClubSelect(null)}
+                      className="text-xs font-bold px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition shadow-2xs"
+                    >
+                      ← Back to All Clubs
+                    </button>
+                  </div>
+                </div>
+              );
+            })()
+          )}
+
+          {/* Needs Attention Warning Panel (Core only) */}
+          {isCore && clubDetail.needsAttention && clubDetail.needsAttention.length > 0 && (
+            <div className="p-5 bg-amber-50 border-2 border-amber-300 rounded-3xl text-amber-900 shadow-xs space-y-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangleIcon className="w-5 h-5 text-amber-600 shrink-0" />
+                <h3 className="text-sm font-black text-amber-900">
+                  Needs Attention: {clubDetail.needsAttention.length} expense{clubDetail.needsAttention.length > 1 ? 's' : ''} flagged
+                </h3>
               </div>
+              <p className="text-xs text-amber-800">
+                The following expenses fall outside defined semesters or their dates mismatch their linked event&apos;s academic semester. They are excluded from semester spending totals and ledger calculations until reconciled.
+              </p>
+              <div className="divide-y divide-amber-200/60 bg-white/80 rounded-2xl border border-amber-200 overflow-hidden text-xs">
+                {clubDetail.needsAttention.map((item, idx) => (
+                  <div key={item.expenseId || idx} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="font-bold text-slate-900 flex items-center gap-2">
+                        <span>{item.title}</span>
+                        <span className="text-indigo-700 font-black">₹{item.amount.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 mt-0.5">
+                        Linked Event: <strong>{item.eventTitle || 'Unknown Event'}</strong> • Recorded Date:{' '}
+                        {new Date(item.expenseDate).toLocaleDateString('en-IN')}
+                      </div>
+                      <div className="text-[11px] text-rose-700 font-semibold mt-0.5">
+                        ⚠️ {item.reason}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ex = (clubDetail.expenses || []).find((e: any) => e.id === item.expenseId);
+                          if (ex) openEditExpenseModal(ex);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-2xs"
+                      >
+                        Reconcile Expense
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Top Bar of Club Detail: Club Info & Period Toggle */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-3xl p-5 shadow-xs">
+            <div className="text-xs font-semibold text-slate-600">
+              Club: <strong className="text-slate-900 font-bold">{clubDetail.club.name}</strong>
+              <span className="text-slate-400 font-normal ml-1">({clubDetail.semester.name})</span>
             </div>
 
             {/* Semester | Month Toggle and Month Selector */}
@@ -714,7 +1094,7 @@ export default function ExpenseManager({
                   </div>
                   <div className="text-[11px] text-slate-500 mt-1 font-medium">
                     {isMonthMode
-                      ? `${selectedMonth} actual expenses`
+                      ? `${selectedMonth} verified expenses`
                       : clubDetail.allocated > 0
                       ? `${Math.round((clubDetail.spent / clubDetail.allocated) * 100)}% of allocation`
                       : '0% utilized'}
@@ -753,50 +1133,44 @@ export default function ExpenseManager({
             );
           })()}
 
-          {/* VISUAL CHARTS: DONUT CHART & MONTHLY SPENDING BAR CHART */}
+          {/* VISUAL CHARTS SECTION: DONUT (LEFT) + MONTHLY SPENDING BARS (RIGHT) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 1. DONUT CHART: SPENT VS. REMAINING */}
+            {/* 1. DONUT CHART */}
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 mb-1">
-                  Fund Utilization Donut • Spent vs. Remaining
-                </h3>
+                <h3 className="text-sm font-bold text-slate-900 mb-1">Budget Utilization Ratio</h3>
                 <p className="text-xs text-slate-500 mb-4">
-                  Semester allocation breakdown for {clubDetail.semester.name}.
+                  Visual ratio of actual spent funds versus remaining balance for this semester.
                 </p>
               </div>
 
               {(() => {
-                const radius = 54;
-                const circumference = 2 * Math.PI * radius;
-                const allocated = clubDetail.allocated || 1;
-                const spent = clubDetail.spent || 0;
+                const allocated = clubDetail.allocated;
+                const spent = clubDetail.spent;
                 const remaining = Math.max(0, clubDetail.remaining);
+                const percentSpent = allocated > 0 ? Math.min(100, Math.round((spent / allocated) * 100)) : 0;
 
-                const percentSpent = Math.min(100, Math.round((spent / allocated) * 100));
+                const radius = 64;
+                const circumference = 2 * Math.PI * radius;
                 const spentDash = (percentSpent / 100) * circumference;
 
                 return (
-                  <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-                    {/* Donut SVG */}
-                    <div className="relative w-44 h-44 flex items-center justify-center shrink-0">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
-                        {/* Background circle (Remaining portion) */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-8 py-4">
+                    <div className="relative w-40 h-40 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
                         <circle
-                          cx="70"
-                          cy="70"
+                          cx="80"
+                          cy="80"
                           r={radius}
-                          stroke="#10b981"
+                          stroke="#e2e8f0"
                           strokeWidth="14"
                           fill="transparent"
-                          className="opacity-90"
                         />
-                        {/* Foreground arc (Spent portion) */}
                         <circle
-                          cx="70"
-                          cy="70"
+                          cx="80"
+                          cy="80"
                           r={radius}
-                          stroke="#6366f1"
+                          stroke="#4f46e5"
                           strokeWidth="14"
                           strokeDasharray={`${spentDash} ${circumference}`}
                           strokeDashoffset="0"
@@ -813,7 +1187,6 @@ export default function ExpenseManager({
                       </div>
                     </div>
 
-                    {/* Donut Legend */}
                     <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
                       <div className="p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100">
                         <div className="flex items-center gap-1.5 mb-0.5">
@@ -877,13 +1250,11 @@ export default function ExpenseManager({
                       )}
                     </div>
                     <p className="text-xs text-slate-500 mb-4">
-                      Spent per month across semester. Click any bar to inspect that month.
+                      Spent per month across semester in chronological order. Click any bar to filter that month.
                     </p>
                   </div>
 
-                  {/* Chart Graphic Area */}
                   <div className="relative pt-6 pb-2">
-                    {/* Average Line Across Chart */}
                     {avgMonthlySpend > 0 && maxMonthlySpend > 0 && (
                       <div
                         className="absolute inset-x-0 border-b-2 border-dashed border-indigo-300 z-10 pointer-events-none flex items-center justify-end"
@@ -897,7 +1268,6 @@ export default function ExpenseManager({
                       </div>
                     )}
 
-                    {/* Bars Container */}
                     <div className="flex items-end justify-between gap-2 h-40 px-2 border-b border-slate-200">
                       {monthlyItems.map((m) => {
                         const isSelected = viewPeriod === 'MONTH' && selectedMonth === m.month;
@@ -913,9 +1283,8 @@ export default function ExpenseManager({
                               setViewPeriod('MONTH');
                             }}
                             className="flex-1 flex flex-col items-center justify-end group cursor-pointer"
-                            title={`${m.month}: ₹${m.spent.toLocaleString('en-IN')} (${m.expenseCount} expenses). Click to inspect.`}
+                            title={`${m.month}: ₹${m.spent.toLocaleString('en-IN')} (${m.expenseCount} expenses). Click to filter.`}
                           >
-                            {/* Amount label above bar */}
                             <span
                               className={`text-[10px] font-bold mb-1 transition-colors ${
                                 isSelected
@@ -928,7 +1297,6 @@ export default function ExpenseManager({
                               {m.spent > 0 ? `₹${(m.spent / 1000).toFixed(m.spent >= 10000 ? 0 : 1)}k` : '₹0'}
                             </span>
 
-                            {/* Bar Column */}
                             <div className="w-full max-w-[42px] flex items-end justify-center">
                               <div
                                 className={`w-full rounded-t-lg transition-all duration-300 ${
@@ -942,7 +1310,6 @@ export default function ExpenseManager({
                               />
                             </div>
 
-                            {/* Month label below baseline */}
                             <span
                               className={`text-[10px] font-bold mt-2 truncate max-w-full text-center transition-colors ${
                                 isSelected
@@ -962,45 +1329,15 @@ export default function ExpenseManager({
             })()}
           </div>
 
-          {/* EVENTS & MONTHLY LEDGER SECTION */}
+          {/* EVENTS & ITEMISED LEDGER SECTION */}
           {(() => {
             const isMonthMode = viewPeriod === 'MONTH';
-            const currentMonthObj = clubDetail.monthlySpending.find((m) => m.month === selectedMonth);
-            const hasMonthExpenses = currentMonthObj ? currentMonthObj.expenseCount > 0 : false;
-
-            // In Month mode with 0 expenses: show empty state
-            if (isMonthMode && !hasMonthExpenses) {
-              return (
-                <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-900 shadow-xs space-y-3">
-                  <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
-                    <ReceiptIcon className="w-6 h-6" />
-                  </div>
-                  <h4 className="text-base font-bold text-slate-900">
-                    No Expenses in {selectedMonth}
-                  </h4>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    {clubDetail.club.name} recorded zero expenses during {selectedMonth}.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setViewPeriod('SEMESTER')}
-                    className="mt-2 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition cursor-pointer"
-                  >
-                    Switch to Full Semester View
-                  </button>
-                </div>
-              );
-            }
-
-            // Events rows to display:
-            // In Month mode: show only events that have expenses dated in selectedMonth, with spent = month spent
-            // In Semester mode: show all perEventRows
             const eventsToDisplay = isMonthMode
               ? clubDetail.perEventRows
                   .map((ev) => {
-                    const mExpenses = (ev.expenses || []).filter((ex: any) =>
-                      isExpenseInMonth(ex.expenseDate, selectedMonth)
-                    );
+                    const mExpenses = (ev.expenses || [])
+                      .filter((ex: any) => !ex.isVoided)
+                      .filter((ex: any) => isExpenseInMonth(ex.expenseDate, selectedMonth));
                     const mSpent = mExpenses.reduce(
                       (sum: number, ex: any) => sum + Math.round(Number(ex.amount || 0)),
                       0
@@ -1015,23 +1352,6 @@ export default function ExpenseManager({
                   .filter((ev) => ev.expenses.length > 0)
               : clubDetail.perEventRows;
 
-            // Itemized expenses ledger in Month mode
-            const monthLedgerExpenses: any[] = [];
-            if (isMonthMode) {
-              eventsToDisplay.forEach((ev) => {
-                ev.expenses.forEach((ex: any) => {
-                  monthLedgerExpenses.push({
-                    ...ex,
-                    eventTitle: ev.title,
-                    eventVenue: ev.venue,
-                  });
-                });
-              });
-              monthLedgerExpenses.sort(
-                (a, b) => new Date(b.expenseDate).getTime() - new Date(a.expenseDate).getTime()
-              );
-            }
-
             return (
               <div className="space-y-6">
                 {/* Events Table */}
@@ -1045,8 +1365,8 @@ export default function ExpenseManager({
                       </h3>
                       <p className="text-xs text-slate-500">
                         {isMonthMode
-                          ? `Showing only expenses dated in ${selectedMonth}. Click an event to view receipts.`
-                          : 'Click any event row to inspect its itemized expense entries and receipts.'}
+                          ? `Showing only expenses dated in ${selectedMonth}. Click an event row to inspect receipts.`
+                          : 'Click any event row to inspect its expenses. Core can edit approved budgets.'}
                       </p>
                     </div>
                     <span className="text-xs font-bold text-slate-500">
@@ -1072,7 +1392,8 @@ export default function ExpenseManager({
                               {isMonthMode ? `Spent (${selectedMonth.split(' ')[0]})` : 'Spent'}
                             </th>
                             <th className="py-3.5 px-4 text-right">Left</th>
-                            <th className="py-3.5 px-5 w-48">Progress</th>
+                            <th className="py-3.5 px-5 w-44">Progress</th>
+                            {isCore && <th className="py-3.5 px-4 text-center">Action</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-xs">
@@ -1153,6 +1474,27 @@ export default function ExpenseManager({
                                     </div>
                                   )}
                                 </td>
+
+                                {isCore && (
+                                  <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingEventBudget({
+                                          id: ev.id,
+                                          title: ev.title,
+                                          currentBudget: ev.budget,
+                                        });
+                                        setNewEventBudgetAmount(String(ev.budget));
+                                        setEventBudgetError(null);
+                                        setConfirmEventBudgetPrompt(false);
+                                      }}
+                                      className="px-2.5 py-1 rounded-xl border border-slate-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700 font-bold text-[11px] transition shadow-2xs cursor-pointer"
+                                    >
+                                      Edit budget
+                                    </button>
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
@@ -1162,23 +1504,47 @@ export default function ExpenseManager({
                   )}
                 </div>
 
-                {/* In Month mode: Itemized Monthly Expense Ledger */}
-                {isMonthMode && monthLedgerExpenses.length > 0 && (
-                  <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
-                    <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-900">
-                          {selectedMonth} Itemized Expense Ledger
-                        </h3>
-                        <p className="text-xs text-slate-500">
-                          Complete list of expenses recorded for {clubDetail.club.name} dated in {selectedMonth}.
-                        </p>
-                      </div>
-                      <span className="text-xs font-bold text-slate-500">
-                        {monthLedgerExpenses.length} entries
-                      </span>
+                {/* ITEMISED EXPENSE LEDGER (WITH VOIDED TOGGLE & AUDIT ATTRIBUTION) */}
+                <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+                  <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        {isMonthMode
+                          ? `${selectedMonth} Itemized Expense Ledger`
+                          : `${clubDetail.club.name} • Semester Expense Ledger`}
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {isMonthMode
+                          ? `All expenses recorded for ${clubDetail.club.name} dated in ${selectedMonth}.`
+                          : `Complete ledger of expenses dated within ${clubDetail.semester.name}.`}
+                      </p>
                     </div>
 
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {/* Show Voided Toggle */}
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={showVoided}
+                          onChange={(e) => setShowVoided(e.target.checked)}
+                          className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                        />
+                        <span>Show voided expenses</span>
+                      </label>
+
+                      <span className="text-xs font-bold text-slate-500">
+                        {filteredLedgerExpenses.length} entries
+                      </span>
+                    </div>
+                  </div>
+
+                  {filteredLedgerExpenses.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-xs font-semibold">
+                      {isMonthMode
+                        ? `No expenses found for ${selectedMonth}.`
+                        : `No expenses recorded for this club in ${clubDetail.semester.name}.`}
+                    </div>
+                  ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs">
                         <thead>
@@ -1188,15 +1554,23 @@ export default function ExpenseManager({
                             <th className="py-3 px-4">Category</th>
                             <th className="py-3 px-4">Description</th>
                             <th className="py-3 px-4 text-right">Amount</th>
-                            <th className="py-3 px-4">Added By</th>
+                            <th className="py-3 px-4">Attribution / Added By</th>
                             <th className="py-3 px-4 text-center">Receipt</th>
+                            <th className="py-3 px-4 text-center">Audit</th>
+                            {isCore && <th className="py-3 px-4 text-center">Action</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {monthLedgerExpenses.map((ex: any) => {
+                          {filteredLedgerExpenses.map((ex: any) => {
                             const catInfo = CATEGORY_COLORS[ex.category] || { label: ex.category };
+
                             return (
-                              <tr key={ex.id} className="hover:bg-slate-50/80 transition">
+                              <tr
+                                key={ex.id}
+                                className={`hover:bg-slate-50/80 transition ${
+                                  ex.isVoided ? 'bg-rose-50/40 opacity-75' : ''
+                                }`}
+                              >
                                 <td className="py-3 px-4 whitespace-nowrap text-slate-600 font-medium">
                                   {new Date(ex.expenseDate).toLocaleDateString('en-IN', {
                                     month: 'short',
@@ -1204,23 +1578,51 @@ export default function ExpenseManager({
                                     year: 'numeric',
                                   })}
                                 </td>
+
                                 <td className="py-3 px-4 font-bold text-slate-900">
-                                  {ex.eventTitle}
+                                  {ex.eventTitle || '—'}
                                 </td>
+
                                 <td className="py-3 px-4">
                                   <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold">
                                     {catInfo.label}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 text-slate-800 font-medium max-w-xs truncate">
-                                  {ex.description || '—'}
+
+                                <td className="py-3 px-4 text-slate-800 font-medium max-w-xs">
+                                  <div className="truncate">{ex.description || '—'}</div>
+                                  {ex.isVoided && (
+                                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                                        Voided
+                                      </span>
+                                      <span className="text-[10px] text-rose-700 italic">
+                                        by {ex.voidedBy || 'Core'}: &quot;{ex.voidReason}&quot;
+                                      </span>
+                                    </div>
+                                  )}
                                 </td>
-                                <td className="py-3 px-4 text-right font-black text-slate-900">
-                                  ₹{Math.round(Number(ex.amount)).toLocaleString('en-IN')}
+
+                                <td className="py-3 px-4 text-right font-black text-slate-900 whitespace-nowrap">
+                                  {ex.isVoided ? (
+                                    <span className="line-through text-slate-400">
+                                      ₹{Math.round(Number(ex.amount)).toLocaleString('en-IN')}
+                                    </span>
+                                  ) : (
+                                    <span>₹{Math.round(Number(ex.amount)).toLocaleString('en-IN')}</span>
+                                  )}
                                 </td>
+
                                 <td className="py-3 px-4 text-slate-600 text-[11px]">
-                                  {ex.addedByName || ex.submittedBy?.name || 'Club Executive'}
+                                  {ex.onBehalfOfClub ? (
+                                    <span className="font-semibold text-indigo-700">
+                                      Added by ACM Core on behalf of {ex.onBehalfOfClub}
+                                    </span>
+                                  ) : (
+                                    <span>{ex.addedByName || ex.submittedBy?.name || 'Club Executive'}</span>
+                                  )}
                                 </td>
+
                                 <td className="py-3 px-4 text-center">
                                   {ex.receiptUrl ? (
                                     <a
@@ -1235,25 +1637,63 @@ export default function ExpenseManager({
                                     <span className="text-slate-400">—</span>
                                   )}
                                 </td>
+
+                                <td className="py-3 px-4 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => openExpenseHistory(ex)}
+                                    className="text-[11px] font-bold text-slate-500 hover:text-indigo-600 underline cursor-pointer"
+                                  >
+                                    History
+                                  </button>
+                                </td>
+
+                                {isCore && (
+                                  <td className="py-3 px-4 text-center whitespace-nowrap">
+                                    {!ex.isVoided ? (
+                                      <div className="flex items-center justify-center gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => openEditExpenseModal(ex)}
+                                          className="px-2 py-1 rounded-lg border border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 text-[11px] font-bold transition shadow-2xs cursor-pointer"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setVoidingExpense(ex);
+                                            setVoidReason('');
+                                            setVoidError(null);
+                                          }}
+                                          className="px-2 py-1 rounded-lg border border-rose-300 hover:bg-rose-50 text-rose-700 text-[11px] font-bold transition shadow-2xs cursor-pointer"
+                                        >
+                                          Void
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400 font-semibold italic">Voided</span>
+                                    )}
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
                         </tbody>
                       </table>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           })()}
         </div>
       )}
 
-      {/* EVENT EXPENSES PANEL (CLICKING AN EVENT OPENS THIS DRAWER / PANEL) */}
+      {/* EVENT EXPENSES PANEL (CLICKING AN EVENT ROW) */}
       {currentPanelEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 text-slate-900 shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto">
-            {/* Header: ₹X spent of ₹Y, ₹Z left */}
             <div className="flex items-start justify-between pb-3 border-b border-slate-200">
               <div>
                 <div className="text-base font-black text-slate-900">
@@ -1285,10 +1725,9 @@ export default function ExpenseManager({
               </button>
             </div>
 
-            {/* Expenses List */}
             {currentPanelEvent.expenses.length === 0 ? (
               <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
-                No individual expenses recorded for this event yet. Use the &quot;Add Expense&quot; button to record an expense.
+                No expenses recorded for this event. Use &quot;Add Expense&quot; to submit receipts.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1301,6 +1740,7 @@ export default function ExpenseManager({
                       <th className="py-2.5 px-3 text-right">Amount</th>
                       <th className="py-2.5 px-3">Added By</th>
                       <th className="py-2.5 px-3 text-center">Receipt</th>
+                      {isCore && <th className="py-2.5 px-3 text-center">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1308,7 +1748,12 @@ export default function ExpenseManager({
                       const catInfo = CATEGORY_COLORS[ex.category] || { label: ex.category };
 
                       return (
-                        <tr key={ex.id} className="hover:bg-slate-50/80 transition">
+                        <tr
+                          key={ex.id}
+                          className={`hover:bg-slate-50/80 transition ${
+                            ex.isVoided ? 'bg-rose-50/40 opacity-75' : ''
+                          }`}
+                        >
                           <td className="py-3 px-3 whitespace-nowrap text-slate-600">
                             {new Date(ex.expenseDate).toLocaleDateString('en-IN', {
                               month: 'short',
@@ -1322,16 +1767,33 @@ export default function ExpenseManager({
                             </span>
                           </td>
 
-                          <td className="py-3 px-3 text-slate-800 font-medium max-w-xs truncate">
-                            {ex.description || '—'}
+                          <td className="py-3 px-3 text-slate-800 font-medium max-w-xs">
+                            <div className="truncate">{ex.description || '—'}</div>
+                            {ex.isVoided && (
+                              <span className="text-[10px] text-rose-700 italic">
+                                [Voided: {ex.voidReason}]
+                              </span>
+                            )}
                           </td>
 
-                          <td className="py-3 px-3 text-right font-black text-slate-900">
-                            ₹{Math.round(Number(ex.amount)).toLocaleString('en-IN')}
+                          <td className="py-3 px-3 text-right font-black text-slate-900 whitespace-nowrap">
+                            {ex.isVoided ? (
+                              <span className="line-through text-slate-400">
+                                ₹{Math.round(Number(ex.amount)).toLocaleString('en-IN')}
+                              </span>
+                            ) : (
+                              <span>₹{Math.round(Number(ex.amount)).toLocaleString('en-IN')}</span>
+                            )}
                           </td>
 
                           <td className="py-3 px-3 text-slate-600 text-[11px]">
-                            {ex.addedByName || ex.submittedBy?.name || 'Club Executive'}
+                            {ex.onBehalfOfClub ? (
+                              <span className="font-semibold text-indigo-700">
+                                Core for {ex.onBehalfOfClub}
+                              </span>
+                            ) : (
+                              <span>{ex.addedByName || ex.submittedBy?.name || 'Club Executive'}</span>
+                            )}
                           </td>
 
                           <td className="py-3 px-3 text-center">
@@ -1348,6 +1810,35 @@ export default function ExpenseManager({
                               <span className="text-slate-400">—</span>
                             )}
                           </td>
+
+                          {isCore && (
+                            <td className="py-3 px-3 text-center whitespace-nowrap">
+                              {!ex.isVoided ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditExpenseModal(ex)}
+                                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setVoidingExpense(ex);
+                                      setVoidReason('');
+                                      setVoidError(null);
+                                    }}
+                                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200"
+                                  >
+                                    Void
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 italic">Voided</span>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -1369,7 +1860,7 @@ export default function ExpenseManager({
         </div>
       )}
 
-      {/* EDIT BUDGET MODAL (CORE ONLY) */}
+      {/* EDIT CLUB BUDGET ALLOCATION MODAL (CORE ONLY WITH CONFIRMATION) */}
       {editingClub && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-slate-900 shadow-2xl relative space-y-4">
@@ -1382,7 +1873,10 @@ export default function ExpenseManager({
               </div>
               <button
                 type="button"
-                onClick={() => setEditingClub(null)}
+                onClick={() => {
+                  setEditingClub(null);
+                  setConfirmClubBudgetPrompt(false);
+                }}
                 className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
               >
                 ✕
@@ -1395,62 +1889,594 @@ export default function ExpenseManager({
               </div>
             )}
 
-            <form onSubmit={handleSaveBudget} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  New Allocation Amount (₹) <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-bold text-xs">
-                    ₹
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
+            {!confirmClubBudgetPrompt ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    New Allocation Amount (₹) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-bold text-xs">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      required
+                      value={newBudgetAmount}
+                      onChange={(e) => setNewBudgetAmount(e.target.value)}
+                      placeholder="50000"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-7 pr-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Required Justification Reason <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
                     required
-                    value={newBudgetAmount}
-                    onChange={(e) => setNewBudgetAmount(e.target.value)}
-                    placeholder="50000"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-7 pr-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500"
+                    rows={3}
+                    value={budgetReason}
+                    onChange={(e) => setBudgetReason(e.target.value)}
+                    placeholder="e.g. Mid-semester grant for annual hackathon prize pool"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   />
+                  <span className="text-[10px] text-slate-400">
+                    Every budget modification is logged in the immutable audit change log.
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingClub(null)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!budgetReason.trim()) {
+                        setEditBudgetError('A justification reason is required.');
+                        return;
+                      }
+                      setConfirmClubBudgetPrompt(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs"
+                  >
+                    Continue →
+                  </button>
                 </div>
               </div>
+            ) : (
+              /* Confirmation Dialog */
+              <div className="space-y-4">
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-amber-900 text-xs space-y-2">
+                  <div className="font-bold text-sm text-amber-900">Confirm Budget Allocation Update</div>
+                  <p>
+                    Are you sure you want to update <strong>{editingClub.name}</strong>&apos;s budget from{' '}
+                    <strong>₹{editingClub.currentAllocated.toLocaleString('en-IN')}</strong> to{' '}
+                    <strong>₹{Math.round(Number(newBudgetAmount)).toLocaleString('en-IN')}</strong>?
+                  </p>
+                  <p className="text-[11px] text-amber-800 italic">
+                    Reason: &quot;{budgetReason.trim()}&quot;
+                  </p>
+                </div>
 
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClubBudgetPrompt(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingBudget}
+                    onClick={handleSaveClubBudget}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50"
+                  >
+                    {savingBudget ? 'Saving...' : 'Yes, Confirm Allocation'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* EDIT EVENT APPROVED BUDGET MODAL (CORE ONLY WITH CONFIRMATION) */}
+      {editingEventBudget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-slate-900 shadow-2xl relative space-y-4">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Required Justification Reason <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  value={budgetReason}
-                  onChange={(e) => setBudgetReason(e.target.value)}
-                  placeholder="e.g. Mid-semester grant for annual hackathon prize pool"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
-                />
-                <span className="text-[10px] text-slate-400">
-                  Every budget modification is logged in the immutable audit change log.
-                </span>
+                <h3 className="text-base font-bold text-slate-900">Edit Event Approved Budget</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Update approved ceiling for <strong>{editingEventBudget.title}</strong>
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingEventBudget(null);
+                  setConfirmEventBudgetPrompt(false);
+                }}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingClub(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingBudget}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50"
-                >
-                  {savingBudget ? 'Saving...' : 'Save Allocation'}
-                </button>
+            {eventBudgetError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold">
+                {eventBudgetError}
               </div>
-            </form>
+            )}
+
+            {!confirmEventBudgetPrompt ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Approved Event Budget (₹) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-bold text-xs">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      required
+                      value={newEventBudgetAmount}
+                      onChange={(e) => setNewEventBudgetAmount(e.target.value)}
+                      placeholder="15000"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-7 pr-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingEventBudget(null)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmEventBudgetPrompt(true)}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs"
+                  >
+                    Continue →
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Confirmation Dialog */
+              <div className="space-y-4">
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-amber-900 text-xs space-y-2">
+                  <div className="font-bold text-sm text-amber-900">Confirm Event Budget Update</div>
+                  <p>
+                    Are you sure you want to adjust the approved budget for{' '}
+                    <strong>{editingEventBudget.title}</strong> from{' '}
+                    <strong>₹{editingEventBudget.currentBudget.toLocaleString('en-IN')}</strong> to{' '}
+                    <strong>₹{Math.round(Number(newEventBudgetAmount)).toLocaleString('en-IN')}</strong>?
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmEventBudgetPrompt(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingEventBudget}
+                    onClick={handleSaveEventBudget}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50"
+                  >
+                    {savingEventBudget ? 'Saving...' : 'Yes, Confirm Event Budget'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* EDIT EXPENSE MODAL (CORE ONLY WITH LIVE DATE WARNING & CONFIRMATION) */}
+      {editingExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 text-slate-900 shadow-2xl relative space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Edit Expense Record</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Core audit modification for expense #{editingExpense.id.slice(0, 8)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingExpense(null);
+                  setConfirmExpenseEditPrompt(false);
+                }}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {editExpError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold">
+                {editExpError}
+              </div>
+            )}
+
+            {/* Check date boundary vs semester */}
+            {(() => {
+              if (!clubDetail || !editExpDate) return null;
+              const expD = new Date(editExpDate);
+              if (isNaN(expD.getTime())) return null;
+              const sStart = new Date(clubDetail.semester.startDate);
+              const sEnd = new Date(clubDetail.semester.endDate);
+              sEnd.setHours(23, 59, 59, 999);
+              if (expD < sStart || expD > sEnd) {
+                return (
+                  <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs flex items-center gap-2">
+                    <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>
+                      Warning: Selected date ({editExpDate}) is outside {clubDetail.semester.name}. This will be flagged in Needs Attention.
+                    </span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {!confirmExpenseEditPrompt ? (
+              <div className="space-y-3.5">
+                {/* Amount */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Amount (₹) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editExpAmount}
+                    onChange={(e) => setEditExpAmount(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Category <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={editExpCategory}
+                    onChange={(e) => setEditExpCategory(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    {Object.values(ExpenseCategory).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Expense Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editExpDate}
+                    onChange={(e) => setEditExpDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Description <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={200}
+                    required
+                    value={editExpDescription}
+                    onChange={(e) => setEditExpDescription(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Event dropdown (within same club) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Linked Event (within {clubDetail?.club?.name})
+                  </label>
+                  <select
+                    value={editExpEventId}
+                    onChange={(e) => setEditExpEventId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="">Select event...</option>
+                    {(clubDetail?.perEventRows || []).map((ev) => (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.title} (Budget: ₹{ev.budget.toLocaleString('en-IN')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Receipt URL */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Receipt URL / Link</label>
+                  <input
+                    type="url"
+                    value={editExpReceiptUrl}
+                    onChange={(e) => setEditExpReceiptUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Required Reason */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Reason for Edit <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    required
+                    rows={2}
+                    value={editExpReason}
+                    onChange={(e) => setEditExpReason(e.target.value)}
+                    placeholder="e.g. Corrected invoice amount after GST verification"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingExpense(null)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!editExpReason.trim()) {
+                        setEditExpError('A reason is strictly required to edit an expense.');
+                        return;
+                      }
+                      setConfirmExpenseEditPrompt(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs"
+                  >
+                    Review & Confirm →
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Confirmation Dialog for Edit */
+              <div className="space-y-4">
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-amber-900 text-xs space-y-2">
+                  <div className="font-bold text-sm text-amber-900">Confirm Expense Modifications</div>
+                  <p>
+                    Are you sure you want to update this expense record? This action will write a permanent audit entry to the expense change log.
+                  </p>
+                  <p className="text-[11px] text-amber-800 italic">
+                    Reason: &quot;{editExpReason.trim()}&quot;
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmExpenseEditPrompt(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+                  >
+                    ← Back to Edit
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingExpenseEdit}
+                    onClick={handleSaveExpenseEdit}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50"
+                  >
+                    {savingExpenseEdit ? 'Saving...' : 'Yes, Confirm Expense Edit'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* VOID EXPENSE CONFIRMATION MODAL (CORE ONLY WITH MANDATORY REASON) */}
+      {voidingExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-slate-900 shadow-2xl relative space-y-4">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600">
+                  <AlertTriangleIcon className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Void Expense Record</h3>
+                  <p className="text-xs text-slate-500">Soft-delete expense with audit justification</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVoidingExpense(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {voidError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold">
+                {voidError}
+              </div>
+            )}
+
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
+              <div className="font-bold text-slate-900">
+                ₹{Math.round(Number(voidingExpense.amount)).toLocaleString('en-IN')} • {voidingExpense.category}
+              </div>
+              <div className="text-slate-600 truncate">{voidingExpense.description || 'No description'}</div>
+              <div className="text-[11px] text-slate-400">
+                Date: {new Date(voidingExpense.expenseDate).toLocaleDateString('en-IN')}
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Voided expenses are immediately removed from all semester spend calculations, charts, and balances. They will remain visible behind the &quot;Show voided&quot; toggle in the ledger for transparency.
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Reason for Voiding <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                required
+                rows={3}
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                placeholder="e.g. Duplicate entry submitted by vendor / payment cancelled"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-rose-500 font-medium"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setVoidingExpense(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isVoiding}
+                onClick={handleVoidExpense}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50"
+              >
+                {isVoiding ? 'Voiding...' : 'Confirm Void Expense'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EXPENSE AUDIT HISTORY MODAL */}
+      {historyExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 text-slate-900 shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Expense Audit History</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Audit timeline for expense #{historyExpense.id.slice(0, 8)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistoryExpense(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingHistory ? (
+              <div className="py-8 text-center text-slate-400 text-xs font-semibold">
+                Loading audit trail...
+              </div>
+            ) : expenseHistoryRecords.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs font-semibold">
+                No edit history logged for this expense.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {expenseHistoryRecords.map((log) => {
+                  const badgeColor =
+                    log.action === 'CREATED'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : log.action === 'VOIDED'
+                      ? 'bg-rose-50 text-rose-800 border-rose-200'
+                      : 'bg-indigo-50 text-indigo-800 border-indigo-200';
+
+                  return (
+                    <div
+                      key={log.id}
+                      className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-0.5 rounded-md border font-black text-[10px] ${badgeColor}`}>
+                          {log.action}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {new Date(log.timestamp || log.createdAt).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      <div className="text-slate-700 font-medium">
+                        Performed by: <strong>{log.performedBy}</strong>
+                        {log.onBehalfOfClub && (
+                          <span className="text-indigo-600 font-semibold ml-1">
+                            (on behalf of {log.onBehalfOfClub})
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-slate-600 italic bg-white p-2 rounded-xl border border-slate-200">
+                        &quot;{log.reason}&quot;
+                      </div>
+
+                      {log.newValues && log.action === 'EDITED' && (
+                        <div className="text-[10px] text-slate-500 font-mono bg-slate-100 p-2 rounded-xl">
+                          New values: {JSON.stringify(log.newValues)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setHistoryExpense(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs transition"
+              >
+                Close History
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1466,7 +2492,7 @@ export default function ExpenseManager({
         }}
         currentRole={currentRole}
         currentUser={currentUser}
-        approvedEvents={allEvents.filter((e) => e.status === 'APPROVED' || e.status === 'COMPLETED')}
+        approvedEvents={addExpenseApprovedEvents}
         currentTotalSpent={clubDetail?.spent || allClubsData?.totalSpent || 0}
       />
     </div>
