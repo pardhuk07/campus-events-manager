@@ -125,6 +125,40 @@ export default function ExpenseManager({
   // Add Expense Modal
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
 
+  // Semester vs. Month view mode in Club Detail
+  const [viewPeriod, setViewPeriod] = useState<'SEMESTER' | 'MONTH'>('SEMESTER');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+
+  const isExpenseInMonth = useCallback(
+    (expDate: string | Date, monthStr: string) => {
+      if (!expDate || !monthStr) return false;
+      const d = new Date(expDate);
+      if (isNaN(d.getTime())) return false;
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const label = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      return label === monthStr;
+    },
+    []
+  );
+
+  // Sync selectedMonth with available months when clubDetail changes
+  useEffect(() => {
+    if (clubDetail?.monthlySpending && clubDetail.monthlySpending.length > 0) {
+      const exists = clubDetail.monthlySpending.some((m) => m.month === selectedMonth);
+      if (!exists) {
+        const now = new Date();
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const curLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+        const foundCurrent = clubDetail.monthlySpending.find((m) => m.month === curLabel);
+        if (foundCurrent) {
+          setSelectedMonth(foundCurrent.month);
+        } else {
+          setSelectedMonth(clubDetail.monthlySpending[0].month);
+        }
+      }
+    }
+  }, [clubDetail, selectedMonth]);
+
   // 1. Load Semesters on Mount
   useEffect(() => {
     async function loadSemesters() {
@@ -305,8 +339,24 @@ export default function ExpenseManager({
   // Keep event expenses in sync when activeEventPanel is open
   const currentPanelEvent = useMemo(() => {
     if (!activeEventPanel || !clubDetail) return null;
-    return clubDetail.perEventRows.find((r) => r.id === activeEventPanel.id) || activeEventPanel;
-  }, [activeEventPanel, clubDetail]);
+    const found = clubDetail.perEventRows.find((r) => r.id === activeEventPanel.id) || activeEventPanel;
+    if (viewPeriod === 'MONTH') {
+      const filteredExpenses = (found.expenses || []).filter((ex: any) =>
+        isExpenseInMonth(ex.expenseDate, selectedMonth)
+      );
+      const filteredSpent = filteredExpenses.reduce(
+        (sum: number, ex: any) => sum + Math.round(Number(ex.amount || 0)),
+        0
+      );
+      return {
+        ...found,
+        spent: filteredSpent,
+        left: found.budget - filteredSpent,
+        expenses: filteredExpenses,
+      };
+    }
+    return found;
+  }, [activeEventPanel, clubDetail, viewPeriod, selectedMonth, isExpenseInMonth]);
 
   return (
     <div className="space-y-6">
@@ -538,190 +588,373 @@ export default function ExpenseManager({
       {/* VIEW B: CLUB DETAIL VIEW (Executive for their own club, or Core drilled down) */}
       {!loading && clubDetail && (
         <div className="space-y-6">
-          {/* Breadcrumb for Core */}
-          {isCore && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedClubId(null)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-300 text-xs font-bold transition shadow-2xs cursor-pointer"
-              >
-                <span>←</span>
-                <span>Back to All Clubs</span>
-              </button>
-              <span className="text-slate-400 text-xs">•</span>
-              <span className="text-xs font-semibold text-slate-600">
-                Inspecting: <strong className="text-slate-900">{clubDetail.club.name}</strong>
-              </span>
-            </div>
-          )}
-
-          {/* FOUR METRIC CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card 1: Allocated */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Allocated Budget
-              </div>
-              <div className="text-2xl font-black text-slate-900 tracking-tight">
-                ₹{clubDetail.allocated.toLocaleString('en-IN')}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-1 font-medium">
-                Fixed semester allocation
-              </div>
-              <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500">
-                <RupeeIcon className="w-5 h-5" />
+          {/* Top Bar of Club Detail: Breadcrumbs / Club Title (Left) and Semester|Month Toggle & Month Selector (Right) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-3xl p-5 shadow-xs">
+            <div className="flex items-center gap-3 flex-wrap">
+              {isCore && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedClubId(null)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:text-indigo-600 hover:border-indigo-300 text-xs font-bold transition shadow-2xs cursor-pointer"
+                >
+                  <span>←</span>
+                  <span>Back to All Clubs</span>
+                </button>
+              )}
+              {isCore && <span className="text-slate-300 text-xs">•</span>}
+              <div className="text-xs font-semibold text-slate-600">
+                Club: <strong className="text-slate-900 font-bold">{clubDetail.club.name}</strong>
+                <span className="text-slate-400 font-normal ml-1">({clubDetail.semester.name})</span>
               </div>
             </div>
 
-            {/* Card 2: Committed */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Committed Budget
+            {/* Semester | Month Toggle and Month Selector */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="bg-slate-100 p-1 rounded-2xl flex items-center border border-slate-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setViewPeriod('SEMESTER')}
+                  className={`px-3 py-1.5 rounded-xl transition ${
+                    viewPeriod === 'SEMESTER'
+                      ? 'bg-white text-indigo-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Semester
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewPeriod('MONTH');
+                    if (!selectedMonth && clubDetail.monthlySpending.length > 0) {
+                      setSelectedMonth(clubDetail.monthlySpending[0].month);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-xl transition ${
+                    viewPeriod === 'MONTH'
+                      ? 'bg-white text-indigo-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Month
+                </button>
               </div>
-              <div className="text-2xl font-black text-indigo-700 tracking-tight">
-                ₹{clubDetail.committed.toLocaleString('en-IN')}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-1 font-medium">
-                Approved events total
-              </div>
-              <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-                <CalendarIcon className="w-5 h-5" />
-              </div>
-            </div>
 
-            {/* Card 3: Spent */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Total Spent
-              </div>
-              <div className="text-2xl font-black text-slate-900 tracking-tight">
-                ₹{clubDetail.spent.toLocaleString('en-IN')}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-1 font-medium">
-                {clubDetail.allocated > 0
-                  ? `${Math.round((clubDetail.spent / clubDetail.allocated) * 100)}% of allocation`
-                  : '0% utilized'}
-              </div>
-              <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-                <ReceiptIcon className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Card 4: Remaining */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Remaining Balance
-              </div>
-              <div
-                className={`text-2xl font-black tracking-tight ${
-                  clubDetail.remaining >= 0 ? 'text-emerald-700' : 'text-rose-700'
-                }`}
-              >
-                ₹{clubDetail.remaining.toLocaleString('en-IN')}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-1 font-medium">
-                Allocated − Actual Spent
-              </div>
-              <div
-                className={`absolute top-4 right-4 w-10 h-10 rounded-2xl flex items-center justify-center border ${
-                  clubDetail.remaining >= 0
-                    ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
-                    : 'bg-rose-50 border-rose-100 text-rose-600'
-                }`}
-              >
-                <RupeeIcon className="w-5 h-5" />
-              </div>
+              {viewPeriod === 'MONTH' && (
+                <div className="flex items-center gap-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Month:</label>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 shadow-2xs"
+                  >
+                    {clubDetail.monthlySpending.map((m) => (
+                      <option key={m.month} value={m.month}>
+                        {m.month} (₹{m.spent.toLocaleString('en-IN')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* DONUT CHART: SPENT VS. REMAINING */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 mb-4">
-              Fund Utilization Donut • Spent vs. Remaining
-            </h3>
+          {/* FOUR METRIC CARDS (MONTH-AWARE) */}
+          {(() => {
+            const currentMonthObj = clubDetail.monthlySpending.find((m) => m.month === selectedMonth);
+            const isMonthMode = viewPeriod === 'MONTH';
+            const spentDisplay = isMonthMode
+              ? (currentMonthObj ? currentMonthObj.spent : 0)
+              : clubDetail.spent;
+            const remainingDisplay = isMonthMode
+              ? clubDetail.allocated - spentDisplay
+              : clubDetail.remaining;
 
-            {(() => {
-              const radius = 54;
-              const circumference = 2 * Math.PI * radius;
-              const allocated = clubDetail.allocated || 1;
-              const spent = clubDetail.spent || 0;
-              const remaining = Math.max(0, clubDetail.remaining);
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Card 1: Allocated */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Allocated Budget
+                  </div>
+                  <div className="text-2xl font-black text-slate-900 tracking-tight">
+                    ₹{clubDetail.allocated.toLocaleString('en-IN')}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                    Fixed semester allocation
+                  </div>
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500">
+                    <RupeeIcon className="w-5 h-5" />
+                  </div>
+                </div>
 
-              const percentSpent = Math.min(100, Math.round((spent / allocated) * 100));
-              const spentDash = (percentSpent / 100) * circumference;
+                {/* Card 2: Committed */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Committed Budget
+                  </div>
+                  <div className="text-2xl font-black text-indigo-700 tracking-tight">
+                    ₹{clubDetail.committed.toLocaleString('en-IN')}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                    Approved events total
+                  </div>
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <CalendarIcon className="w-5 h-5" />
+                  </div>
+                </div>
 
-              return (
-                <div className="flex flex-col md:flex-row items-center justify-around gap-6">
-                  {/* Donut SVG */}
-                  <div className="relative w-48 h-48 flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
-                      {/* Background circle (Remaining portion) */}
-                      <circle
-                        cx="70"
-                        cy="70"
-                        r={radius}
-                        stroke="#10b981"
-                        strokeWidth="14"
-                        fill="transparent"
-                        className="opacity-90"
-                      />
-                      {/* Foreground arc (Spent portion) */}
-                      <circle
-                        cx="70"
-                        cy="70"
-                        r={radius}
-                        stroke="#6366f1"
-                        strokeWidth="14"
-                        strokeDasharray={`${spentDash} ${circumference}`}
-                        strokeDashoffset="0"
-                        strokeLinecap="round"
-                        fill="transparent"
-                        className="transition-all duration-700 ease-out"
-                      />
-                    </svg>
-                    <div className="absolute flex flex-col items-center text-center">
-                      <span className="text-2xl font-black text-slate-900">{percentSpent}%</span>
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Spent
-                      </span>
+                {/* Card 3: Spent */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    {isMonthMode ? `Spent in ${selectedMonth}` : 'Total Spent'}
+                  </div>
+                  <div className="text-2xl font-black text-slate-900 tracking-tight">
+                    ₹{spentDisplay.toLocaleString('en-IN')}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                    {isMonthMode
+                      ? `${selectedMonth} actual expenses`
+                      : clubDetail.allocated > 0
+                      ? `${Math.round((clubDetail.spent / clubDetail.allocated) * 100)}% of allocation`
+                      : '0% utilized'}
+                  </div>
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                    <ReceiptIcon className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Card 4: Remaining */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Remaining Balance
+                  </div>
+                  <div
+                    className={`text-2xl font-black tracking-tight ${
+                      remainingDisplay >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                    }`}
+                  >
+                    ₹{remainingDisplay.toLocaleString('en-IN')}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                    {isMonthMode ? `Allocated − ${selectedMonth} Spent` : 'Allocated − Actual Spent'}
+                  </div>
+                  <div
+                    className={`absolute top-4 right-4 w-10 h-10 rounded-2xl flex items-center justify-center border ${
+                      remainingDisplay >= 0
+                        ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                        : 'bg-rose-50 border-rose-100 text-rose-600'
+                    }`}
+                  >
+                    <RupeeIcon className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* VISUAL CHARTS: DONUT CHART & MONTHLY SPENDING BAR CHART */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 1. DONUT CHART: SPENT VS. REMAINING */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 mb-1">
+                  Fund Utilization Donut • Spent vs. Remaining
+                </h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Semester allocation breakdown for {clubDetail.semester.name}.
+                </p>
+              </div>
+
+              {(() => {
+                const radius = 54;
+                const circumference = 2 * Math.PI * radius;
+                const allocated = clubDetail.allocated || 1;
+                const spent = clubDetail.spent || 0;
+                const remaining = Math.max(0, clubDetail.remaining);
+
+                const percentSpent = Math.min(100, Math.round((spent / allocated) * 100));
+                const spentDash = (percentSpent / 100) * circumference;
+
+                return (
+                  <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
+                    {/* Donut SVG */}
+                    <div className="relative w-44 h-44 flex items-center justify-center shrink-0">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
+                        {/* Background circle (Remaining portion) */}
+                        <circle
+                          cx="70"
+                          cy="70"
+                          r={radius}
+                          stroke="#10b981"
+                          strokeWidth="14"
+                          fill="transparent"
+                          className="opacity-90"
+                        />
+                        {/* Foreground arc (Spent portion) */}
+                        <circle
+                          cx="70"
+                          cy="70"
+                          r={radius}
+                          stroke="#6366f1"
+                          strokeWidth="14"
+                          strokeDasharray={`${spentDash} ${circumference}`}
+                          strokeDashoffset="0"
+                          strokeLinecap="round"
+                          fill="transparent"
+                          className="transition-all duration-700 ease-out"
+                        />
+                      </svg>
+                      <div className="absolute flex flex-col items-center text-center">
+                        <span className="text-2xl font-black text-slate-900">{percentSpent}%</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Spent
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Donut Legend */}
+                    <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+                      <div className="p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+                          <span className="text-[10px] font-bold text-slate-600">Actual Spent</span>
+                        </div>
+                        <div className="text-sm font-black text-indigo-900">
+                          ₹{spent.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                          <span className="text-[10px] font-bold text-slate-600">Remaining</span>
+                        </div>
+                        <div className="text-sm font-black text-emerald-900">
+                          ₹{remaining.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <div className="text-[10px] font-bold text-slate-500 mb-0.5">Committed</div>
+                        <div className="text-sm font-black text-slate-800">
+                          ₹{clubDetail.committed.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <div className="text-[10px] font-bold text-slate-500 mb-0.5">Available to Plan</div>
+                        <div className="text-sm font-black text-slate-800">
+                          ₹{clubDetail.availableToPlan.toLocaleString('en-IN')}
+                        </div>
+                      </div>
                     </div>
                   </div>
+                );
+              })()}
+            </div>
 
-                  {/* Donut Legend & Summary Metrics */}
-                  <div className="grid grid-cols-2 gap-4 max-w-md w-full">
-                    <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-                        <span className="text-[11px] font-bold text-slate-600">Actual Spent</span>
-                      </div>
-                      <div className="text-base font-black text-indigo-900">
-                        ₹{spent.toLocaleString('en-IN')}
-                      </div>
+            {/* 2. MONTHLY SPENDING BAR CHART WITH AVERAGE MARKER */}
+            {(() => {
+              const monthlyItems = clubDetail.monthlySpending || [];
+              const totalMonths = monthlyItems.length || 1;
+              const sumSpent = monthlyItems.reduce((acc, m) => acc + m.spent, 0);
+              const avgMonthlySpend = Math.round(sumSpent / totalMonths);
+              const maxMonthlySpend = Math.max(...monthlyItems.map((m) => m.spent), avgMonthlySpend, 1000);
+
+              return (
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h3 className="text-sm font-bold text-slate-900">
+                        Monthly Spending Breakdown
+                      </h3>
+                      {avgMonthlySpend > 0 && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                          Avg: ₹{avgMonthlySpend.toLocaleString('en-IN')}/mo
+                        </span>
+                      )}
                     </div>
+                    <p className="text-xs text-slate-500 mb-4">
+                      Spent per month across semester. Click any bar to inspect that month.
+                    </p>
+                  </div>
 
-                    <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                        <span className="text-[11px] font-bold text-slate-600">Remaining</span>
+                  {/* Chart Graphic Area */}
+                  <div className="relative pt-6 pb-2">
+                    {/* Average Line Across Chart */}
+                    {avgMonthlySpend > 0 && maxMonthlySpend > 0 && (
+                      <div
+                        className="absolute inset-x-0 border-b-2 border-dashed border-indigo-300 z-10 pointer-events-none flex items-center justify-end"
+                        style={{
+                          bottom: `${Math.min(88, Math.max(12, Math.round((avgMonthlySpend / maxMonthlySpend) * 115) + 24))}px`,
+                        }}
+                      >
+                        <span className="bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs -translate-y-2.5">
+                          Avg ₹{avgMonthlySpend.toLocaleString('en-IN')}
+                        </span>
                       </div>
-                      <div className="text-base font-black text-emerald-900">
-                        ₹{remaining.toLocaleString('en-IN')}
-                      </div>
-                    </div>
+                    )}
 
-                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-                      <div className="text-[11px] font-bold text-slate-500 mb-1">Committed</div>
-                      <div className="text-base font-black text-slate-800">
-                        ₹{clubDetail.committed.toLocaleString('en-IN')}
-                      </div>
-                    </div>
+                    {/* Bars Container */}
+                    <div className="flex items-end justify-between gap-2 h-40 px-2 border-b border-slate-200">
+                      {monthlyItems.map((m) => {
+                        const isSelected = viewPeriod === 'MONTH' && selectedMonth === m.month;
+                        const heightPx = maxMonthlySpend > 0
+                          ? Math.max(6, Math.round((m.spent / maxMonthlySpend) * 115))
+                          : 6;
 
-                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-                      <div className="text-[11px] font-bold text-slate-500 mb-1">Available to Plan</div>
-                      <div className="text-base font-black text-slate-800">
-                        ₹{clubDetail.availableToPlan.toLocaleString('en-IN')}
-                      </div>
+                        return (
+                          <div
+                            key={m.month}
+                            onClick={() => {
+                              setSelectedMonth(m.month);
+                              setViewPeriod('MONTH');
+                            }}
+                            className="flex-1 flex flex-col items-center justify-end group cursor-pointer"
+                            title={`${m.month}: ₹${m.spent.toLocaleString('en-IN')} (${m.expenseCount} expenses). Click to inspect.`}
+                          >
+                            {/* Amount label above bar */}
+                            <span
+                              className={`text-[10px] font-bold mb-1 transition-colors ${
+                                isSelected
+                                  ? 'text-indigo-700 font-extrabold'
+                                  : m.spent > 0
+                                  ? 'text-slate-600 group-hover:text-indigo-600'
+                                  : 'text-slate-300'
+                              }`}
+                            >
+                              {m.spent > 0 ? `₹${(m.spent / 1000).toFixed(m.spent >= 10000 ? 0 : 1)}k` : '₹0'}
+                            </span>
+
+                            {/* Bar Column */}
+                            <div className="w-full max-w-[42px] flex items-end justify-center">
+                              <div
+                                className={`w-full rounded-t-lg transition-all duration-300 ${
+                                  isSelected
+                                    ? 'bg-indigo-600 ring-2 ring-indigo-400 ring-offset-1 shadow-md'
+                                    : m.spent > 0
+                                    ? 'bg-indigo-400/80 group-hover:bg-indigo-500'
+                                    : 'bg-slate-200 group-hover:bg-slate-300'
+                                }`}
+                                style={{ height: `${heightPx}px` }}
+                              />
+                            </div>
+
+                            {/* Month label below baseline */}
+                            <span
+                              className={`text-[10px] font-bold mt-2 truncate max-w-full text-center transition-colors ${
+                                isSelected
+                                  ? 'text-indigo-700 underline font-extrabold'
+                                  : 'text-slate-500 group-hover:text-slate-800'
+                              }`}
+                            >
+                              {m.month.split(' ')[0]}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -729,125 +962,290 @@ export default function ExpenseManager({
             })()}
           </div>
 
-          {/* EVENTS TABLE WITH PROGRESS BARS & OVER-BUDGET BADGES */}
-          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  {clubDetail.club.name} • Events & Budget Tracker
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Click any event row to inspect its itemized expense entries and receipts.
-                </p>
+          {/* EVENTS & MONTHLY LEDGER SECTION */}
+          {(() => {
+            const isMonthMode = viewPeriod === 'MONTH';
+            const currentMonthObj = clubDetail.monthlySpending.find((m) => m.month === selectedMonth);
+            const hasMonthExpenses = currentMonthObj ? currentMonthObj.expenseCount > 0 : false;
+
+            // In Month mode with 0 expenses: show empty state
+            if (isMonthMode && !hasMonthExpenses) {
+              return (
+                <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-900 shadow-xs space-y-3">
+                  <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
+                    <ReceiptIcon className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-base font-bold text-slate-900">
+                    No Expenses in {selectedMonth}
+                  </h4>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    {clubDetail.club.name} recorded zero expenses during {selectedMonth}.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setViewPeriod('SEMESTER')}
+                    className="mt-2 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition cursor-pointer"
+                  >
+                    Switch to Full Semester View
+                  </button>
+                </div>
+              );
+            }
+
+            // Events rows to display:
+            // In Month mode: show only events that have expenses dated in selectedMonth, with spent = month spent
+            // In Semester mode: show all perEventRows
+            const eventsToDisplay = isMonthMode
+              ? clubDetail.perEventRows
+                  .map((ev) => {
+                    const mExpenses = (ev.expenses || []).filter((ex: any) =>
+                      isExpenseInMonth(ex.expenseDate, selectedMonth)
+                    );
+                    const mSpent = mExpenses.reduce(
+                      (sum: number, ex: any) => sum + Math.round(Number(ex.amount || 0)),
+                      0
+                    );
+                    return {
+                      ...ev,
+                      spent: mSpent,
+                      left: ev.budget - mSpent,
+                      expenses: mExpenses,
+                    };
+                  })
+                  .filter((ev) => ev.expenses.length > 0)
+              : clubDetail.perEventRows;
+
+            // Itemized expenses ledger in Month mode
+            const monthLedgerExpenses: any[] = [];
+            if (isMonthMode) {
+              eventsToDisplay.forEach((ev) => {
+                ev.expenses.forEach((ex: any) => {
+                  monthLedgerExpenses.push({
+                    ...ex,
+                    eventTitle: ev.title,
+                    eventVenue: ev.venue,
+                  });
+                });
+              });
+              monthLedgerExpenses.sort(
+                (a, b) => new Date(b.expenseDate).getTime() - new Date(a.expenseDate).getTime()
+              );
+            }
+
+            return (
+              <div className="space-y-6">
+                {/* Events Table */}
+                <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+                  <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        {isMonthMode
+                          ? `${clubDetail.club.name} • Events with Expenses in ${selectedMonth}`
+                          : `${clubDetail.club.name} • Events & Budget Tracker`}
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {isMonthMode
+                          ? `Showing only expenses dated in ${selectedMonth}. Click an event to view receipts.`
+                          : 'Click any event row to inspect its itemized expense entries and receipts.'}
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold text-slate-500">
+                      {eventsToDisplay.length} {eventsToDisplay.length === 1 ? 'event' : 'events'}
+                    </span>
+                  </div>
+
+                  {eventsToDisplay.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-xs font-semibold">
+                      {isMonthMode
+                        ? `No event expenses recorded in ${selectedMonth}.`
+                        : `No events registered for this club in ${clubDetail.semester.name}.`}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                            <th className="py-3.5 px-5">Event</th>
+                            <th className="py-3.5 px-4">Date</th>
+                            <th className="py-3.5 px-4 text-right">Budget</th>
+                            <th className="py-3.5 px-4 text-right">
+                              {isMonthMode ? `Spent (${selectedMonth.split(' ')[0]})` : 'Spent'}
+                            </th>
+                            <th className="py-3.5 px-4 text-right">Left</th>
+                            <th className="py-3.5 px-5 w-48">Progress</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-xs">
+                          {eventsToDisplay.map((ev) => {
+                            const isOverBudget = ev.spent > ev.budget;
+                            const overAmount = ev.spent - ev.budget;
+                            const percent = ev.budget > 0 ? Math.min(100, Math.round((ev.spent / ev.budget) * 100)) : 0;
+
+                            return (
+                              <tr
+                                key={ev.id}
+                                onClick={() => setActiveEventPanel(ev)}
+                                className={`hover:bg-slate-50/80 transition cursor-pointer group ${
+                                  activeEventPanel?.id === ev.id ? 'bg-indigo-50/40' : ''
+                                }`}
+                              >
+                                <td className="py-4 px-5">
+                                  <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                                    {ev.title}
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                      {ev.eventType}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">{ev.venue}</span>
+                                  </div>
+                                </td>
+
+                                <td className="py-4 px-4 font-medium text-slate-600 whitespace-nowrap">
+                                  {new Date(ev.startTime).toLocaleDateString('en-IN', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  })}
+                                </td>
+
+                                <td className="py-4 px-4 text-right font-bold text-slate-900">
+                                  ₹{ev.budget.toLocaleString('en-IN')}
+                                </td>
+
+                                <td className="py-4 px-4 text-right font-bold text-indigo-700">
+                                  ₹{ev.spent.toLocaleString('en-IN')}
+                                </td>
+
+                                <td className="py-4 px-4 text-right font-bold">
+                                  {isOverBudget ? (
+                                    <span className="text-rose-600">₹0</span>
+                                  ) : (
+                                    <span className="text-emerald-700">₹{ev.left.toLocaleString('en-IN')}</span>
+                                  )}
+                                </td>
+
+                                <td className="py-4 px-5">
+                                  {isOverBudget ? (
+                                    <div className="space-y-1">
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-black">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                                        Over by ₹{overAmount.toLocaleString('en-IN')}
+                                      </span>
+                                      <div className="w-full bg-rose-100 rounded-full h-2 overflow-hidden">
+                                        <div className="h-full bg-rose-600 rounded-full w-full" />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                                        <span>{percent}%</span>
+                                        <span>₹{ev.left.toLocaleString('en-IN')} left</span>
+                                      </div>
+                                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                        <div
+                                          className={`h-full rounded-full transition-all duration-500 ${
+                                            percent < 75 ? 'bg-emerald-500' : 'bg-amber-500'
+                                          }`}
+                                          style={{ width: `${percent}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* In Month mode: Itemized Monthly Expense Ledger */}
+                {isMonthMode && monthLedgerExpenses.length > 0 && (
+                  <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+                    <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">
+                          {selectedMonth} Itemized Expense Ledger
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Complete list of expenses recorded for {clubDetail.club.name} dated in {selectedMonth}.
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-slate-500">
+                        {monthLedgerExpenses.length} entries
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50/80 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                            <th className="py-3 px-4">Date</th>
+                            <th className="py-3 px-4">Event</th>
+                            <th className="py-3 px-4">Category</th>
+                            <th className="py-3 px-4">Description</th>
+                            <th className="py-3 px-4 text-right">Amount</th>
+                            <th className="py-3 px-4">Added By</th>
+                            <th className="py-3 px-4 text-center">Receipt</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {monthLedgerExpenses.map((ex: any) => {
+                            const catInfo = CATEGORY_COLORS[ex.category] || { label: ex.category };
+                            return (
+                              <tr key={ex.id} className="hover:bg-slate-50/80 transition">
+                                <td className="py-3 px-4 whitespace-nowrap text-slate-600 font-medium">
+                                  {new Date(ex.expenseDate).toLocaleDateString('en-IN', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  })}
+                                </td>
+                                <td className="py-3 px-4 font-bold text-slate-900">
+                                  {ex.eventTitle}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold">
+                                    {catInfo.label}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-slate-800 font-medium max-w-xs truncate">
+                                  {ex.description || '—'}
+                                </td>
+                                <td className="py-3 px-4 text-right font-black text-slate-900">
+                                  ₹{Math.round(Number(ex.amount)).toLocaleString('en-IN')}
+                                </td>
+                                <td className="py-3 px-4 text-slate-600 text-[11px]">
+                                  {ex.addedByName || ex.submittedBy?.name || 'Club Executive'}
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  {ex.receiptUrl ? (
+                                    <a
+                                      href={ex.receiptUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline"
+                                    >
+                                      View ↗
+                                    </a>
+                                  ) : (
+                                    <span className="text-slate-400">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
-              <span className="text-xs font-bold text-slate-500">
-                {clubDetail.perEventRows.length} {clubDetail.perEventRows.length === 1 ? 'event' : 'events'}
-              </span>
-            </div>
-
-            {clubDetail.perEventRows.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs font-semibold">
-                No events registered for this club in {clubDetail.semester.name}.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                      <th className="py-3.5 px-5">Event</th>
-                      <th className="py-3.5 px-4">Date</th>
-                      <th className="py-3.5 px-4 text-right">Budget</th>
-                      <th className="py-3.5 px-4 text-right">Spent</th>
-                      <th className="py-3.5 px-4 text-right">Left</th>
-                      <th className="py-3.5 px-5 w-48">Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
-                    {clubDetail.perEventRows.map((ev) => {
-                      const isOverBudget = ev.spent > ev.budget;
-                      const overAmount = ev.spent - ev.budget;
-                      const percent = ev.budget > 0 ? Math.min(100, Math.round((ev.spent / ev.budget) * 100)) : 0;
-
-                      return (
-                        <tr
-                          key={ev.id}
-                          onClick={() => setActiveEventPanel(ev)}
-                          className={`hover:bg-slate-50/80 transition cursor-pointer group ${
-                            activeEventPanel?.id === ev.id ? 'bg-indigo-50/40' : ''
-                          }`}
-                        >
-                          <td className="py-4 px-5">
-                            <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                              {ev.title}
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                                {ev.eventType}
-                              </span>
-                              <span className="text-[10px] text-slate-400">{ev.venue}</span>
-                            </div>
-                          </td>
-
-                          <td className="py-4 px-4 font-medium text-slate-600 whitespace-nowrap">
-                            {new Date(ev.startTime).toLocaleDateString('en-IN', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </td>
-
-                          <td className="py-4 px-4 text-right font-bold text-slate-900">
-                            ₹{ev.budget.toLocaleString('en-IN')}
-                          </td>
-
-                          <td className="py-4 px-4 text-right font-bold text-indigo-700">
-                            ₹{ev.spent.toLocaleString('en-IN')}
-                          </td>
-
-                          <td className="py-4 px-4 text-right font-bold">
-                            {isOverBudget ? (
-                              <span className="text-rose-600">₹0</span>
-                            ) : (
-                              <span className="text-emerald-700">₹{ev.left.toLocaleString('en-IN')}</span>
-                            )}
-                          </td>
-
-                          <td className="py-4 px-5">
-                            {isOverBudget ? (
-                              <div className="space-y-1">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-black">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-                                  Over by ₹{overAmount.toLocaleString('en-IN')}
-                                </span>
-                                <div className="w-full bg-rose-100 rounded-full h-2 overflow-hidden">
-                                  <div className="h-full bg-rose-600 rounded-full w-full" />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                                  <span>{percent}%</span>
-                                  <span>₹{ev.left.toLocaleString('en-IN')} left</span>
-                                </div>
-                                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full transition-all duration-500 ${
-                                      percent < 75 ? 'bg-emerald-500' : 'bg-amber-500'
-                                    }`}
-                                    style={{ width: `${percent}%` }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
       )}
 

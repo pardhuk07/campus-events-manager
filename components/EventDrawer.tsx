@@ -42,6 +42,35 @@ export default function EventDrawer({
   const [checkingConflict, setCheckingConflict] = useState(false);
   const [liveConflictResult, setLiveConflictResult] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [availableToPlan, setAvailableToPlan] = useState<number | null>(null);
+
+  useEffect(() => {
+    const targetClub: string = clubId || currentUser?.clubId || '';
+    if (!targetClub) {
+      setAvailableToPlan(null);
+      return;
+    }
+
+    let isMounted = true;
+    async function fetchClubBudget() {
+      try {
+        const res = await fetch(`/api/club-budgets?clubId=${encodeURIComponent(targetClub)}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (isMounted && json.success && json.data) {
+            setAvailableToPlan(json.data.availableToPlan ?? 0);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch available to plan for drawer:', e);
+      }
+    }
+
+    fetchClubBudget();
+    return () => {
+      isMounted = false;
+    };
+  }, [clubId, currentUser?.clubId, isOpen]);
 
   useEffect(() => {
     if (currentUser?.name) {
@@ -303,6 +332,20 @@ export default function EventDrawer({
                   placeholder="0"
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 font-medium"
                 />
+                {availableToPlan !== null && (
+                  <div
+                    className={`mt-1.5 text-[11px] font-semibold flex items-center gap-1.5 transition-colors ${
+                      Number(estimatedCost) > availableToPlan ? 'text-amber-700' : 'text-slate-500'
+                    }`}
+                  >
+                    {Number(estimatedCost) > availableToPlan && (
+                      <AlertTriangleIcon className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    )}
+                    <span>
+                      Your club has ₹{availableToPlan.toLocaleString('en-IN')} available to plan this semester
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
