@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { CalendarIcon, RupeeIcon, ShieldCheckIcon } from './Icons';
+import { CalendarIcon, RupeeIcon, ShieldCheckIcon, TrendingUpIcon } from './Icons';
 import NotificationBell from './NotificationBell';
 import { UserRole, CAMPUS_CLUBS } from '@/lib/constants';
 
@@ -15,8 +15,8 @@ export interface AuthUser {
 }
 
 interface NavbarProps {
-  activeTab: 'events' | 'expenses' | 'history';
-  setActiveTab: (tab: 'events' | 'expenses' | 'history') => void;
+  activeTab: 'dashboard' | 'events' | 'expenses' | 'history';
+  setActiveTab: (tab: 'dashboard' | 'events' | 'expenses' | 'history') => void;
   currentUser: AuthUser | null;
   onLogin: (user: AuthUser) => void;
   onLogout: () => void;
@@ -99,7 +99,23 @@ export default function Navbar({
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Navigation Tabs with Violet-to-Cyan Gradient Active State */}
             <nav className="flex p-0.5 sm:p-1 bg-slate-100 rounded-xl border border-slate-200 shadow-inner">
+              {currentUser && currentUser.role === UserRole.CORE_VERIFIER && (
+                <button
+                  id="nav-tab-dashboard"
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
+                    activeTab === 'dashboard'
+                      ? 'tab-active-gradient'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                  }`}
+                >
+                  <TrendingUpIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                  <span>Dashboard</span>
+                </button>
+              )}
+
               <button
+                id="nav-tab-events"
                 onClick={() => setActiveTab('events')}
                 className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
                   activeTab === 'events'
