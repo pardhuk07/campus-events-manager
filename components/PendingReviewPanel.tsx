@@ -45,6 +45,9 @@ export default function PendingReviewPanel({
   // Conflict modal state for "Approve despite conflict?"
   const [conflictApprovalTarget, setConflictApprovalTarget] = useState<any | null>(null);
 
+  // Per-event approved budget adjustments edited by Core
+  const [approvedBudgets, setApprovedBudgets] = useState<Record<string, number | string>>({});
+
   const isCoreVerifier = currentRole === UserRole.CORE_VERIFIER || currentRole === 'ACM_CORE';
 
   const fetchPendingEvents = async () => {
@@ -92,7 +95,8 @@ export default function PendingReviewPanel({
   const submitReview = async (
     eventId: string,
     decision: 'APPROVE' | 'REJECT' | 'RESCHEDULE_REQUESTED',
-    comment?: string
+    comment?: string,
+    approvedBudget?: number
   ) => {
     setSubmittingId(eventId);
     try {
@@ -110,6 +114,7 @@ export default function PendingReviewPanel({
           comment: comment || null,
           reviewerName,
           userRole: currentRole,
+          approvedBudget: decision === 'APPROVE' ? approvedBudget : undefined,
         }),
       });
 
@@ -137,14 +142,19 @@ export default function PendingReviewPanel({
   };
 
   const handleApproveClick = (event: any) => {
+    const rawVal = approvedBudgets[event.id] !== undefined
+      ? approvedBudgets[event.id]
+      : Math.round(Number(event.approvedBudget ?? event.estimatedCost ?? 0));
+    const finalBudget = Math.max(0, Math.round(Number(rawVal) || 0));
+
     const hasFlags = (event.flags && event.flags.length > 0) || (event.conflictFlags && event.conflictFlags.length > 0);
 
     if (hasFlags) {
       // Conflicts must only warn: ask 'Approve despite conflict?' first
-      setConflictApprovalTarget(event);
+      setConflictApprovalTarget({ ...event, targetApprovedBudget: finalBudget });
     } else {
       // Direct approval
-      submitReview(event.id, 'APPROVE');
+      submitReview(event.id, 'APPROVE', undefined, finalBudget);
     }
   };
 
@@ -351,47 +361,136 @@ export default function PendingReviewPanel({
                 </div>
               </div>
 
-              {/* Conflict Flags Warning Section */}
-              {flags.length > 0 && (
-                <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/70 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
-                    <AlertTriangleIcon className="w-4 h-4 text-amber-600" />
-                    <span>Conflict Warnings ({flags.length}):</span>
+              {/* Conflict Flags and Club Budget Evaluation Beside Each Other */}
+              {(() => {
+                const budgetFlags = flags.filter(
+                  (f) => f.toLowerCase().includes('exceeds') && f.toLowerCase().includes('available budget')
+                );
+                const conflictFlags = flags.filter((f) => !budgetFlags.includes(f));
+
+                const clubBudget = ev.clubBudget;
+                const clubAllocated = clubBudget ? clubBudget.allocated : 0;
+                const clubCommitted = clubBudget ? clubBudget.committed : 0;
+                const clubSpent = clubBudget ? clubBudget.spent : 0;
+                const clubAvailableToPlan = clubBudget ? clubBudget.availableToPlan : 0;
+
+                const initialCost = Math.round(Number(ev.approvedBudget ?? ev.estimatedCost ?? 0));
+                const currentApprovedBudgetStr =
+                  approvedBudgets[ev.id] !== undefined ? approvedBudgets[ev.id] : String(initialCost);
+                const currentApprovedBudgetNum = Math.max(0, Math.round(Number(currentApprovedBudgetStr) || 0));
+                const availableAfterApproval = clubAvailableToPlan - currentApprovedBudgetNum;
+
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {/* Conflict Warnings Column */}
+                    <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/70 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                        <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Conflict Warnings ({conflictFlags.length}):</span>
+                      </div>
+                      {conflictFlags.length > 0 ? (
+                        <ul className="space-y-1 text-xs text-amber-950 pl-5 list-disc">
+                          {conflictFlags.map((flag, idx) => (
+                            <li key={idx} className="leading-snug font-medium">
+                              {flag}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-emerald-800 font-medium">
+                          ✓ No scheduling overlaps detected with other campus events.
+                        </p>
+                      )}
+                      <p className="text-[11px] text-amber-700 italic pt-1">
+                        Conflicts only warn; Core may approve after reviewing timing and venue.
+                      </p>
+                    </div>
+
+                    {/* Club Semester Budget Column */}
+                    <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2.5 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <RupeeIcon className="w-3.5 h-3.5 text-indigo-600" />
+                          {ev.club?.name || 'Club'} Budget ({ev.clubBudget?.semesterName || 'Semester'})
+                        </span>
+                        {budgetFlags.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black animate-pulse">
+                            Budget Alert
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Budget Flag Warning */}
+                      {budgetFlags.length > 0 && (
+                        <div className="p-2 rounded-lg bg-amber-100/80 border border-amber-300 text-amber-950 text-[11px] font-bold flex items-center gap-2">
+                          <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>{budgetFlags.join(', ')}</span>
+                        </div>
+                      )}
+
+                      {/* Club Metrics Grid: Allocated, Committed, Spent, Available to Plan */}
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="bg-white p-2 rounded-lg border border-slate-200">
+                          <span className="text-slate-500 block text-[10px]">Allocated:</span>
+                          <strong className="text-slate-900 font-bold">₹{clubAllocated.toLocaleString('en-IN')}</strong>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-200">
+                          <span className="text-slate-500 block text-[10px]">Committed:</span>
+                          <strong className="text-indigo-700 font-bold">₹{clubCommitted.toLocaleString('en-IN')}</strong>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-200">
+                          <span className="text-slate-500 block text-[10px]">Spent:</span>
+                          <strong className="text-slate-900 font-bold">₹{clubSpent.toLocaleString('en-IN')}</strong>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-200">
+                          <span className="text-slate-500 block text-[10px]">Available to Plan:</span>
+                          <strong
+                            className={
+                              clubAvailableToPlan >= 0 ? 'text-emerald-700 font-bold' : 'text-rose-700 font-bold'
+                            }
+                          >
+                            ₹{clubAvailableToPlan.toLocaleString('en-IN')}
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* Core Adjustable Approved Budget Field */}
+                      <div className="pt-2 border-t border-slate-200 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-[11px] font-bold text-slate-700">
+                            Approved Budget (₹):
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={currentApprovedBudgetStr}
+                            onChange={(e) => {
+                              setApprovedBudgets({
+                                ...approvedBudgets,
+                                [ev.id]: e.target.value,
+                              });
+                            }}
+                            className="w-28 bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-slate-900 focus:outline-none focus:border-indigo-500 text-right"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] pt-1">
+                          <span className="text-slate-600 font-medium">Available to plan after approval:</span>
+                          <span
+                            className={`font-black ${
+                              availableAfterApproval >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                            }`}
+                          >
+                            ₹{availableAfterApproval.toLocaleString('en-IN')}
+                            {availableAfterApproval < 0 && ' (Deficit)'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <ul className="space-y-1 text-xs text-amber-950 pl-5 list-disc">
-                    {flags.map((flag, idx) => (
-                      <li key={idx} className="leading-snug font-medium">
-                        {flag}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="text-[11px] text-amber-700 italic pt-1">
-                    Conflicts only warn; ACM Core may approve despite conflicts after evaluating scheduling feasibility.
-                  </p>
-                </div>
-              )}
-
-              {/* Budget Impact Line */}
-              {/* Exact format: "Estimated cost ₹X. Remaining ₹Y of ₹50,000 → ₹Z after approval" */}
-              <div className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-3 ${budgetBgClass}`}>
-                <div className="flex items-center gap-2">
-                  <RupeeIcon className="w-4 h-4 shrink-0" />
-                  <span>
-                    Estimated cost ₹{X.toLocaleString('en-IN')}. Remaining ₹{Y.toLocaleString('en-IN')} of ₹50,000 → ₹{Z.toLocaleString('en-IN')} after approval
-                  </span>
-                </div>
-
-                {isNegative && (
-                  <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded bg-rose-200 text-rose-900 shrink-0">
-                    Deficit Risk
-                  </span>
-                )}
-                {isBelow20Percent && !isNegative && (
-                  <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded bg-amber-200 text-amber-900 shrink-0">
-                    Low Balance (&lt;20%)
-                  </span>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Action Buttons Row */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
@@ -559,7 +658,14 @@ export default function PendingReviewPanel({
               <button
                 type="button"
                 disabled={submittingId === conflictApprovalTarget.id}
-                onClick={() => submitReview(conflictApprovalTarget.id, 'APPROVE')}
+                onClick={() =>
+                  submitReview(
+                    conflictApprovalTarget.id,
+                    'APPROVE',
+                    undefined,
+                    conflictApprovalTarget.targetApprovedBudget
+                  )
+                }
                 className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition disabled:opacity-50"
               >
                 {submittingId === conflictApprovalTarget.id ? 'Approving...' : 'Approve despite conflict?'}

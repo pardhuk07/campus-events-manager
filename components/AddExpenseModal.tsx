@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CATEGORY_COLORS } from '@/lib/colors';
 import { ExpenseCategory, UserRole } from '@/lib/constants';
 import { RupeeIcon, AlertTriangleIcon, ReceiptIcon } from './Icons';
@@ -32,6 +32,7 @@ export default function AddExpenseModal({
     setDate(new Date().toISOString().split('T')[0]);
   }, []);
   const [eventId, setEventId] = useState('');
+  const [eventName, setEventName] = useState('');
   const [description, setDescription] = useState('');
 
   // Receipt state
@@ -43,8 +44,35 @@ export default function AddExpenseModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [semestersList, setSemestersList] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/semesters')
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) setSemestersList(json.data);
+      })
+      .catch(() => {});
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Filter events: strictly limited to the user's club for Executives, all clubs for Core
+  const eligibleEvents = useMemo(() => {
+    if (currentRole === UserRole.CLUB_EXEC) {
+      const userClubId = currentUser?.clubId;
+      return approvedEvents.filter((ev: any) => {
+        if (userClubId && (ev.clubId === userClubId || ev.club?.id === userClubId)) return true;
+        if (currentUser?.name) {
+          const lowerUser = currentUser.name.toLowerCase();
+          if (ev.club?.name && lowerUser.includes(ev.club.name.toLowerCase())) return true;
+          if (ev.club?.shortName && lowerUser.includes(ev.club.shortName.toLowerCase())) return true;
+        }
+        return false;
+      });
+    }
+    return approvedEvents;
+  }, [approvedEvents, currentRole, currentUser]);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -52,7 +80,8 @@ export default function AddExpenseModal({
       setAmount('');
       setCategory(ExpenseCategory.FOOD);
       setDate(new Date().toISOString().split('T')[0]);
-      setEventId(approvedEvents.length > 0 ? approvedEvents[0].id : '');
+      setEventId('');
+      setEventName('');
       setDescription('');
       setReceiptUrl('');
       setReceiptFileName('');
@@ -64,16 +93,78 @@ export default function AddExpenseModal({
         fileInputRef.current.value = '';
       }
     }
-  }, [isOpen, approvedEvents]);
+  }, [isOpen]);
+
+  const handleEventInputChange = (val: string) => {
+    setEventName(val);
+    const matched = eligibleEvents.find(
+      (ev: any) =>
+        ev.id === val.trim() ||
+        ev.title?.toLowerCase() === val.trim().toLowerCase()
+    );
+    if (matched) {
+      setEventId(matched.id);
+    } else {
+      setEventId('');
+    }
+  };
+
+  const selectedEvent = useMemo(() => {
+    if (eventId) {
+      return eligibleEvents.find((ev: any) => ev.id === eventId);
+    }
+    if (eventName) {
+      return eligibleEvents.find(
+        (ev: any) => ev.title?.toLowerCase() === eventName.trim().toLowerCase()
+      );
+    }
+    return null;
+  }, [eligibleEvents, eventId, eventName]);
+
+  const eventRemaining = useMemo(() => {
+    if (!selectedEvent) return 0;
+    const b = Math.round(Number(selectedEvent.approvedBudget ?? selectedEvent.budget ?? selectedEvent.estimatedCost ?? 0));
+    const s = selectedEvent.spent !== undefined
+      ? Math.round(Number(selectedEvent.spent))
+      : (selectedEvent.expenses || []).reduce((sum: number, ex: any) => sum + Math.round(Number(ex.amount || 0)), 0);
+    return b - s;
+  }, [selectedEvent]);
 
   if (!isOpen) return null;
 
   // Live budget impact calculation
   const numAmount = parseFloat(amount) || 0;
   const isReceiptRequired = numAmount > 500;
-  const projectedTotal = currentTotalSpent + numAmount;
-  const isOverBudget = numAmount > 0 && projectedTotal > 50000;
-  const excessAmount = projectedTotal - 50000;
+  const exceedsEventRemaining = selectedEvent && numAmount > 0 && numAmount > eventRemaining;
+  const eventExcessAmount = exceedsEventRemaining ? numAmount - eventRemaining : 0;
+
+  const dateSemesterWarning = useMemo(() => {
+    if (!selectedEvent || !date || semestersList.length === 0) return null;
+    const expD = new Date(date);
+    if (isNaN(expD.getTime())) return null;
+
+    let eventSem = semestersList.find((s) => s.id === selectedEvent.semesterId);
+    if (!eventSem && selectedEvent.startTime) {
+      const evD = new Date(selectedEvent.startTime);
+      eventSem = semestersList.find((s) => {
+        const start = new Date(s.startDate);
+        const end = new Date(s.endDate);
+        end.setHours(23, 59, 59, 999);
+        return evD >= start && evD <= end;
+      });
+    }
+
+    if (!eventSem) return null;
+
+    const start = new Date(eventSem.startDate);
+    const end = new Date(eventSem.endDate);
+    end.setHours(23, 59, 59, 999);
+
+    if (expD < start || expD > end) {
+      return `Warning: Selected expense date (${date}) is outside this event's semester (${eventSem.name}).`;
+    }
+    return null;
+  }, [selectedEvent, date, semestersList]);
 
   // Client-side file validation and upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -170,8 +261,9 @@ export default function AddExpenseModal({
       return;
     }
 
-    if (!eventId) {
-      setErrorMsg('An approved event is required.');
+    const finalEventName = eventName.trim();
+    if (!finalEventName && !eventId) {
+      setErrorMsg('Event name is required. Please type an event name.');
       return;
     }
 
@@ -227,7 +319,9 @@ export default function AddExpenseModal({
           amount: parsedAmount,
           category,
           expenseDate: date ? new Date(date) : new Date(),
-          eventId,
+          eventId: eventId || undefined,
+          eventName: finalEventName || (selectedEvent?.title ?? ''),
+          clubId: currentUser?.clubId,
           description: description.trim(),
           receiptUrl: receiptUrl || null,
           receiptFileName: receiptFileName || null,
@@ -285,11 +379,33 @@ export default function AddExpenseModal({
           </div>
         )}
 
-        {/* Dynamic Red Warning if Expense Pushes Total Spent Above ₹50,000 */}
-        {isOverBudget && (
-          <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-rose-700 text-xs font-bold flex items-center gap-2 animate-in fade-in">
-            <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>This exceeds the semester budget by ₹{excessAmount.toLocaleString('en-IN')}</span>
+        {/* Dynamic Amber Warning if Expense Exceeds Event Remaining Budget */}
+        {exceedsEventRemaining && (
+          <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
+            <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-800">
+                Amber Warning: Exceeds event remaining budget
+              </p>
+              <p className="mt-0.5 text-amber-700">
+                This expense of ₹{Math.round(numAmount).toLocaleString('en-IN')} exceeds the event&apos;s remaining budget (₹{eventRemaining.toLocaleString('en-IN')} left) by ₹{Math.round(eventExcessAmount).toLocaleString('en-IN')}. You may still proceed with saving.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Live Warning if Expense Date is outside selected event's semester */}
+        {dateSemesterWarning && (
+          <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
+            <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-800">
+                Date Warning: Outside event semester
+              </p>
+              <p className="mt-0.5 text-amber-700">
+                {dateSemesterWarning} This expense will be flagged in ACM Core&apos;s Needs Attention panel.
+              </p>
+            </div>
           </div>
         )}
 
@@ -360,30 +476,59 @@ export default function AddExpenseModal({
             </div>
           </div>
 
-          {/* Event (required dropdown of approved events) */}
+          {/* Event (typed input by default with autocomplete datalist) */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Event <span className="text-rose-500">*</span>
-            </label>
-            {approvedEvents.length === 0 ? (
-              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-                No approved events available. Only approved events can have expenses linked.
-              </div>
-            ) : (
-              <select
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-700">
+                Event <span className="text-rose-500">*</span>
+              </label>
+              {selectedEvent && (
+                <span className="text-[11px] font-semibold text-slate-500">
+                  {selectedEvent.club?.name || ''}
+                </span>
+              )}
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
                 required
-                value={eventId}
-                onChange={(e) => setEventId(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
-              >
-                <option value="">Select an approved event...</option>
-                {approvedEvents.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.title} ({ev.club?.name || 'Club'})
+                list="approved-events-list"
+                value={eventName}
+                onChange={(e) => handleEventInputChange(e.target.value)}
+                placeholder="Type event name (e.g. Orientation, Annual Hackathon)..."
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium"
+              />
+              <datalist id="approved-events-list">
+                {eligibleEvents.map((ev: any) => (
+                  <option key={ev.id} value={ev.title}>
+                    {ev.title} {ev.club?.name ? `(${ev.club.name})` : ''}
                   </option>
                 ))}
-              </select>
-            )}
+              </datalist>
+            </div>
+
+            {/* Event Remaining Budget Display */}
+            {selectedEvent ? (
+              <div className="mt-2 flex items-center gap-2">
+                {eventRemaining >= 0 ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    ₹{eventRemaining.toLocaleString('en-IN')} left for this event
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Event currently over budget by ₹{Math.abs(eventRemaining).toLocaleString('en-IN')}
+                  </span>
+                )}
+              </div>
+            ) : eventName.trim() ? (
+              <div className="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1">
+                <span className="text-indigo-600 font-bold">ℹ</span>
+                <span>This event will be registered for your club and linked to the semester budget.</span>
+              </div>
+            ) : null}
           </div>
 
           {/* Receipt Upload using Cloudinary (1 file, PDF/JPG/PNG, Max 5 MB) */}

@@ -49,6 +49,28 @@ export async function GET(request: NextRequest) {
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP(3) DEFAULT '2026-12-31 23:59:59';
       ALTER TABLE "Budget" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "isVoided" BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "voidedAt" TIMESTAMP(3);
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "voidedBy" TEXT;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "voidReason" TEXT;
+      ALTER TABLE "Expense" ADD COLUMN IF NOT EXISTS "onBehalfOfClub" TEXT;
+
+      CREATE TABLE IF NOT EXISTS "ExpenseChangeLog" (
+        "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        "expenseId" TEXT NOT NULL,
+        "action" TEXT NOT NULL,
+        "performedBy" TEXT NOT NULL,
+        "performedById" TEXT,
+        "onBehalfOfClub" TEXT,
+        "reason" TEXT NOT NULL,
+        "oldValues" JSONB,
+        "newValues" JSONB,
+        "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
       -- Universal removal of NOT NULL on any legacy columns across all tables
       DO $$ 
       DECLARE

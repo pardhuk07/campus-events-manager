@@ -9,6 +9,10 @@ import { GET as getSemesters } from '../app/api/semesters/route';
 import { GET as getClubBudgets, POST as postClubBudgets } from '../app/api/club-budgets/route';
 import { GET as getBudgets } from '../app/api/budgets/route';
 import { GET as getBudgetSingle } from '../app/api/budget/route';
+import { POST as createEvent } from '../app/api/events/route';
+import { GET as getPendingEvents } from '../app/api/events/pending/route';
+import { POST as reviewEvent } from '../app/api/events/[id]/review/route';
+import { POST as postExpense } from '../app/api/expenses/route';
 
 describe('Club Semester Budget System Restructure Tests', () => {
   // Ensure DB tables, safe migration, and seeds are loaded
@@ -318,6 +322,199 @@ describe('Club Semester Budget System Restructure Tests', () => {
 
       const getRes = await getClubBudgets(execGetReq);
       assert.strictEqual(getRes.status, 403, 'Executive cannot inspect another club budget');
+    });
+  });
+
+  describe('Proposal Budget Flags and Core Pending Review Flow', () => {
+    test('stores budget flag on proposal when estimated cost exceeds availableToPlan', async () => {
+      const clubs = await dbService.getClubs();
+      const acm = clubs.find((c: any) => c.name.toLowerCase().includes('acm'));
+      assert.ok(acm);
+
+      const fall = await budgetService.getSemesterById('Fall 2026');
+      assert.ok(fall);
+
+      const budgetBefore = await budgetService.getClubBudgetDetails(acm.id, fall.id);
+      const availableToPlan = budgetBefore.availableToPlan;
+      const excessiveCost = availableToPlan + 7500;
+
+      const req = new NextRequest('http://localhost:3000/api/events', {
+        method: 'POST',
+        headers: {
+          'x-user-email': 'acmcore@gmail.com',
+          'x-user-role': 'CORE_VERIFIER',
+        },
+        body: JSON.stringify({
+          title: 'High Budget Flagship Event',
+          description: 'Testing budget flag check when proposal exceeds available balance',
+          clubId: acm.id,
+          startTime: '2026-09-15T14:00:00Z',
+          endTime: '2026-09-15T17:00:00Z',
+          venue: 'Library Basement',
+          audienceTags: ['ALL_STUDENTS'],
+          expectedAttendance: 100,
+          estimatedCost: excessiveCost,
+          category: 'Symposium',
+          eventType: 'Symposium',
+          organizer: 'ACM Core Team',
+        }),
+      });
+
+      const res = await createEvent(req);
+      assert.strictEqual(res.status, 201);
+      const json = await res.json();
+      assert.ok(json.success);
+      assert.ok(json.data.event);
+
+      const flags: string[] = json.data.flags || json.data.event.flags || [];
+      const budgetFlag = flags.find((f: string) => f.includes('available budget by ₹'));
+      assert.ok(budgetFlag, `Proposal must store a budget flag when exceeding availableToPlan. Found flags: ${JSON.stringify(flags)}`);
+      assert.ok(budgetFlag.includes('7,500') || budgetFlag.includes('7500'), `Flag must indicate excess by 7,500. Found: ${budgetFlag}`);
+
+      // Clean up event
+      await dbService.deleteEvent(json.data.event.id);
+    });
+
+    test('attaches clubBudget to pending events for Core review', async () => {
+      const clubs = await dbService.getClubs();
+      const acm = clubs.find((c: any) => c.name.toLowerCase().includes('acm'));
+      assert.ok(acm);
+
+      const testPendingEvent = await dbService.createEvent({
+        title: 'Pending Review Budget Attachment Test',
+        clubId: acm.id,
+        startTime: new Date('2026-11-01 10:00:00'),
+        endTime: new Date('2026-11-01 12:00:00'),
+        venue: 'CSE Department Seminar Hall',
+        audienceTags: ['ALL_STUDENTS'],
+        estimatedCost: 3000,
+        submittedById: 'user-core-admin',
+      });
+
+      try {
+        const req = new NextRequest('http://localhost:3000/api/events/pending', {
+          headers: {
+            'x-user-email': 'acmcore@gmail.com',
+            'x-user-role': 'CORE_VERIFIER',
+          },
+        });
+
+        const res = await getPendingEvents(req);
+        assert.strictEqual(res.status, 200);
+        const json = await res.json();
+        assert.ok(json.success);
+        assert.ok(Array.isArray(json.data.events));
+        assert.ok(json.data.events.length > 0);
+
+        const pendingWithBudget = json.data.events.find((e: any) => e.id === testPendingEvent.id);
+        assert.ok(pendingWithBudget, 'Pending events must include created event');
+        assert.ok(pendingWithBudget.clubBudget, 'Pending event must include clubBudget');
+        assert.ok('allocated' in pendingWithBudget.clubBudget);
+        assert.ok('committed' in pendingWithBudget.clubBudget);
+        assert.ok('spent' in pendingWithBudget.clubBudget);
+        assert.ok('availableToPlan' in pendingWithBudget.clubBudget);
+      } finally {
+        await dbService.deleteEvent(testPendingEvent.id);
+      }
+    });
+
+    test('Core can adjust approvedBudget during approval', async () => {
+      const clubs = await dbService.getClubs();
+      const acm = clubs.find((c: any) => c.name.toLowerCase().includes('acm'));
+      assert.ok(acm);
+
+      // Create a proposal
+      const createReq = new NextRequest('http://localhost:3000/api/events', {
+        method: 'POST',
+        headers: {
+          'x-user-email': 'acmcore@gmail.com',
+          'x-user-role': 'CORE_VERIFIER',
+        },
+        body: JSON.stringify({
+          title: 'Budget Adjustment Test Event',
+          description: 'Testing core budget adjustment',
+          clubId: acm.id,
+          startTime: '2026-10-10T10:00:00Z',
+          endTime: '2026-10-10T12:00:00Z',
+          venue: 'Library Basement',
+          audienceTags: ['ALL_STUDENTS'],
+          expectedAttendance: 50,
+          estimatedCost: 10000,
+          category: 'Workshop',
+          eventType: 'Workshop',
+          organizer: 'ACM Lead',
+        }),
+      });
+
+      const createRes = await createEvent(createReq);
+      const createJson = await createRes.json();
+      assert.ok(createJson.success, 'Event creation should succeed');
+      const eventId = createJson.data.event.id;
+
+      // Core approves with adjusted budget 6500 instead of 10000
+      const reviewReq = new NextRequest(`http://localhost:3000/api/events/${eventId}/review`, {
+        method: 'POST',
+        headers: {
+          'x-user-email': 'acmcore@gmail.com',
+          'x-user-role': 'CORE_VERIFIER',
+        },
+        body: JSON.stringify({
+          decision: 'APPROVE',
+          comment: 'Approved with adjusted budget',
+          approvedBudget: 6500,
+        }),
+      });
+
+      const reviewRes = await reviewEvent(reviewReq, { params: Promise.resolve({ id: eventId }) });
+      assert.strictEqual(reviewRes.status, 200);
+      const reviewJson = await reviewRes.json();
+      assert.ok(reviewJson.success);
+      assert.strictEqual(reviewJson.data.event.approvedBudget, 6500, 'approvedBudget must be updated to adjusted amount');
+
+      // Clean up event
+      await dbService.deleteEvent(eventId);
+    });
+
+    test('adds expense by typing event name by default and verifies updatedAt is stored', async () => {
+      const clubs = await dbService.getClubs();
+      const acm = clubs.find((c: any) => c.name.toLowerCase().includes('acm'));
+      assert.ok(acm);
+
+      // Create an expense with typed eventName (no eventId provided)
+      const expenseReq = new NextRequest('http://localhost:3000/api/expenses', {
+        method: 'POST',
+        headers: {
+          'x-user-email': 'acmexec@gmail.com',
+          'x-user-role': 'CLUB_EXEC',
+        },
+        body: JSON.stringify({
+          eventName: 'Orientation Freshers Kit Distribution',
+          amount: 1500,
+          category: 'PRINTING',
+          description: 'Custom badges and stickers for orientation',
+          expenseDate: '2026-09-15',
+          receiptUrl: 'https://example.com/receipt.jpg',
+        }),
+      });
+
+      const res = await postExpense(expenseReq);
+      assert.strictEqual(res.status, 201);
+      const json = await res.json();
+      assert.ok(json.success, 'Expense creation should succeed');
+      assert.ok(json.data.expense, 'Response must return created expense');
+      assert.strictEqual(json.data.expense.amount, 1500);
+      assert.ok(json.data.expense.updatedAt, 'Expense record must have updatedAt timestamp');
+      assert.ok(json.data.expense.eventId, 'Expense must be linked to an eventId');
+
+      // Verify the auto-created event exists and is approved
+      const linkedEvent = await dbService.getEventById(json.data.expense.eventId);
+      assert.ok(linkedEvent, 'Linked event must exist in database');
+      assert.strictEqual(linkedEvent.title, 'Orientation Freshers Kit Distribution');
+      assert.strictEqual(linkedEvent.status, 'APPROVED');
+
+      // Cleanup expense and event
+      await dbService.deleteExpense(json.data.expense.id);
+      await dbService.deleteEvent(linkedEvent.id);
     });
   });
 });

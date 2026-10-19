@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { dbService } from '@/lib/dbService';
 import { checkEventConflicts } from '@/services/conflictEngine';
 import { getServerUser } from '@/lib/auth';
+import { budgetService } from '@/lib/budgetService';
+import { query } from '@/lib/db';
 import {
   apiSuccess,
   apiError,
@@ -236,6 +238,40 @@ export async function POST(request: NextRequest) {
       });
     } catch (conflictErr) {
       console.error('Non-blocking conflict detection error:', conflictErr);
+    }
+
+    // 5.5 Compare estimated cost with club's availableToPlan for the semester of the event's start date
+    try {
+      let semester = null;
+      if (createdEvent.semesterId) {
+        semester = await budgetService.getSemesterById(createdEvent.semesterId);
+      }
+      if (!semester) {
+        const semRows = await query<any>(
+          `SELECT * FROM "Semester" WHERE $1 >= "startDate" AND $1 <= "endDate" ORDER BY "startDate" DESC LIMIT 1`,
+          [start]
+        );
+        semester = semRows[0] || (await budgetService.getActiveSemester());
+      }
+
+      if (semester && targetClubId) {
+        const budgetDetails = await budgetService.getClubBudgetDetails(targetClubId, semester.id);
+        const availableToPlan = budgetDetails.availableToPlan;
+        if (costNum > availableToPlan) {
+          const excess = costNum - availableToPlan;
+          const clubName = budgetDetails.club?.name || createdEvent.club?.name || 'Club';
+          const budgetFlag = `Exceeds ${clubName} available budget by ₹${excess.toLocaleString('en-IN')}`;
+
+          const combinedFlags = [...(conflictResult.flags || [])];
+          if (!combinedFlags.includes(budgetFlag)) {
+            combinedFlags.push(budgetFlag);
+          }
+          await dbService.setEventConflictFlags(createdEvent.id, combinedFlags);
+          conflictResult.flags = combinedFlags;
+        }
+      }
+    } catch (budgetCheckErr) {
+      console.error('Non-blocking budget flag check error:', budgetCheckErr);
     }
 
     const refreshedEvent = (await dbService.getEventById(createdEvent.id)) || createdEvent;

@@ -195,6 +195,7 @@ export const dbService = {
     organizer?: string | null;
     status?: string;
     conflictFlags?: string[];
+    semesterId?: string | null;
     submittedById: string;
   }) {
     await checkInit();
@@ -262,6 +263,7 @@ export const dbService = {
     status: string;
     conflictFlags: string[];
     lessonsLearned: string | null;
+    approvedBudget: number | null;
   }>) {
     await checkInit();
     const fields: string[] = [];
@@ -492,6 +494,7 @@ export const dbService = {
     receiptFileName?: string | null;
     submittedById: string;
     addedByName?: string | null;
+    onBehalfOfClub?: string | null;
   }) {
     await checkInit();
     const expenseId = randomUUID();
@@ -500,9 +503,9 @@ export const dbService = {
       `
       INSERT INTO "Expense" (
         "id", "eventId", "clubId", "semesterId", "amount", "category", "description", "expenseDate",
-        "receiptUrl", "receiptPublicId", "receiptFileName", "submittedById", "addedByName", "updatedAt"
+        "receiptUrl", "receiptPublicId", "receiptFileName", "submittedById", "addedByName", "onBehalfOfClub", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
       RETURNING *
     `,
       [
@@ -519,6 +522,7 @@ export const dbService = {
         data.receiptFileName || null,
         data.submittedById,
         data.addedByName || null,
+        data.onBehalfOfClub || null,
       ]
     );
     return this.getExpenseById(rows[0].id);
@@ -531,7 +535,15 @@ export const dbService = {
     expenseDate: Date;
     receiptUrl: string | null;
     receiptPublicId: string | null;
+    receiptFileName: string | null;
     eventId: string | null;
+    clubId: string | null;
+    semesterId: string | null;
+    isVoided: boolean;
+    voidedAt: Date | string | null;
+    voidedBy: string | null;
+    voidReason: string | null;
+    onBehalfOfClub: string | null;
   }>) {
     await checkInit();
     const fields: string[] = [];
