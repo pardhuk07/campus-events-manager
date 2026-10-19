@@ -1,25 +1,77 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import BudgetCharts from './BudgetCharts';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import AddExpenseModal from './AddExpenseModal';
 import {
   RupeeIcon,
-  TrendingUpIcon,
   PlusCircleIcon,
-  ReceiptIcon,
-  DownloadIcon,
   AlertTriangleIcon,
+  CalendarIcon,
+  ReceiptIcon,
 } from './Icons';
 import { CATEGORY_COLORS } from '@/lib/colors';
-import { UserRole, ExpenseCategory } from '@/lib/constants';
+import { UserRole } from '@/lib/constants';
 
-interface SemesterMonth {
-  year: number;
-  month: number; // 0-indexed (7 = Aug, 8 = Sep, 9 = Oct, 10 = Nov, 11 = Dec)
-  key: string;   // "2026-08", "2026-09", etc.
-  shortLabel: string; // "Aug", "Sep", "Oct", "Nov", "Dec"
-  fullLabel: string;  // "August 2026", "September 2026", etc.
+interface Semester {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+}
+
+interface ClubSummary {
+  clubId: string;
+  clubName: string;
+  allocated: number;
+  committed: number;
+  spent: number;
+  remaining: number;
+  availableToPlan: number;
+  eventsCount: number;
+  approvedEventsCount: number;
+}
+
+interface PerEventRow {
+  id: string;
+  title: string;
+  status: string;
+  startTime: string;
+  endTime: string;
+  venue: string;
+  eventType: string;
+  organizer: string;
+  budget: number;
+  spent: number;
+  left: number;
+  expenses: any[];
+}
+
+interface ClubDetailData {
+  club: {
+    id: string;
+    name: string;
+    description?: string;
+  };
+  semester: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+  };
+  allocated: number;
+  committed: number;
+  spent: number;
+  remaining: number;
+  availableToPlan: number;
+  perEventRows: PerEventRow[];
+  monthlySpending: Array<{
+    month: string;
+    monthIndex: number;
+    year: number;
+    spent: number;
+    expenseCount: number;
+  }>;
+  changeLogs: any[];
 }
 
 export default function ExpenseManager({
@@ -29,759 +81,995 @@ export default function ExpenseManager({
   currentRole: string;
   currentUser?: any;
 }) {
-  const [budgets, setBudgets] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
+  const isCore = currentRole === UserRole.CORE_VERIFIER || currentRole === 'ACM_CORE';
+  const isExec = currentRole === UserRole.CLUB_EXEC;
 
-  // Period mode: 'semester' | 'month'
-  const [viewPeriod, setViewPeriod] = useState<'semester' | 'month'>('semester');
+  // Semesters list and selected semester
+  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string>('');
 
-  // Month selector state (defaults to current month: e.g. "2026-10")
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>('2026-10');
+  // Selected club for detail view (Core can switch; Exec locked to own club)
+  const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const now = new Date();
-    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    setSelectedMonthKey(currentKey);
-  }, []);
+  // Data states
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Budget Edit State (STRICTLY for CORE_VERIFIER)
-  const [isEditingBudget, setIsEditingBudget] = useState(false);
-  const [newBudgetAmount, setNewBudgetAmount] = useState('50000');
+  // Overview data for Core
+  const [allClubsData, setAllClubsData] = useState<{
+    semester: any;
+    totalAllocated: number;
+    totalCommitted: number;
+    totalSpent: number;
+    totalRemaining: number;
+    totalAvailableToPlan: number;
+    clubs: ClubSummary[];
+  } | null>(null);
+
+  // Club detail data
+  const [clubDetail, setClubDetail] = useState<ClubDetailData | null>(null);
+
+  // All events (for Add Expense modal and global reference)
+  const [allEvents, setAllEvents] = useState<any[]>([]);
+
+  // Edit Budget Modal (Core only)
+  const [editingClub, setEditingClub] = useState<{ id: string; name: string; currentAllocated: number } | null>(null);
+  const [newBudgetAmount, setNewBudgetAmount] = useState('');
+  const [budgetReason, setBudgetReason] = useState('');
   const [savingBudget, setSavingBudget] = useState(false);
+  const [editBudgetError, setEditBudgetError] = useState<string | null>(null);
 
-  // Add Expense Modal State
+  // Event Expenses Panel (opened upon clicking an event row)
+  const [activeEventPanel, setActiveEventPanel] = useState<PerEventRow | null>(null);
+
+  // Add Expense Modal
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
 
-  const isCoreVerifier = currentRole === UserRole.CORE_VERIFIER || currentRole === 'ACM_CORE';
-  const isMember = currentRole === UserRole.MEMBER;
-  const canAddExpense = currentRole === UserRole.CLUB_EXEC || isCoreVerifier;
+  // 1. Load Semesters on Mount
+  useEffect(() => {
+    async function loadSemesters() {
+      try {
+        const res = await fetch('/api/semesters');
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setSemesters(json.data);
 
-  const fetchBudgetData = async () => {
-    try {
-      const [budgetsRes, expensesRes, eventsRes] = await Promise.all([
-        fetch('/api/budgets'),
-        fetch('/api/expenses'),
-        fetch(
-          isMember
-            ? `/api/events?userRole=${UserRole.MEMBER}`
-            : `/api/events?userRole=${encodeURIComponent(currentRole)}`
-        ),
-      ]);
+          // Find semester containing today
+          const now = new Date();
+          const currentSem = json.data.find((s: Semester) => {
+            const start = new Date(s.startDate);
+            const end = new Date(s.endDate);
+            return now >= start && now <= end;
+          });
 
-      const budgetsJson = await budgetsRes.json();
-      const expensesJson = await expensesRes.json();
-      const eventsJson = await eventsRes.json();
-
-      if (budgetsJson.success && budgetsJson.data) {
-        setBudgets(budgetsJson.data);
-        if (budgetsJson.data.length > 0) {
-          setNewBudgetAmount(String(budgetsJson.data[0].amount));
+          // Default to the semester containing today, or first semester
+          setSelectedSemesterId(currentSem ? currentSem.id : json.data[0].id);
         }
+      } catch (err) {
+        console.error('Failed to load semesters:', err);
       }
-      if (expensesJson.success && expensesJson.data) {
-        setExpenses(expensesJson.data);
-      }
-      if (eventsJson.success && eventsJson.data) {
-        setEvents(eventsJson.data);
+    }
+    loadSemesters();
+  }, []);
+
+  // 2. Fetch events
+  const fetchEvents = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/events?userRole=${encodeURIComponent(currentRole)}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setAllEvents(json.data);
       }
     } catch (err) {
-      console.error('Failed to load expenses/budget data:', err);
+      console.error('Failed to load events:', err);
     }
-  };
+  }, [currentRole]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  // 3. Fetch Budget Data based on active semester and role
+  const fetchBudgetData = useCallback(async () => {
+    if (!selectedSemesterId) return;
+    setLoading(true);
+    setErrorMsg(null);
+
+    try {
+      // Executive always goes straight to their own club detail
+      if (isExec) {
+        if (!currentUser?.clubId) {
+          setErrorMsg('Your executive account is not associated with an SVNIT club.');
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(`/api/club-budgets?semesterId=${encodeURIComponent(selectedSemesterId)}&clubId=${encodeURIComponent(currentUser.clubId)}`);
+        const json = await res.json();
+        if (json.success && json.data) {
+          setClubDetail(json.data);
+          setSelectedClubId(currentUser.clubId);
+        } else {
+          setErrorMsg(json.error?.message || 'Failed to load club budget details.');
+        }
+      } else if (isCore) {
+        // Core View
+        if (selectedClubId) {
+          // Fetch specific club detail
+          const res = await fetch(`/api/club-budgets?semesterId=${encodeURIComponent(selectedSemesterId)}&clubId=${encodeURIComponent(selectedClubId)}`);
+          const json = await res.json();
+          if (json.success && json.data) {
+            setClubDetail(json.data);
+          } else {
+            setErrorMsg(json.error?.message || 'Failed to load club budget details.');
+          }
+        } else {
+          // Fetch overview of all clubs
+          const res = await fetch(`/api/club-budgets?semesterId=${encodeURIComponent(selectedSemesterId)}`);
+          const json = await res.json();
+          if (json.success && json.data) {
+            setAllClubsData(json.data);
+            setClubDetail(null);
+          } else {
+            setErrorMsg(json.error?.message || 'Failed to load clubs overview.');
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Error loading budget data:', err);
+      setErrorMsg(err.message || 'An unexpected error occurred loading budget information.');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedSemesterId, selectedClubId, isExec, isCore, currentUser]);
 
   useEffect(() => {
     fetchBudgetData();
-  }, [currentRole]);
+  }, [fetchBudgetData]);
 
-  const activeBudget = budgets[0] || {
-    id: 'budget-fall-2026',
-    name: 'Fall 2026 Semester Budget',
-    amount: 50000,
-    totalSpent: 0,
-    remainingBudget: 50000,
-    percentSpent: 0,
-    startDate: '2026-08-01',
-    endDate: '2026-12-31',
-  };
-
-  const handleUpdateBudget = async (e: React.FormEvent) => {
+  // 4. Handle Edit Budget Submission (Core only)
+  const handleSaveBudget = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBudgetAmount || !isCoreVerifier) return;
+    if (!editingClub || !selectedSemesterId) return;
+
+    setEditBudgetError(null);
+    const parsedAmt = parseFloat(newBudgetAmount);
+    if (isNaN(parsedAmt) || parsedAmt < 0) {
+      setEditBudgetError('Please enter a valid non-negative allocation amount in rupees.');
+      return;
+    }
+
+    if (!budgetReason.trim()) {
+      setEditBudgetError('A reason is strictly required when setting or modifying a club budget.');
+      return;
+    }
 
     setSavingBudget(true);
     try {
-      const res = await fetch(`/api/budgets/${activeBudget.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch('/api/club-budgets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': UserRole.CORE_VERIFIER,
+        },
         body: JSON.stringify({
-          amount: parseFloat(newBudgetAmount),
-          userRole: UserRole.CORE_VERIFIER,
+          clubId: editingClub.id,
+          semesterId: selectedSemesterId,
+          allocatedAmount: Math.round(parsedAmt),
+          reason: budgetReason.trim(),
         }),
       });
 
-      const result = await res.json();
-      if (result.success) {
-        setIsEditingBudget(false);
-        fetchBudgetData();
+      const json = await res.json();
+      if (json.success) {
+        setEditingClub(null);
+        setNewBudgetAmount('');
+        setBudgetReason('');
+        // Refresh all numbers without a page reload
+        await fetchBudgetData();
+        await fetchEvents();
       } else {
-        alert(result.error?.message || result.error || 'Failed to update budget');
+        setEditBudgetError(json.error?.message || 'Failed to save budget allocation.');
       }
-    } catch (err) {
-      console.error('Error updating budget:', err);
+    } catch (err: any) {
+      setEditBudgetError(err.message || 'Network error updating budget.');
     } finally {
       setSavingBudget(false);
     }
   };
 
-  const handleDownloadReport = () => {
-    window.open('/api/reports/handover?format=csv', '_blank');
+  // Helper function for progress bar color threshold:
+  // green below 75%, amber from 75%, red from 90%
+  const getProgressColor = (percent: number) => {
+    if (percent < 75) {
+      return {
+        bg: 'bg-emerald-500',
+        text: 'text-emerald-700',
+        badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+      };
+    }
+    if (percent < 90) {
+      return {
+        bg: 'bg-amber-500',
+        text: 'text-amber-700',
+        badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
+      };
+    }
+    return {
+      bg: 'bg-rose-500',
+      text: 'text-rose-700',
+      badgeBg: 'bg-rose-50 text-rose-800 border-rose-200',
+    };
   };
 
-  // Generate semester months dynamically (Aug 2026 to Dec 2026)
-  const semesterMonths: SemesterMonth[] = useMemo(() => {
-    const list: SemesterMonth[] = [
-      { year: 2026, month: 7, key: '2026-08', shortLabel: 'Aug', fullLabel: 'August 2026' },
-      { year: 2026, month: 8, key: '2026-09', shortLabel: 'Sep', fullLabel: 'September 2026' },
-      { year: 2026, month: 9, key: '2026-10', shortLabel: 'Oct', fullLabel: 'October 2026' },
-      { year: 2026, month: 10, key: '2026-11', shortLabel: 'Nov', fullLabel: 'November 2026' },
-      { year: 2026, month: 11, key: '2026-12', shortLabel: 'Dec', fullLabel: 'December 2026' },
-    ];
-
-    // Check if any expenses fall outside default months and include them
-    for (const ex of expenses) {
-      if (ex.expenseDate) {
-        const d = new Date(ex.expenseDate);
-        const y = d.getFullYear();
-        const m = d.getMonth();
-        const key = `${y}-${String(m + 1).padStart(2, '0')}`;
-        if (!list.some((item) => item.key === key)) {
-          const shortLabel = d.toLocaleString('en-US', { month: 'short' });
-          const fullLabel = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-          list.push({ year: y, month: m, key, shortLabel, fullLabel });
-        }
-      }
-    }
-
-    return list.sort((a, b) => a.key.localeCompare(b.key));
-  }, [expenses]);
-
-  // Compute monthly spending for each month in the semester
-  const monthlySpendingMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const m of semesterMonths) {
-      map[m.key] = 0;
-    }
-    for (const ex of expenses) {
-      if (ex.expenseDate) {
-        const d = new Date(ex.expenseDate);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        const amt = parseFloat(ex.amount) || 0;
-        if (map[key] !== undefined) {
-          map[key] += amt;
-        } else {
-          map[key] = amt;
-        }
-      }
-    }
-    return map;
-  }, [expenses, semesterMonths]);
-
-  const maxMonthlySpend = useMemo(() => {
-    const values = Object.values(monthlySpendingMap);
-    return Math.max(1, ...values);
-  }, [monthlySpendingMap]);
-
-  // Selected Month details
-  const selectedMonthObj = useMemo(() => {
-    return (
-      semesterMonths.find((m) => m.key === selectedMonthKey) ||
-      semesterMonths[2] || // fallback to Oct 2026
-      { year: 2026, month: 9, key: '2026-10', shortLabel: 'Oct', fullLabel: 'October 2026' }
-    );
-  }, [semesterMonths, selectedMonthKey]);
-
-  const selectedMonthIndex = semesterMonths.findIndex((m) => m.key === selectedMonthKey);
-
-  const handlePrevMonth = () => {
-    if (selectedMonthIndex > 0) {
-      setSelectedMonthKey(semesterMonths[selectedMonthIndex - 1].key);
-    }
-  };
-
-  const handleNextMonth = () => {
-    if (selectedMonthIndex < semesterMonths.length - 1) {
-      setSelectedMonthKey(semesterMonths[selectedMonthIndex + 1].key);
-    }
-  };
-
-  // Base Semester Budget
-  const budget = parseFloat(activeBudget.amount) || 50000;
-
-  // Filter expenses and calculate based on active mode (Semester vs Month)
-  const isMonthMode = viewPeriod === 'month';
-
-  // 1. Month Mode Expenses: Only expenses dated in the selected month
-  const monthFilteredExpenses = useMemo(() => {
-    const [y, mStr] = selectedMonthKey.split('-').map(Number);
-    const mIndex = mStr - 1;
-    return expenses.filter((ex) => {
-      const d = new Date(ex.expenseDate);
-      return d.getFullYear() === y && d.getMonth() === mIndex;
-    });
-  }, [expenses, selectedMonthKey]);
-
-  // Cumulative spending through the end of the selected month
-  const cumulativeSpendingThroughSelectedMonth = useMemo(() => {
-    const [y, mStr] = selectedMonthKey.split('-').map(Number);
-    const mIndex = mStr - 1;
-    // End of the selected month at 23:59:59.999
-    const endOfMonthTimestamp = new Date(y, mIndex + 1, 0, 23, 59, 59, 999).getTime();
-
-    return expenses
-      .filter((ex) => new Date(ex.expenseDate).getTime() <= endOfMonthTimestamp)
-      .reduce((sum, ex) => sum + (parseFloat(ex.amount) || 0), 0);
-  }, [expenses, selectedMonthKey]);
-
-  // Overall semester total spent
-  const semesterTotalSpent = useMemo(() => {
-    return expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-  }, [expenses]);
-
-  // Total spent in active view
-  const activeTotalSpent = isMonthMode
-    ? monthFilteredExpenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
-    : semesterTotalSpent;
-
-  // Remaining Balance:
-  // "Remaining Balance should always be the semester budget minus spending up to the end of the selected month, and the label should say which it is."
-  const activeRemainingBalance = isMonthMode
-    ? budget - cumulativeSpendingThroughSelectedMonth
-    : budget - semesterTotalSpent;
-
-  const percent = budget > 0 ? Math.min(100, Math.round((activeTotalSpent / budget) * 100)) : 0;
-
-  // Active expenses for ledger and category breakdown
-  const displayedExpenses = isMonthMode ? monthFilteredExpenses : expenses;
-
-  // Category breakdown for charts
-  const categoryBreakdown: Record<string, number> = useMemo(() => {
-    const breakdown: Record<string, number> = {};
-    for (const cat of Object.values(ExpenseCategory)) {
-      breakdown[cat] = 0;
-    }
-    for (const ex of displayedExpenses) {
-      if (breakdown[ex.category] !== undefined) {
-        breakdown[ex.category] += parseFloat(ex.amount) || 0;
-      }
-    }
-    return breakdown;
-  }, [displayedExpenses]);
-
-  // Sorted ledger expenses (newest first)
-  const sortedExpenses = useMemo(() => {
-    return [...displayedExpenses].sort(
-      (a, b) =>
-        new Date(b.createdAt || b.expenseDate).getTime() -
-        new Date(a.createdAt || a.expenseDate).getTime()
-    );
-  }, [displayedExpenses]);
-
-  // Red Warning if Semester Total Spent exceeds ₹50,000
-  const isBudgetExceeded = semesterTotalSpent > 50000;
-  const excessBudgetAmount = semesterTotalSpent - 50000;
-
-  // Approved events for expense linking
-  const approvedEvents = events.filter((ev: any) => ev.status === 'APPROVED');
+  // Keep event expenses in sync when activeEventPanel is open
+  const currentPanelEvent = useMemo(() => {
+    if (!activeEventPanel || !clubDetail) return null;
+    return clubDetail.perEventRows.find((r) => r.id === activeEventPanel.id) || activeEventPanel;
+  }, [activeEventPanel, clubDetail]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      {/* Red Warning Banner if Semester Budget Exceeded */}
-      {isBudgetExceeded && (
-        <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl text-rose-700 text-xs font-bold flex items-center justify-between shadow-xs">
+    <div className="space-y-6">
+      {/* Top Header & Semester Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
+        <div>
           <div className="flex items-center gap-2.5">
-            <AlertTriangleIcon className="w-5 h-5 text-rose-600 shrink-0" />
-            <span>This exceeds the semester budget by ₹{excessBudgetAmount.toLocaleString('en-IN')}</span>
+            <span className="p-2 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600">
+              <RupeeIcon className="w-5 h-5" />
+            </span>
+            <div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                {isExec
+                  ? `${clubDetail?.club?.name || 'Club'} Semester Budget`
+                  : selectedClubId
+                  ? `${clubDetail?.club?.name || 'Club'} Budget Details`
+                  : 'Campus Club Budgets & Fund Allocations'}
+              </h1>
+              <p className="text-xs text-slate-500 font-medium">
+                {isExec
+                  ? 'Official fixed semester allocation and verified event expense ledger'
+                  : selectedClubId
+                  ? 'Deep-dive event audit and expense tracking'
+                  : 'Centralized semester fund monitoring for all SVNIT campus clubs'}
+              </p>
+            </div>
           </div>
-          <span className="text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded bg-rose-200 text-rose-900">
-            Over Budget
-          </span>
+        </div>
+
+        {/* Semester Selector Dropdown */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-2xl px-3 py-2 shadow-2xs">
+            <CalendarIcon className="w-4 h-4 text-slate-500" />
+            <select
+              value={selectedSemesterId}
+              onChange={(e) => {
+                setSelectedSemesterId(e.target.value);
+                // Keep selectedClubId if drilled in, data refreshes automatically
+              }}
+              className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+            >
+              {semesters.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({new Date(s.startDate).toLocaleDateString('en-IN', { month: 'short' })} –{' '}
+                  {new Date(s.endDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Add Expense Action Button */}
+          <button
+            onClick={() => setIsAddExpenseOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700 text-white rounded-2xl font-bold text-xs shadow-xs transition cursor-pointer"
+          >
+            <PlusCircleIcon className="w-4 h-4" />
+            <span>Add Expense</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Global Error Banner */}
+      {errorMsg && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs font-semibold flex items-center gap-2">
+          <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* 1. TOP CONTROL BAR: 'Semester | Month' Toggle & Month Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm text-slate-900">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Mode Toggle: Semester | Month */}
-          <div className="flex bg-slate-100 border border-slate-200 rounded-xl p-1 text-xs font-semibold shrink-0">
-            <button
-              type="button"
-              onClick={() => setViewPeriod('semester')}
-              className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-                viewPeriod === 'semester'
-                  ? 'tab-active-gradient font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-              }`}
-            >
-              <span>🎓</span>
-              <span>Semester</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewPeriod('month')}
-              className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-                viewPeriod === 'month'
-                  ? 'tab-active-gradient font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-              }`}
-            >
-              <span>📅</span>
-              <span>Month</span>
-            </button>
-          </div>
-
-          {/* Month Selector: Appears in Month mode with dropdown + prev/next arrows */}
-          {isMonthMode && (
-            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1 animate-in fade-in duration-200">
-              <button
-                type="button"
-                onClick={handlePrevMonth}
-                disabled={selectedMonthIndex <= 0}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent font-bold text-sm transition cursor-pointer"
-                title="Previous Month"
-              >
-                ‹
-              </button>
-
-              <select
-                value={selectedMonthKey}
-                onChange={(e) => setSelectedMonthKey(e.target.value)}
-                className="bg-transparent text-xs font-bold text-slate-800 py-1 px-2 border-0 focus:outline-none cursor-pointer"
-              >
-                {semesterMonths.map((m) => (
-                  <option key={m.key} value={m.key}>
-                    {m.fullLabel}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                onClick={handleNextMonth}
-                disabled={selectedMonthIndex >= semesterMonths.length - 1}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent font-bold text-sm transition cursor-pointer"
-                title="Next Month"
-              >
-                ›
-              </button>
-            </div>
-          )}
+      {/* Loading Skeleton */}
+      {loading && (
+        <div className="p-12 text-center bg-white border border-slate-200 rounded-3xl">
+          <div className="inline-block animate-spin w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full mb-3"></div>
+          <p className="text-xs text-slate-500 font-semibold">Loading semester allocations and ledger data...</p>
         </div>
+      )}
 
-        {/* Informative Context Pill */}
-        <div className="text-xs text-slate-500 font-medium flex items-center gap-2">
-          {isMonthMode ? (
-            <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1 rounded-xl font-semibold text-xs">
-              <span>Filtering month:</span>
-              <strong className="underline">{selectedMonthObj.fullLabel}</strong>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1 rounded-xl font-medium text-xs">
-              <span>Full Period:</span>
-              <strong className="text-slate-900">{activeBudget.name || 'Fall 2026 Semester'}</strong>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 2. SMALL 'MONTHLY SPENDING' BAR CHART (Clickable bars select month) */}
-      <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm text-slate-900 space-y-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <TrendingUpIcon className="w-4 h-4 text-indigo-600" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              Monthly Spending
-            </h4>
-          </div>
-          <span className="text-[11px] text-slate-400 font-medium">
-            Click any month bar to filter analytics for that month
-          </span>
-        </div>
-
-        <div className="grid grid-cols-5 gap-2 sm:gap-4 items-end pt-3 pb-1">
-          {semesterMonths.map((m) => {
-            const isSelected = isMonthMode && selectedMonthKey === m.key;
-            const spend = monthlySpendingMap[m.key] || 0;
-            const heightPercent =
-              maxMonthlySpend > 0 ? Math.max(12, Math.round((spend / maxMonthlySpend) * 100)) : 12;
-
-            return (
-              <button
-                key={m.key}
-                type="button"
-                onClick={() => {
-                  setViewPeriod('month');
-                  setSelectedMonthKey(m.key);
-                }}
-                className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition group text-center cursor-pointer ${
-                  isSelected
-                    ? 'bg-indigo-50/80 border-2 border-indigo-600 shadow-sm'
-                    : 'hover:bg-slate-50 border border-transparent hover:border-slate-200'
-                }`}
-                title={`Click to inspect ${m.fullLabel}: ₹${spend.toLocaleString('en-IN')}`}
-              >
-                {/* Spending Amount */}
-                <span
-                  className={`text-[11px] font-black tracking-tight ${
-                    isSelected ? 'text-indigo-700 font-extrabold' : 'text-slate-700'
-                  }`}
-                >
-                  ₹{spend.toLocaleString('en-IN')}
-                </span>
-
-                {/* Bar Track & Fill */}
-                <div className="w-full bg-slate-100 rounded-lg h-16 flex items-end p-1 border border-slate-200">
-                  <div
-                    className={`w-full rounded-md transition-all duration-300 ${
-                      isSelected
-                        ? 'btn-primary-gradient shadow-xs'
-                        : spend > 0
-                        ? 'bg-indigo-400 group-hover:bg-indigo-500'
-                        : 'bg-slate-200'
-                    }`}
-                    style={{ height: `${heightPercent}%` }}
-                  ></div>
-                </div>
-
-                {/* Month Name */}
-                <span
-                  className={`text-xs font-bold ${
-                    isSelected
-                      ? 'text-indigo-900 font-extrabold'
-                      : 'text-slate-500 group-hover:text-slate-800'
-                  }`}
-                >
-                  {m.shortLabel}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. SUMMARY CARDS (Total Budget, Total Spent, Remaining Balance) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Budget Card */}
-        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-slate-900 relative overflow-hidden">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span className="font-semibold uppercase tracking-wider">Total Semester Budget</span>
-            <div className="flex items-center gap-2">
-              <RupeeIcon className="w-4 h-4 text-indigo-600" />
-              {isCoreVerifier && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingBudget(!isEditingBudget)}
-                  className="text-[11px] bg-violet-50 hover:bg-violet-100 text-violet-700 px-2.5 py-0.5 rounded-lg border border-violet-200 transition font-bold cursor-pointer"
-                >
-                  {isEditingBudget ? 'Cancel' : 'Edit Budget'}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {isEditingBudget && isCoreVerifier ? (
-            <form onSubmit={handleUpdateBudget} className="mt-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  step="100"
-                  required
-                  value={newBudgetAmount}
-                  onChange={(e) => setNewBudgetAmount(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-bold"
-                />
-                <button
-                  type="submit"
-                  disabled={savingBudget}
-                  className="btn-primary-gradient text-white text-xs px-3 py-2 rounded-xl font-bold transition shadow-sm cursor-pointer"
-                >
-                  {savingBudget ? '...' : 'Save'}
-                </button>
-              </div>
-              <p className="text-[10px] text-amber-700 font-medium">Authorized: CORE_VERIFIER override privilege</p>
-            </form>
-          ) : (
-            <>
-              <div className="text-3xl font-black mt-2 text-slate-900">₹{budget.toLocaleString('en-IN')}</div>
-              <p className="text-xs text-slate-500 mt-1 font-medium">{activeBudget.name || 'Semester Budget'}</p>
-            </>
-          )}
-        </div>
-
-        {/* Total Spent Card (Recalculated in Month Mode) */}
-        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-slate-900">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span className="font-semibold uppercase tracking-wider">
-              {isMonthMode ? `Total Spent (${selectedMonthObj.fullLabel})` : 'Total Semester Spent'}
-            </span>
-            <TrendingUpIcon className="w-4 h-4 text-cyan-600" />
-          </div>
-          <div
-            className={`text-3xl font-black mt-2 ${
-              isBudgetExceeded ? 'text-rose-600' : 'text-cyan-700'
-            }`}
-          >
-            ₹{activeTotalSpent.toLocaleString('en-IN')}
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden border border-slate-200">
-            <div
-              className={`h-2 rounded-full transition-all duration-300 ${
-                isBudgetExceeded
-                  ? 'bg-rose-500'
-                  : percent > 80
-                  ? 'bg-amber-500'
-                  : 'btn-primary-gradient'
-              }`}
-              style={{ width: `${Math.min(100, percent)}%` }}
-            ></div>
-          </div>
-          <p className="text-xs text-slate-500 mt-1.5 font-medium">
-            {isMonthMode
-              ? `${percent}% of total semester budget disbursed in ${selectedMonthObj.shortLabel}`
-              : `${percent}% of total semester budget utilized`}
-          </p>
-        </div>
-
-        {/* Remaining Budget Card:
-            "Remaining Balance should always be the semester budget minus spending up to the end of the selected month, and the label should say which it is." */}
-        <div
-          className={`border p-6 rounded-2xl shadow-sm text-slate-900 ${
-            activeRemainingBalance < 0
-              ? 'bg-rose-50/60 border-rose-300'
-              : activeRemainingBalance < 10000
-              ? 'bg-amber-50/60 border-amber-300'
-              : 'bg-white border-slate-200'
-          }`}
-        >
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span className="font-semibold uppercase tracking-wider">
-              {isMonthMode
-                ? `Remaining Balance (Through ${selectedMonthObj.shortLabel} ${selectedMonthObj.year})`
-                : 'Remaining Balance (Full Semester)'}
-            </span>
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                activeRemainingBalance < 0
-                  ? 'bg-rose-500'
-                  : activeRemainingBalance < 10000
-                  ? 'bg-amber-500'
-                  : 'bg-emerald-500'
-              }`}
-            ></span>
-          </div>
-          <div
-            className={`text-3xl font-black mt-2 ${
-              activeRemainingBalance < 0
-                ? 'text-rose-600'
-                : activeRemainingBalance < 10000
-                ? 'text-amber-800'
-                : 'text-emerald-600'
-            }`}
-          >
-            {activeRemainingBalance < 0
-              ? `-₹${Math.abs(activeRemainingBalance).toLocaleString('en-IN')}`
-              : `₹${activeRemainingBalance.toLocaleString('en-IN')}`}
-          </div>
-          <p className="text-xs text-slate-500 mt-1 font-medium">
-            {isMonthMode
-              ? `Semester budget minus ₹${cumulativeSpendingThroughSelectedMonth.toLocaleString('en-IN')} cumulative spending through end of ${selectedMonthObj.fullLabel}`
-              : activeRemainingBalance < 0
-              ? 'Semester budget ceiling exceeded'
-              : 'Available for upcoming approved club proposals'}
-          </p>
-        </div>
-      </div>
-
-      {/* 4. VISUAL CHARTS (Donut Chart & Category Breakdown Bars - Recalculated for Mode) */}
-      <BudgetCharts
-        totalBudget={budget}
-        totalSpent={activeTotalSpent}
-        remainingBudget={activeRemainingBalance}
-        percentSpent={percent}
-        categoryBreakdown={categoryBreakdown}
-        periodLabel={isMonthMode ? selectedMonthObj.fullLabel : 'Full Semester'}
-      />
-
-      {/* 5. INSTITUTIONAL LEDGER TABLE */}
-      <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-slate-900 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
-          <div>
-            <div className="flex items-center gap-2">
-              <ReceiptIcon className="w-5 h-5 text-indigo-600" />
-              <h3 className="text-base font-bold text-slate-900">
-                Institutional Ledger {isMonthMode ? `• ${selectedMonthObj.fullLabel}` : '• All Semester'}
-              </h3>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {isMonthMode
-                ? `Disbursements recorded specifically in ${selectedMonthObj.fullLabel}`
-                : 'Historical reimbursements, event cost records & digital audit trail'}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Add Expense Button - Visible to Club Executive and ACM Core roles only */}
-            {canAddExpense && (
-              <button
-                type="button"
-                onClick={() => setIsAddExpenseOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 btn-primary-gradient text-white text-xs font-bold rounded-xl shadow-md transition hover:opacity-95 cursor-pointer"
-              >
-                <PlusCircleIcon className="w-4 h-4" />
-                <span>+ Add Expense</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleDownloadReport}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition shadow-xs cursor-pointer"
-            >
-              <DownloadIcon className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Export Handover CSV</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Friendly Empty State for Months with No Expenses */}
-        {sortedExpenses.length === 0 ? (
-          isMonthMode ? (
-            <div className="py-16 text-center text-slate-500 space-y-2">
-              <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold">
-                🍃
-              </div>
-              <h4 className="text-sm font-bold text-slate-800">
-                No Expenses in {selectedMonthObj.fullLabel}
-              </h4>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                No campus club reimbursements or expenditures were recorded for this month. All budget allocations remain intact!
+      {/* VIEW A: CORE OVERVIEW TABLE (All Clubs) */}
+      {!loading && isCore && !selectedClubId && allClubsData && (
+        <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">
+                SVNIT Clubs Allocation Ledger • {allClubsData.semester?.name}
+              </h2>
+              <p className="text-xs text-slate-500">
+                Click any club row to inspect event details, or use &quot;Edit budget&quot; to adjust allocations.
               </p>
             </div>
-          ) : (
-            <div className="py-16 text-center text-slate-400 text-xs italic">
-              No expenses logged yet this period.
+            <div className="text-right">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Total Campus Budget:{' '}
+              </span>
+              <span className="text-sm font-black text-indigo-700">
+                ₹{allClubsData.totalAllocated.toLocaleString('en-IN')}
+              </span>
             </div>
-          )
-        ) : (
+          </div>
+
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="text-slate-400 border-b border-slate-200 uppercase tracking-wider text-[10px]">
-                  <th className="pb-3 font-bold">Date</th>
-                  <th className="pb-3 font-bold">Event</th>
-                  <th className="pb-3 font-bold">Category</th>
-                  <th className="pb-3 font-bold">Description</th>
-                  <th className="pb-3 font-bold text-center">Receipt</th>
-                  <th className="pb-3 font-bold text-right">Amount</th>
-                  <th className="pb-3 font-bold pl-4">Added by</th>
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  <th className="py-3.5 px-5">Club</th>
+                  <th className="py-3.5 px-4 text-right">Allocated</th>
+                  <th className="py-3.5 px-4 text-right">Committed</th>
+                  <th className="py-3.5 px-4 text-right">Spent</th>
+                  <th className="py-3.5 px-4 text-right">Remaining</th>
+                  <th className="py-3.5 px-5 w-44">% Used</th>
+                  <th className="py-3.5 px-5 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {sortedExpenses.map((item: any) => {
-                  const catInfo = CATEGORY_COLORS[item.category] || {
-                    label: item.category,
-                    hex: '#6366f1',
-                  };
-                  const eventTitle = item.event?.title || 'General Campus Event';
-                  const addedByName = item.addedByName || item.submittedBy?.name || 'Club Executive';
-                  const addedAt = item.createdAt || item.expenseDate;
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {allClubsData.clubs.map((c) => {
+                  const percent = c.allocated > 0 ? Math.round((c.spent / c.allocated) * 100) : 0;
+                  const progressColor = getProgressColor(percent);
 
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                      {/* 1. Date */}
-                      <td className="py-3 font-medium text-slate-700 whitespace-nowrap">
-                        {new Date(item.expenseDate).toLocaleDateString([], { dateStyle: 'medium' })}
-                      </td>
-
-                      {/* 2. Event */}
-                      <td className="py-3 text-slate-800 font-semibold max-w-[180px] truncate" title={eventTitle}>
-                        {eventTitle}
-                      </td>
-
-                      {/* 3. Category */}
-                      <td className="py-3">
-                        <span
-                          className="text-[10px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap"
-                          style={{ backgroundColor: `${catInfo.hex}18`, color: catInfo.hex }}
-                        >
-                          {catInfo.label}
-                        </span>
-                      </td>
-
-                      {/* 4. Description */}
-                      <td className="py-3 text-slate-600 max-w-[240px] text-xs">
-                        <p className="line-clamp-2" title={item.description || ''}>
-                          {item.description || '—'}
-                        </p>
-                      </td>
-
-                      {/* 5. Receipt (View link in new tab or dash) */}
-                      <td className="py-3 text-center whitespace-nowrap">
-                        {item.receiptUrl ? (
-                          <a
-                            href={item.receiptUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 shadow-2xs"
-                            title={item.receiptFileName || 'View uploaded receipt in new tab'}
-                          >
-                            <ReceiptIcon className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>View</span>
-                          </a>
-                        ) : (
-                          <span className="text-slate-300 font-bold">—</span>
-                        )}
-                      </td>
-
-                      {/* 6. Amount */}
-                      <td className="py-3 text-right font-black text-slate-900 whitespace-nowrap">
-                        ₹{parseFloat(item.amount).toLocaleString('en-IN')}
-                      </td>
-
-                      {/* 7. Added by with timestamp */}
-                      <td className="py-3 pl-4 whitespace-nowrap">
-                        <div className="font-semibold text-slate-800 text-xs">{addedByName}</div>
-                        <div className="text-[10px] text-slate-400">
-                          {new Date(addedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    <tr
+                      key={c.clubId}
+                      onClick={() => setSelectedClubId(c.clubId)}
+                      className="hover:bg-slate-50/80 transition cursor-pointer group"
+                    >
+                      <td className="py-4 px-5">
+                        <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                          {c.clubName}
                         </div>
+                        <div className="text-[11px] text-slate-500">
+                          {c.approvedEventsCount} approved {c.approvedEventsCount === 1 ? 'event' : 'events'}
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-4 text-right font-bold text-slate-900">
+                        ₹{c.allocated.toLocaleString('en-IN')}
+                      </td>
+
+                      <td className="py-4 px-4 text-right font-medium text-slate-600">
+                        ₹{c.committed.toLocaleString('en-IN')}
+                      </td>
+
+                      <td className="py-4 px-4 text-right font-bold text-indigo-700">
+                        ₹{c.spent.toLocaleString('en-IN')}
+                      </td>
+
+                      <td className="py-4 px-4 text-right font-bold text-emerald-700">
+                        ₹{c.remaining.toLocaleString('en-IN')}
+                      </td>
+
+                      <td className="py-4 px-5">
+                        <div className="flex items-center justify-between text-[11px] font-bold mb-1">
+                          <span className={progressColor.text}>{percent}%</span>
+                          <span className="text-[10px] text-slate-400">
+                            {percent < 75 ? 'Safe' : percent < 90 ? 'Moderate' : 'Critical'}
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${progressColor.bg}`}
+                            style={{ width: `${Math.min(100, percent)}%` }}
+                          />
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingClub({ id: c.clubId, name: c.clubName, currentAllocated: c.allocated });
+                            setNewBudgetAmount(String(c.allocated));
+                            setBudgetReason('');
+                            setEditBudgetError(null);
+                          }}
+                          className="px-3 py-1.5 rounded-xl border border-slate-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700 font-bold text-[11px] transition shadow-2xs"
+                        >
+                          Edit budget
+                        </button>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
+
+              {/* OVERALL TOTAL ROW */}
+              <tfoot>
+                {(() => {
+                  const overallPercent =
+                    allClubsData.totalAllocated > 0
+                      ? Math.round((allClubsData.totalSpent / allClubsData.totalAllocated) * 100)
+                      : 0;
+                  const totalColor = getProgressColor(overallPercent);
+
+                  return (
+                    <tr className="bg-slate-100/80 border-t-2 border-slate-300 font-black text-xs text-slate-900">
+                      <td className="py-4 px-5 uppercase tracking-wider">Overall Campus Total</td>
+                      <td className="py-4 px-4 text-right font-black">
+                        ₹{allClubsData.totalAllocated.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-4 px-4 text-right font-bold text-slate-700">
+                        ₹{allClubsData.totalCommitted.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-4 px-4 text-right font-black text-indigo-800">
+                        ₹{allClubsData.totalSpent.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-4 px-4 text-right font-black text-emerald-800">
+                        ₹{allClubsData.totalRemaining.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className="flex items-center justify-between text-[11px] font-bold mb-1">
+                          <span className={totalColor.text}>{overallPercent}%</span>
+                          <span className="text-[10px] text-slate-500">Utilization</span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${totalColor.bg}`}
+                            style={{ width: `${Math.min(100, overallPercent)}%` }}
+                          />
+                        </div>
+                      </td>
+                      <td className="py-4 px-5"></td>
+                    </tr>
+                  );
+                })()}
+              </tfoot>
             </table>
           </div>
-        )}
-
-        <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between">
-          <span>Fund Ledger audited under ACM Core Financial Policy</span>
-          <span className="font-semibold text-slate-600">
-            Total items: {sortedExpenses.length} {isMonthMode ? `(${selectedMonthObj.shortLabel})` : '(Semester)'}
-          </span>
         </div>
-      </div>
+      )}
 
-      {/* Add Expense Modal (Visible to Club Executive & ACM Core) */}
+      {/* VIEW B: CLUB DETAIL VIEW (Executive for their own club, or Core drilled down) */}
+      {!loading && clubDetail && (
+        <div className="space-y-6">
+          {/* Breadcrumb for Core */}
+          {isCore && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedClubId(null)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-300 text-xs font-bold transition shadow-2xs cursor-pointer"
+              >
+                <span>←</span>
+                <span>Back to All Clubs</span>
+              </button>
+              <span className="text-slate-400 text-xs">•</span>
+              <span className="text-xs font-semibold text-slate-600">
+                Inspecting: <strong className="text-slate-900">{clubDetail.club.name}</strong>
+              </span>
+            </div>
+          )}
+
+          {/* FOUR METRIC CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Allocated */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Allocated Budget
+              </div>
+              <div className="text-2xl font-black text-slate-900 tracking-tight">
+                ₹{clubDetail.allocated.toLocaleString('en-IN')}
+              </div>
+              <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                Fixed semester allocation
+              </div>
+              <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500">
+                <RupeeIcon className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Card 2: Committed */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Committed Budget
+              </div>
+              <div className="text-2xl font-black text-indigo-700 tracking-tight">
+                ₹{clubDetail.committed.toLocaleString('en-IN')}
+              </div>
+              <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                Approved events total
+              </div>
+              <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <CalendarIcon className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Card 3: Spent */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Total Spent
+              </div>
+              <div className="text-2xl font-black text-slate-900 tracking-tight">
+                ₹{clubDetail.spent.toLocaleString('en-IN')}
+              </div>
+              <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                {clubDetail.allocated > 0
+                  ? `${Math.round((clubDetail.spent / clubDetail.allocated) * 100)}% of allocation`
+                  : '0% utilized'}
+              </div>
+              <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                <ReceiptIcon className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Card 4: Remaining */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs relative overflow-hidden">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Remaining Balance
+              </div>
+              <div
+                className={`text-2xl font-black tracking-tight ${
+                  clubDetail.remaining >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                }`}
+              >
+                ₹{clubDetail.remaining.toLocaleString('en-IN')}
+              </div>
+              <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                Allocated − Actual Spent
+              </div>
+              <div
+                className={`absolute top-4 right-4 w-10 h-10 rounded-2xl flex items-center justify-center border ${
+                  clubDetail.remaining >= 0
+                    ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                    : 'bg-rose-50 border-rose-100 text-rose-600'
+                }`}
+              >
+                <RupeeIcon className="w-5 h-5" />
+              </div>
+            </div>
+          </div>
+
+          {/* DONUT CHART: SPENT VS. REMAINING */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
+            <h3 className="text-sm font-bold text-slate-900 mb-4">
+              Fund Utilization Donut • Spent vs. Remaining
+            </h3>
+
+            {(() => {
+              const radius = 54;
+              const circumference = 2 * Math.PI * radius;
+              const allocated = clubDetail.allocated || 1;
+              const spent = clubDetail.spent || 0;
+              const remaining = Math.max(0, clubDetail.remaining);
+
+              const percentSpent = Math.min(100, Math.round((spent / allocated) * 100));
+              const spentDash = (percentSpent / 100) * circumference;
+
+              return (
+                <div className="flex flex-col md:flex-row items-center justify-around gap-6">
+                  {/* Donut SVG */}
+                  <div className="relative w-48 h-48 flex items-center justify-center">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
+                      {/* Background circle (Remaining portion) */}
+                      <circle
+                        cx="70"
+                        cy="70"
+                        r={radius}
+                        stroke="#10b981"
+                        strokeWidth="14"
+                        fill="transparent"
+                        className="opacity-90"
+                      />
+                      {/* Foreground arc (Spent portion) */}
+                      <circle
+                        cx="70"
+                        cy="70"
+                        r={radius}
+                        stroke="#6366f1"
+                        strokeWidth="14"
+                        strokeDasharray={`${spentDash} ${circumference}`}
+                        strokeDashoffset="0"
+                        strokeLinecap="round"
+                        fill="transparent"
+                        className="transition-all duration-700 ease-out"
+                      />
+                    </svg>
+                    <div className="absolute flex flex-col items-center text-center">
+                      <span className="text-2xl font-black text-slate-900">{percentSpent}%</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Spent
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Donut Legend & Summary Metrics */}
+                  <div className="grid grid-cols-2 gap-4 max-w-md w-full">
+                    <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                        <span className="text-[11px] font-bold text-slate-600">Actual Spent</span>
+                      </div>
+                      <div className="text-base font-black text-indigo-900">
+                        ₹{spent.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <span className="text-[11px] font-bold text-slate-600">Remaining</span>
+                      </div>
+                      <div className="text-base font-black text-emerald-900">
+                        ₹{remaining.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                      <div className="text-[11px] font-bold text-slate-500 mb-1">Committed</div>
+                      <div className="text-base font-black text-slate-800">
+                        ₹{clubDetail.committed.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                      <div className="text-[11px] font-bold text-slate-500 mb-1">Available to Plan</div>
+                      <div className="text-base font-black text-slate-800">
+                        ₹{clubDetail.availableToPlan.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* EVENTS TABLE WITH PROGRESS BARS & OVER-BUDGET BADGES */}
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {clubDetail.club.name} • Events & Budget Tracker
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Click any event row to inspect its itemized expense entries and receipts.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-slate-500">
+                {clubDetail.perEventRows.length} {clubDetail.perEventRows.length === 1 ? 'event' : 'events'}
+              </span>
+            </div>
+
+            {clubDetail.perEventRows.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs font-semibold">
+                No events registered for this club in {clubDetail.semester.name}.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                      <th className="py-3.5 px-5">Event</th>
+                      <th className="py-3.5 px-4">Date</th>
+                      <th className="py-3.5 px-4 text-right">Budget</th>
+                      <th className="py-3.5 px-4 text-right">Spent</th>
+                      <th className="py-3.5 px-4 text-right">Left</th>
+                      <th className="py-3.5 px-5 w-48">Progress</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs">
+                    {clubDetail.perEventRows.map((ev) => {
+                      const isOverBudget = ev.spent > ev.budget;
+                      const overAmount = ev.spent - ev.budget;
+                      const percent = ev.budget > 0 ? Math.min(100, Math.round((ev.spent / ev.budget) * 100)) : 0;
+
+                      return (
+                        <tr
+                          key={ev.id}
+                          onClick={() => setActiveEventPanel(ev)}
+                          className={`hover:bg-slate-50/80 transition cursor-pointer group ${
+                            activeEventPanel?.id === ev.id ? 'bg-indigo-50/40' : ''
+                          }`}
+                        >
+                          <td className="py-4 px-5">
+                            <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                              {ev.title}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                {ev.eventType}
+                              </span>
+                              <span className="text-[10px] text-slate-400">{ev.venue}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-4 font-medium text-slate-600 whitespace-nowrap">
+                            {new Date(ev.startTime).toLocaleDateString('en-IN', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </td>
+
+                          <td className="py-4 px-4 text-right font-bold text-slate-900">
+                            ₹{ev.budget.toLocaleString('en-IN')}
+                          </td>
+
+                          <td className="py-4 px-4 text-right font-bold text-indigo-700">
+                            ₹{ev.spent.toLocaleString('en-IN')}
+                          </td>
+
+                          <td className="py-4 px-4 text-right font-bold">
+                            {isOverBudget ? (
+                              <span className="text-rose-600">₹0</span>
+                            ) : (
+                              <span className="text-emerald-700">₹{ev.left.toLocaleString('en-IN')}</span>
+                            )}
+                          </td>
+
+                          <td className="py-4 px-5">
+                            {isOverBudget ? (
+                              <div className="space-y-1">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-black">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                                  Over by ₹{overAmount.toLocaleString('en-IN')}
+                                </span>
+                                <div className="w-full bg-rose-100 rounded-full h-2 overflow-hidden">
+                                  <div className="h-full bg-rose-600 rounded-full w-full" />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                                  <span>{percent}%</span>
+                                  <span>₹{ev.left.toLocaleString('en-IN')} left</span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      percent < 75 ? 'bg-emerald-500' : 'bg-amber-500'
+                                    }`}
+                                    style={{ width: `${percent}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* EVENT EXPENSES PANEL (CLICKING AN EVENT OPENS THIS DRAWER / PANEL) */}
+      {currentPanelEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 text-slate-900 shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto">
+            {/* Header: ₹X spent of ₹Y, ₹Z left */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
+              <div>
+                <div className="text-base font-black text-slate-900">
+                  {currentPanelEvent.spent > currentPanelEvent.budget ? (
+                    <span className="text-rose-700">
+                      ₹{currentPanelEvent.spent.toLocaleString('en-IN')} spent of ₹
+                      {currentPanelEvent.budget.toLocaleString('en-IN')}, Over by ₹
+                      {(currentPanelEvent.spent - currentPanelEvent.budget).toLocaleString('en-IN')}
+                    </span>
+                  ) : (
+                    <span>
+                      ₹{currentPanelEvent.spent.toLocaleString('en-IN')} spent of ₹
+                      {currentPanelEvent.budget.toLocaleString('en-IN')}, ₹
+                      {currentPanelEvent.left.toLocaleString('en-IN')} left
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-xs font-semibold text-slate-600 mt-0.5">
+                  {currentPanelEvent.title} • {currentPanelEvent.venue}
+                </h4>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveEventPanel(null)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Expenses List */}
+            {currentPanelEvent.expenses.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
+                No individual expenses recorded for this event yet. Use the &quot;Add Expense&quot; button to record an expense.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Date</th>
+                      <th className="py-2.5 px-3">Category</th>
+                      <th className="py-2.5 px-3">Description</th>
+                      <th className="py-2.5 px-3 text-right">Amount</th>
+                      <th className="py-2.5 px-3">Added By</th>
+                      <th className="py-2.5 px-3 text-center">Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {currentPanelEvent.expenses.map((ex: any) => {
+                      const catInfo = CATEGORY_COLORS[ex.category] || { label: ex.category };
+
+                      return (
+                        <tr key={ex.id} className="hover:bg-slate-50/80 transition">
+                          <td className="py-3 px-3 whitespace-nowrap text-slate-600">
+                            {new Date(ex.expenseDate).toLocaleDateString('en-IN', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </td>
+
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold">
+                              {catInfo.label}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3 text-slate-800 font-medium max-w-xs truncate">
+                            {ex.description || '—'}
+                          </td>
+
+                          <td className="py-3 px-3 text-right font-black text-slate-900">
+                            ₹{Math.round(Number(ex.amount)).toLocaleString('en-IN')}
+                          </td>
+
+                          <td className="py-3 px-3 text-slate-600 text-[11px]">
+                            {ex.addedByName || ex.submittedBy?.name || 'Club Executive'}
+                          </td>
+
+                          <td className="py-3 px-3 text-center">
+                            {ex.receiptUrl ? (
+                              <a
+                                href={ex.receiptUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline"
+                              >
+                                View ↗
+                              </a>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveEventPanel(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs transition"
+              >
+                Close Panel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT BUDGET MODAL (CORE ONLY) */}
+      {editingClub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-slate-900 shadow-2xl relative space-y-4">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Edit Club Budget Allocation</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Adjust fixed semester allocation for <strong>{editingClub.name}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingClub(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {editBudgetError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold">
+                {editBudgetError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveBudget} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  New Allocation Amount (₹) <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-bold text-xs">
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value={newBudgetAmount}
+                    onChange={(e) => setNewBudgetAmount(e.target.value)}
+                    placeholder="50000"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-7 pr-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Required Justification Reason <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={budgetReason}
+                  onChange={(e) => setBudgetReason(e.target.value)}
+                  placeholder="e.g. Mid-semester grant for annual hackathon prize pool"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
+                />
+                <span className="text-[10px] text-slate-400">
+                  Every budget modification is logged in the immutable audit change log.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingClub(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBudget}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50"
+                >
+                  {savingBudget ? 'Saving...' : 'Save Allocation'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD EXPENSE MODAL */}
       <AddExpenseModal
         isOpen={isAddExpenseOpen}
         onClose={() => setIsAddExpenseOpen(false)}
-        onSuccess={() => {
-          fetchBudgetData();
+        onSuccess={async () => {
+          setIsAddExpenseOpen(false);
+          await fetchBudgetData();
+          await fetchEvents();
         }}
         currentRole={currentRole}
         currentUser={currentUser}
-        approvedEvents={approvedEvents}
-        currentTotalSpent={semesterTotalSpent}
+        approvedEvents={allEvents.filter((e) => e.status === 'APPROVED' || e.status === 'COMPLETED')}
+        currentTotalSpent={clubDetail?.spent || allClubsData?.totalSpent || 0}
       />
     </div>
   );

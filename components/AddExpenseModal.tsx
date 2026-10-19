@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CATEGORY_COLORS } from '@/lib/colors';
 import { ExpenseCategory, UserRole } from '@/lib/constants';
 import { RupeeIcon, AlertTriangleIcon, ReceiptIcon } from './Icons';
@@ -46,13 +46,21 @@ export default function AddExpenseModal({
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Filter events: limited to the user's club for Executives, all clubs for Core
+  const eligibleEvents = useMemo(() => {
+    if (currentRole === UserRole.CLUB_EXEC && currentUser?.clubId) {
+      return approvedEvents.filter((ev: any) => ev.clubId === currentUser.clubId);
+    }
+    return approvedEvents;
+  }, [approvedEvents, currentRole, currentUser]);
+
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       setAmount('');
       setCategory(ExpenseCategory.FOOD);
       setDate(new Date().toISOString().split('T')[0]);
-      setEventId(approvedEvents.length > 0 ? approvedEvents[0].id : '');
+      setEventId(eligibleEvents.length > 0 ? eligibleEvents[0].id : '');
       setDescription('');
       setReceiptUrl('');
       setReceiptFileName('');
@@ -64,16 +72,28 @@ export default function AddExpenseModal({
         fileInputRef.current.value = '';
       }
     }
-  }, [isOpen, approvedEvents]);
+  }, [isOpen, eligibleEvents]);
+
+  const selectedEvent = useMemo(() => {
+    return eligibleEvents.find((ev: any) => ev.id === eventId);
+  }, [eligibleEvents, eventId]);
+
+  const eventRemaining = useMemo(() => {
+    if (!selectedEvent) return 0;
+    const b = Math.round(Number(selectedEvent.approvedBudget ?? selectedEvent.budget ?? selectedEvent.estimatedCost ?? 0));
+    const s = selectedEvent.spent !== undefined
+      ? Math.round(Number(selectedEvent.spent))
+      : (selectedEvent.expenses || []).reduce((sum: number, ex: any) => sum + Math.round(Number(ex.amount || 0)), 0);
+    return b - s;
+  }, [selectedEvent]);
 
   if (!isOpen) return null;
 
   // Live budget impact calculation
   const numAmount = parseFloat(amount) || 0;
   const isReceiptRequired = numAmount > 500;
-  const projectedTotal = currentTotalSpent + numAmount;
-  const isOverBudget = numAmount > 0 && projectedTotal > 50000;
-  const excessAmount = projectedTotal - 50000;
+  const exceedsEventRemaining = selectedEvent && numAmount > 0 && numAmount > eventRemaining;
+  const eventExcessAmount = exceedsEventRemaining ? numAmount - eventRemaining : 0;
 
   // Client-side file validation and upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,11 +305,18 @@ export default function AddExpenseModal({
           </div>
         )}
 
-        {/* Dynamic Red Warning if Expense Pushes Total Spent Above ₹50,000 */}
-        {isOverBudget && (
-          <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-rose-700 text-xs font-bold flex items-center gap-2 animate-in fade-in">
-            <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>This exceeds the semester budget by ₹{excessAmount.toLocaleString('en-IN')}</span>
+        {/* Dynamic Amber Warning if Expense Exceeds Event Remaining Budget */}
+        {exceedsEventRemaining && (
+          <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
+            <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-800">
+                Amber Warning: Exceeds event remaining budget
+              </p>
+              <p className="mt-0.5 text-amber-700">
+                This expense of ₹{Math.round(numAmount).toLocaleString('en-IN')} exceeds the event&apos;s remaining budget (₹{eventRemaining.toLocaleString('en-IN')} left) by ₹{Math.round(eventExcessAmount).toLocaleString('en-IN')}. You may still proceed with saving.
+              </p>
+            </div>
           </div>
         )}
 
@@ -362,12 +389,20 @@ export default function AddExpenseModal({
 
           {/* Event (required dropdown of approved events) */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Event <span className="text-rose-500">*</span>
-            </label>
-            {approvedEvents.length === 0 ? (
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-700">
+                Event <span className="text-rose-500">*</span>
+              </label>
+              {selectedEvent && (
+                <span className="text-[11px] font-semibold text-slate-500">
+                  {selectedEvent.club?.name || ''}
+                </span>
+              )}
+            </div>
+
+            {eligibleEvents.length === 0 ? (
               <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-                No approved events available. Only approved events can have expenses linked.
+                No approved events available for this club. Only approved events can have expenses linked.
               </div>
             ) : (
               <select
@@ -377,12 +412,29 @@ export default function AddExpenseModal({
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
               >
                 <option value="">Select an approved event...</option>
-                {approvedEvents.map((ev) => (
+                {eligibleEvents.map((ev: any) => (
                   <option key={ev.id} value={ev.id}>
                     {ev.title} ({ev.club?.name || 'Club'})
                   </option>
                 ))}
               </select>
+            )}
+
+            {/* Event Remaining Budget Display */}
+            {selectedEvent && (
+              <div className="mt-2 flex items-center gap-2">
+                {eventRemaining >= 0 ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    ₹{eventRemaining.toLocaleString('en-IN')} left for this event
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Event currently over budget by ₹{Math.abs(eventRemaining).toLocaleString('en-IN')}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
