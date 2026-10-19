@@ -1,19 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Trash2, Calendar, Tag, FileText, User, ExternalLink, Loader2 } from "lucide-react";
 
-export default function ExpenseDetailPage({ params }: { params: { id: string } }) {
+export default function ExpenseDetailPage() {
   const router = useRouter();
+  const routeParams = useParams();
+  const id = routeParams?.id as string;
   const [expense, setExpense] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/expenses/${params.id}`)
+    if (!id) return;
+    fetch(`/api/expenses/${id}`)
       .then((res) => res.json())
       .then((res) => {
         if (res.success) {
@@ -24,14 +27,14 @@ export default function ExpenseDetailPage({ params }: { params: { id: string } }
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [params.id]);
+  }, [id]);
 
   async function handleDelete() {
     if (!confirm("Are you sure you want to delete this expense record?")) return;
 
     try {
       setDeleting(true);
-      const res = await fetch(`/api/expenses/${params.id}`, {
+      const res = await fetch(`/api/expenses/${id}`, {
         method: "DELETE",
       });
       const result = await res.json();

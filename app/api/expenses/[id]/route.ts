@@ -7,11 +7,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const expense = await prisma.expense.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         event: {
           select: { id: true, title: true, clubId: true },
@@ -35,9 +36,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const parseResult = UpdateExpenseSchema.safeParse(body);
 
@@ -50,7 +52,7 @@ export async function PATCH(
     }
 
     const existing = await prisma.expense.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existing) {
@@ -63,7 +65,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.expense.update({
-      where: { id: params.id },
+      where: { id },
       data,
       include: {
         event: {
@@ -84,11 +86,12 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const existing = await prisma.expense.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existing) {
@@ -96,10 +99,10 @@ export async function DELETE(
     }
 
     await prisma.expense.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
-    return successResponse({ id: params.id, message: "Expense deleted successfully" });
+    return successResponse({ id, message: "Expense deleted successfully" });
   } catch (error: any) {
     console.error("DELETE /api/expenses/:id error:", error);
     return errorResponse("INTERNAL_SERVER_ERROR", "Failed to delete expense", 500);

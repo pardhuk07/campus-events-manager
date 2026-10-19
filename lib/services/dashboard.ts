@@ -14,25 +14,26 @@ export async function fetchDashboardData() {
   ] = await Promise.all([
     // Next 5 approved events
     prisma.event.findMany({
-      where: { startTime: { gte: now }, status: "APPROVED" },
+      where: { startTime: { gte: now } },
       orderBy: { startTime: "asc" },
-      take: 5,
+      take: 10,
       include: { club: { select: { name: true } } },
-    }),
+    }).then((events) => events.filter((e) => (e as any).status === "APPROVED").slice(0, 5)),
 
     // Count pending approvals
-    prisma.event.count({ where: { status: "PENDING" } }),
+    prisma.event.findMany({
+      select: { status: true },
+    }).then((events) => events.filter((e) => (e as any).status === "PENDING").length),
 
     // Flagged conflicts
     prisma.eventConflict.findMany({
-      where: { status: "FLAGGED" },
       include: {
         event: { select: { id: true, title: true, startTime: true, endTime: true } },
         conflictingEvent: { select: { id: true, title: true, startTime: true, endTime: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: 5,
-    }),
+      take: 10,
+    }).then((conflicts) => conflicts.filter((c) => (c as any).status === "FLAGGED").slice(0, 5)),
 
     // Most recent active budget
     prisma.budget.findFirst({

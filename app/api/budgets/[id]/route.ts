@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const parseResult = UpdateBudgetSchema.safeParse(body);
 
@@ -22,11 +23,11 @@ export async function PATCH(
     }
 
     const existing = await prisma.budget.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existing) {
-      return errorResponse("BUDGET_NOT_FOUND", "Budget record not found", 404);
+      return errorResponse("BUDGET_NOT_FOUND", "Budget not found", 404);
     }
 
     const data: any = { ...parseResult.data };
@@ -34,29 +35,30 @@ export async function PATCH(
     if (data.endDate) data.endDate = new Date(data.endDate);
 
     const updated = await prisma.budget.update({
-      where: { id: params.id },
+      where: { id },
       data,
     });
 
-    // Recompute totalSpent and remainingBudget
-    const expenseAggregate = await prisma.expense.aggregate({
-      _sum: { amount: true },
+    // Recompute totalSpent
+    const expenses = await prisma.expense.aggregate({
       where: {
         expenseDate: {
           gte: updated.startDate,
           lte: updated.endDate,
         },
       },
+      _sum: {
+        amount: true,
+      },
     });
 
-    const totalSpent = Number(expenseAggregate._sum.amount ?? 0);
-    const budgetAmount = Number(updated.amount);
+    const totalSpent = Number(expenses._sum.amount ?? 0);
+    const remainingBudget = Number(updated.amount) - totalSpent;
 
     return successResponse({
       ...updated,
-      amount: budgetAmount,
       totalSpent,
-      remainingBudget: budgetAmount - totalSpent,
+      remainingBudget,
     });
   } catch (error: any) {
     console.error("PATCH /api/budgets/:id error:", error);
