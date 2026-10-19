@@ -3,19 +3,14 @@
 import React, { useState } from 'react';
 import { ClockIcon, MapPinIcon } from './Icons';
 import { getClubTheme } from '@/lib/colors';
+import { CAMPUS_VENUES } from '@/lib/constants';
 
 interface VenueTimelineProps {
   events: any[];
   onSelectEvent?: (event: any) => void;
 }
 
-const VENUES = [
-  'Seminar Hall 1',
-  'Seminar Hall 2',
-  'Central Auditorium',
-  'CS Dept Lab 3',
-  'ECE Seminar Hall',
-];
+const VENUES = CAMPUS_VENUES;
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; // 9 AM to 8 PM
 

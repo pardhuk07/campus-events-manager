@@ -96,6 +96,7 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     shortName: 'E-Cell',
     description: 'Entrepreneurship Cell SVNIT',
     category: 'Entrepreneurship & Innovation',
+    logoUrl: '/clubs/ecell.png',
   },
   {
     id: 'club-phoenix',
@@ -155,7 +156,21 @@ export const CAMPUS_CLUBS: CampusClub[] = [
   },
 ];
 
-// 7. Standard Error Codes
+// 7. Official Campus Venues (Single Source of Truth)
+export const CAMPUS_VENUES = [
+  'Chemical Department Seminar Hall',
+  'CSE Dept Seminar Hall',
+  'Civil Dept',
+  'Electrical Dept',
+  'Lecture Theatre (LT1)',
+  'Class Room Complex (CRC)',
+  'CRC Lawns',
+  'Library Basement',
+  'Mech Dept',
+] as const;
+export type CampusVenue = (typeof CAMPUS_VENUES)[number];
+
+// 8. Standard Error Codes
 export const ErrorCodes = {
   EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
   EVENT_ALREADY_EXISTS: 'EVENT_ALREADY_EXISTS',

@@ -5,7 +5,7 @@ import {
   PlusCircleIcon,
   AlertTriangleIcon,
 } from './Icons';
-import { UserRole, CAMPUS_CLUBS } from '@/lib/constants';
+import { UserRole, CAMPUS_CLUBS, CAMPUS_VENUES } from '@/lib/constants';
 
 interface EventDrawerProps {
   isOpen: boolean;
@@ -28,7 +28,7 @@ export default function EventDrawer({
 }: EventDrawerProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [venue, setVenue] = useState('Seminar Hall 1');
+  const [venue, setVenue] = useState<string>(CAMPUS_VENUES[0]);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [audienceTag, setAudienceTag] = useState('TECH_UG');
@@ -313,11 +313,11 @@ export default function EventDrawer({
                 onChange={(e) => setVenue(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
               >
-                <option value="Seminar Hall 1">Seminar Hall 1</option>
-                <option value="Seminar Hall 2">Seminar Hall 2</option>
-                <option value="Central Auditorium">Central Auditorium</option>
-                <option value="CS Dept Lab 3">CS Dept Lab 3</option>
-                <option value="ECE Seminar Hall">ECE Seminar Hall</option>
+                {CAMPUS_VENUES.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
               </select>
             </div>
 
