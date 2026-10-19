@@ -103,6 +103,7 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     shortName: 'Phoenix',
     description: 'Formula Student & Aeromodelling Team SVNIT',
     category: 'Automotive & Aeronautics',
+    logoUrl: '/clubs/phoenix.png',
   },
   {
     id: 'club-drishti',
@@ -118,6 +119,7 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     shortName: 'NEXUS',
     description: 'Tech Club Exclusive for AI & CSE Students',
     category: 'Tech Club (AI & CSE)',
+    logoUrl: '/clubs/nexus.png',
   },
   {
     id: 'club-gdgc',
@@ -141,6 +143,15 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     shortName: 'CES',
     description: 'Civil Engineering Society SVNIT',
     category: 'Departmental Society',
+    logoUrl: '/clubs/ces.png',
+  },
+  {
+    id: 'club-think-india',
+    name: 'Think India',
+    shortName: 'Think India',
+    description: 'Think India SVNIT Chapter (National Forum for Students & Youth)',
+    category: 'Social & Youth Forum',
+    logoUrl: '/clubs/think_india.png',
   },
 ];
 

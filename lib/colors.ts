@@ -93,6 +93,15 @@ export function getClubTheme(clubName?: string) {
       hex: '#475569',
     };
   }
+  if (name.includes('think india') || name.includes('thinkindia')) {
+    return {
+      text: 'text-amber-700 font-semibold',
+      bg: 'bg-amber-50',
+      border: 'border-amber-200',
+      dot: 'bg-amber-600',
+      hex: '#d97706',
+    };
+  }
   return {
     text: 'text-indigo-700 font-semibold',
     bg: 'bg-indigo-50',
