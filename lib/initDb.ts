@@ -263,8 +263,8 @@ export async function ensureDatabaseTables() {
           ('club-chrd', 'CHRD (Dancing, Singing, Arts, Photography)', 'Center for Human Resource Development (Dancing, Singing, Arts, Photography)'),
           ('club-ecell', 'E-Cell', 'Entrepreneurship Cell SVNIT'),
           ('club-phoenix', 'Phoenix Racing & Phoenix Aero', 'Formula Student & Aeromodelling Team SVNIT'),
-          ('club-drishti', 'Drishti', 'Technical Hobby Club SVNIT (Robotics, IoT, Automation)'),
-          ('club-nexus', 'NEXUS', 'Electronics & Communication Engineering Society'),
+          ('club-drishti', 'Drishti', 'Technical Club of SVNIT'),
+          ('club-nexus', 'NEXUS', 'Tech Club Exclusive for AI & CSE Students'),
           ('club-gdgc', 'GDGC', 'Google Developer Groups on Campus SVNIT'),
           ('club-cev', 'CEV (Cutting Edge Visionaries)', 'Cutting Edge Visionaries SVNIT'),
           ('club-ces', 'CES (Civil Engineering Society)', 'Civil Engineering Society SVNIT')

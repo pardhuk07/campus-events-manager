@@ -222,20 +222,41 @@ export default function GatekeeperModal({
                   className="p-3 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition group shadow-2xs flex flex-col justify-between cursor-pointer"
                 >
                   <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 group-hover:text-indigo-700">
-                        {club.shortName}
-                      </span>
-                      <span className="text-[9px] bg-slate-100 group-hover:bg-indigo-100 text-slate-600 group-hover:text-indigo-700 px-2 py-0.5 rounded-full font-semibold">
-                        {club.category}
-                      </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {club.logoUrl ? (
+                          <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 p-0.5 flex items-center justify-center shrink-0 shadow-xs">
+                            <img
+                              src={club.logoUrl}
+                              alt={club.shortName}
+                              className="w-full h-full object-contain rounded"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-indigo-100 border border-indigo-200 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0">
+                            {club.shortName.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-900 group-hover:text-indigo-700 truncate block">
+                            {club.shortName}
+                          </span>
+                          <span className="text-[9px] text-slate-500 truncate block">
+                            {club.category}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-400 group-hover:text-indigo-600 transition shrink-0 font-bold">→</span>
                     </div>
-                    <div className="text-[11px] font-medium text-slate-600 mt-1 line-clamp-2">
-                      {club.name}
+                    <div className="text-[11px] font-medium text-slate-600 mt-2 line-clamp-2">
+                      {club.description || club.name}
                     </div>
                   </div>
-                  <span className="text-[10px] text-indigo-600 font-bold mt-2 flex items-center gap-1">
-                    Select this Club →
+                  <span className="text-[10px] text-indigo-600 font-bold mt-2.5 flex items-center gap-1">
+                    Select {club.shortName} →
                   </span>
                 </button>
               ))}
@@ -273,11 +294,23 @@ export default function GatekeeperModal({
 
             {selectedRole === UserRole.CLUB_EXEC && (
               <div className="mb-3 p-2.5 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">🏢</span>
-                  <div>
-                    <span className="font-bold">{selectedClub.shortName}</span>
-                    <span className="text-[11px] text-slate-600 block">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {selectedClub.logoUrl ? (
+                    <div className="w-8 h-8 rounded-lg bg-white border border-indigo-200 p-0.5 flex items-center justify-center shrink-0 shadow-xs">
+                      <img
+                        src={selectedClub.logoUrl}
+                        alt={selectedClub.shortName}
+                        className="w-full h-full object-contain rounded"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                      {selectedClub.shortName.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <span className="font-bold truncate block">{selectedClub.shortName}</span>
+                    <span className="text-[11px] text-slate-600 block truncate">
                       Events will be strictly restricted to {selectedClub.name}.
                     </span>
                   </div>

@@ -62,6 +62,7 @@ export interface CampusClub {
   shortName: string;
   description: string;
   category: string;
+  logoUrl?: string;
 }
 
 export const CAMPUS_CLUBS: CampusClub[] = [
@@ -71,6 +72,7 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     shortName: 'ACM',
     description: 'Association for Computing Machinery SVNIT Student Chapter',
     category: 'Technical & Computing',
+    logoUrl: '/clubs/acm.png',
   },
   {
     id: 'club-ches',
@@ -78,6 +80,7 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     shortName: 'ChES',
     description: 'Chemical Engineering Society of SVNIT Surat',
     category: 'Departmental Society',
+    logoUrl: '/clubs/ches.png',
   },
   {
     id: 'club-chrd',
@@ -85,6 +88,7 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     shortName: 'CHRD',
     description: 'Center for Human Resource Development (Dancing, Singing, Arts, Photography)',
     category: 'Cultural & Arts',
+    logoUrl: '/clubs/chrd.png',
   },
   {
     id: 'club-ecell',
@@ -104,15 +108,16 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     id: 'club-drishti',
     name: 'Drishti',
     shortName: 'Drishti',
-    description: 'Technical Hobby Club SVNIT (Robotics, IoT, Automation)',
-    category: 'Technical Hobby',
+    description: 'Technical Club of SVNIT',
+    category: 'Technical Club',
+    logoUrl: '/clubs/drishti.png',
   },
   {
     id: 'club-nexus',
     name: 'NEXUS',
     shortName: 'NEXUS',
-    description: 'Electronics & Communication Engineering Society',
-    category: 'Departmental Society',
+    description: 'Tech Club Exclusive for AI & CSE Students',
+    category: 'Tech Club (AI & CSE)',
   },
   {
     id: 'club-gdgc',
@@ -120,6 +125,7 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     shortName: 'GDGC',
     description: 'Google Developer Groups on Campus SVNIT',
     category: 'Technical & Developers',
+    logoUrl: '/clubs/gdgc.png',
   },
   {
     id: 'club-cev',
@@ -127,6 +133,7 @@ export const CAMPUS_CLUBS: CampusClub[] = [
     shortName: 'CEV',
     description: 'Cutting Edge Visionaries SVNIT',
     category: 'Technical & Interdisciplinary',
+    logoUrl: '/clubs/cev.png',
   },
   {
     id: 'club-ces',

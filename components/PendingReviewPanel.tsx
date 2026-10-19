@@ -10,7 +10,7 @@ import {
   ShieldCheckIcon,
 } from './Icons';
 import { getClubTheme } from '@/lib/colors';
-import { UserRole } from '@/lib/constants';
+import { UserRole, CAMPUS_CLUBS } from '@/lib/constants';
 
 interface PendingReviewPanelProps {
   currentRole: string;
@@ -286,10 +286,32 @@ export default function PendingReviewPanel({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className={`font-semibold ${clubTheme.text}`}>
-                      {ev.club?.name || 'General Campus Club'}
-                    </span>
+                  <div className="flex items-center gap-2 text-xs flex-wrap">
+                    {(() => {
+                      const campusClub = CAMPUS_CLUBS.find(
+                        (c) => c.id === ev.clubId || c.name === ev.club?.name || (ev.club?.name && ev.club.name.includes(c.shortName))
+                      );
+                      return (
+                        <div className="flex items-center gap-1.5">
+                          {campusClub?.logoUrl ? (
+                            <div className="w-5 h-5 rounded-md bg-white border border-slate-200 p-0.5 flex items-center justify-center shrink-0 shadow-2xs">
+                              <img
+                                src={campusClub.logoUrl}
+                                alt={campusClub.shortName}
+                                className="w-full h-full object-contain rounded"
+                              />
+                            </div>
+                          ) : (
+                            <span className="w-5 h-5 rounded-md bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center shrink-0">
+                              {campusClub?.shortName ? campusClub.shortName.slice(0, 2).toUpperCase() : '🏢'}
+                            </span>
+                          )}
+                          <span className={`font-semibold ${clubTheme.text}`}>
+                            {ev.club?.name || campusClub?.name || 'General Campus Club'}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <span className="text-slate-400">•</span>
                     <span className="text-slate-600 font-medium">
                       Organizer: <strong className="text-slate-800">{ev.organizer || 'Not specified'}</strong>

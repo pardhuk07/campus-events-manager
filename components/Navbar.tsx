@@ -174,11 +174,29 @@ export default function Navbar({
                       : 'bg-slate-100 text-slate-700 border border-slate-200'
                   }`}
                 >
-                  {currentUser.role === UserRole.CORE_VERIFIER
-                    ? '👑 Core'
-                    : currentUser.role === UserRole.CLUB_EXEC
-                    ? `🛡️ ${CAMPUS_CLUBS.find((c) => c.id === currentUser.clubId)?.shortName || 'Exec'}`
-                    : '👤 Public'}
+                  {currentUser.role === UserRole.CORE_VERIFIER ? (
+                    '👑 Core'
+                  ) : currentUser.role === UserRole.CLUB_EXEC ? (
+                    (() => {
+                      const club = CAMPUS_CLUBS.find((c) => c.id === currentUser.clubId);
+                      return (
+                        <span className="inline-flex items-center gap-1.5">
+                          {club?.logoUrl ? (
+                            <img
+                              src={club.logoUrl}
+                              alt={club.shortName}
+                              className="w-3.5 h-3.5 object-contain rounded-full inline-block"
+                            />
+                          ) : (
+                            <span>🛡️</span>
+                          )}
+                          <span>{club?.shortName || 'Exec'}</span>
+                        </span>
+                      );
+                    })()
+                  ) : (
+                    '👤 Public'
+                  )}
                 </span>
 
                 <button

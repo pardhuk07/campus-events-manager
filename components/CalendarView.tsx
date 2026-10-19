@@ -127,12 +127,24 @@ export default function CalendarView({ events, onSelectEvent, isMember }: Calend
             <span className="text-slate-700 font-medium">ACM</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
-            <span className="text-slate-700 font-medium">IEEE</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+            <span className="text-slate-700 font-medium">ChES</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-            <span className="text-slate-700 font-medium">CSI</span>
+            <span className="text-slate-700 font-medium">CHRD</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+            <span className="text-slate-700 font-medium">Drishti</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span className="text-slate-700 font-medium">GDGC</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+            <span className="text-slate-700 font-medium">CEV</span>
           </div>
         </div>
       </div>

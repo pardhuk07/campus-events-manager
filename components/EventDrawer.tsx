@@ -5,7 +5,7 @@ import {
   PlusCircleIcon,
   AlertTriangleIcon,
 } from './Icons';
-import { UserRole } from '@/lib/constants';
+import { UserRole, CAMPUS_CLUBS } from '@/lib/constants';
 
 interface EventDrawerProps {
   isOpen: boolean;
@@ -196,24 +196,42 @@ export default function EventDrawer({
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Organizing Club</label>
               {currentRole === UserRole.CLUB_EXEC ? (
-                <div className="bg-indigo-50/80 border border-indigo-200 rounded-xl p-3 flex items-center justify-between shadow-2xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm font-black shrink-0">
-                      🏢
-                    </span>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 truncate">
-                        {clubs.find((c) => c.id === (currentUser?.clubId || clubId))?.name || 'Your Assigned Club'}
+                (() => {
+                  const assignedClubId = currentUser?.clubId || clubId;
+                  const campusClub = CAMPUS_CLUBS.find((c) => c.id === assignedClubId);
+                  const clubName = clubs.find((c) => c.id === assignedClubId)?.name || campusClub?.name || 'Your Assigned Club';
+
+                  return (
+                    <div className="bg-indigo-50/80 border border-indigo-200 rounded-xl p-3 flex items-center justify-between shadow-2xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {campusClub?.logoUrl ? (
+                          <div className="w-8 h-8 rounded-lg bg-white border border-indigo-200 p-0.5 flex items-center justify-center shrink-0 shadow-xs">
+                            <img
+                              src={campusClub.logoUrl}
+                              alt={campusClub.shortName}
+                              className="w-full h-full object-contain rounded"
+                            />
+                          </div>
+                        ) : (
+                          <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-black shrink-0">
+                            {campusClub?.shortName ? campusClub.shortName.slice(0, 2).toUpperCase() : '🏢'}
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-900 truncate">
+                            {clubName}
+                          </div>
+                          <div className="text-[10px] text-indigo-700 font-semibold truncate">
+                            Locked to your assigned society (Executives can only submit events for their club)
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-indigo-700 font-semibold truncate">
-                        Locked to your assigned society (Executives can only submit events for their club)
-                      </div>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-800 font-extrabold px-2.5 py-1 rounded-full border border-indigo-200 shrink-0 ml-2">
+                        🔒 Locked
+                      </span>
                     </div>
-                  </div>
-                  <span className="text-[10px] bg-indigo-100 text-indigo-800 font-extrabold px-2.5 py-1 rounded-full border border-indigo-200 shrink-0 ml-2">
-                    🔒 Locked
-                  </span>
-                </div>
+                  );
+                })()
               ) : (
                 <select
                   value={clubId}
