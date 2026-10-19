@@ -1,0 +1,141 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  MEMBER
+  CLUB_EXEC
+  CORE_VERIFIER
+}
+
+enum EventStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum ConflictStatus {
+  FLAGGED
+  REVIEWED
+  DISMISSED
+  RESOLVED
+}
+
+enum ExpenseCategory {
+  FOOD
+  VENUE
+  PRIZES
+  MARKETING
+  PRINTING
+  EQUIPMENT
+  TRAVEL
+  MISCELLANEOUS
+}
+
+enum BudgetPeriod {
+  MONTHLY
+  SEMESTER
+}
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String?
+  role         UserRole  @default(MEMBER)
+  clubId       String?
+  club         Club?     @relation(fields: [clubId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  submittedEvents   Event[]         @relation("EventSubmittedBy")
+  reviewedConflicts EventConflict[] @relation("ConflictReviewedBy")
+  submittedExpenses Expense[]       @relation("ExpenseSubmittedBy")
+}
+
+model Club {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users  User[]
+  events Event[]
+}
+
+model Event {
+  id                 String      @id @default(uuid())
+  title              String
+  description        String?
+  clubId             String
+  club               Club        @relation(fields: [clubId], references: [id])
+  startTime          DateTime
+  endTime            DateTime
+  venue              String
+  audienceTags       String[]
+  expectedAttendance Int?
+  category           String?
+  status             EventStatus @default(PENDING)
+  submittedById      String
+  submittedBy        User        @relation("EventSubmittedBy", fields: [submittedById], references: [id])
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  expenses              Expense[]
+  conflictsAsPrimary    EventConflict[] @relation("PrimaryEvent")
+  conflictsAsConflicted EventConflict[] @relation("ConflictingEvent")
+}
+
+model EventConflict {
+  id                 String         @id @default(uuid())
+  eventId            String
+  event              Event          @relation("PrimaryEvent", fields: [eventId], references: [id])
+  conflictingEventId String
+  conflictingEvent   Event          @relation("ConflictingEvent", fields: [conflictingEventId], references: [id])
+  reason             String
+  overlapStart       DateTime?
+  overlapEnd         DateTime?
+  status             ConflictStatus @default(FLAGGED)
+  reviewedById       String?
+  reviewedBy         User?          @relation("ConflictReviewedBy", fields: [reviewedById], references: [id])
+  resolutionNote     String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@unique([eventId, conflictingEventId])
+}
+
+model Expense {
+  id              String          @id @default(uuid())
+  eventId         String?
+  event           Event?          @relation(fields: [eventId], references: [id])
+  amount          Decimal         @db.Decimal(10, 2)
+  category        ExpenseCategory
+  description     String?
+  expenseDate     DateTime
+  receiptUrl      String?
+  receiptPublicId String?
+  submittedById   String
+  submittedBy     User            @relation("ExpenseSubmittedBy", fields: [submittedById], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Budget {
+  id         String       @id @default(uuid())
+  name       String
+  amount     Decimal      @db.Decimal(10, 2)
+  periodType BudgetPeriod
+  startDate  DateTime
+  endDate    DateTime
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
