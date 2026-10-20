@@ -6,6 +6,7 @@ import DashboardView from '../components/DashboardView';
 import EventManager from '../components/EventManager';
 import ExpenseManager from '../components/ExpenseManager';
 import HistoryView from '../components/HistoryView';
+import ClubOnboardingModal from '../components/ClubOnboardingModal';
 import { UserRole } from '@/lib/constants';
 
 export default function Home() {
@@ -13,6 +14,7 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [eventViewMode, setEventViewMode] = useState<'calendar' | 'timeline' | 'clashes' | 'list' | 'reviews'>('calendar');
   const [targetEventId, setTargetEventId] = useState<string | undefined>();
+  const [showClubModal, setShowClubModal] = useState(false);
 
   const effectiveRole = currentUser?.role || 'MEMBER';
 
@@ -101,6 +103,24 @@ export default function Home() {
     window.location.href = '/login';
   };
 
+  const handleClubPromotionSuccess = (updatedUser: AuthUser) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem('acm_auth_user', JSON.stringify(updatedUser));
+    if (updatedUser.email) {
+      localStorage.setItem(`acm_club_onboarding_answered_${updatedUser.email}`, 'true');
+    }
+  };
+
+  // Ask only once on first login if the user belongs to a club
+  useEffect(() => {
+    if (currentUser && currentUser.role === UserRole.MEMBER && !currentUser.clubId) {
+      const alreadyAnswered = localStorage.getItem(`acm_club_onboarding_answered_${currentUser.email}`);
+      if (!alreadyAnswered) {
+        setShowClubModal(true);
+      }
+    }
+  }, [currentUser]);
+
   // Restrict tabs: Only Core Verifier can access dashboard; regular members cannot access budget
   useEffect(() => {
     if (effectiveRole !== UserRole.CORE_VERIFIER && activeTab === 'dashboard') {
@@ -121,6 +141,7 @@ export default function Home() {
         onLogin={handleLoginSuccess}
         onLogout={handleLogout}
         onOpenPendingReview={handleOpenPendingReview}
+        onOpenClubModal={() => setShowClubModal(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -152,6 +173,14 @@ export default function Home() {
       <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500 font-medium">
         ACM Student Chapter • Campus Conflict-Aware Events & Fund Management System
       </footer>
+
+      {/* Onboarding Club Selection Modal */}
+      <ClubOnboardingModal
+        isOpen={showClubModal}
+        currentUser={currentUser}
+        onClose={() => setShowClubModal(false)}
+        onSuccess={handleClubPromotionSuccess}
+      />
     </div>
   );
 }

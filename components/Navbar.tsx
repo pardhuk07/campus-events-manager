@@ -21,6 +21,7 @@ interface NavbarProps {
   onLogin: (user: AuthUser) => void;
   onLogout: () => void;
   onOpenPendingReview?: (eventId?: string) => void;
+  onOpenClubModal?: () => void;
 }
 
 export default function Navbar({
@@ -30,6 +31,7 @@ export default function Navbar({
   onLogin,
   onLogout,
   onOpenPendingReview,
+  onOpenClubModal,
 }: NavbarProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -274,6 +276,21 @@ export default function Navbar({
                         </span>
                       </div>
                     </div>
+
+                    {currentUser.role === UserRole.MEMBER && onOpenClubModal && (
+                      <button
+                        id="user-promote-exec-btn"
+                        type="button"
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          onOpenClubModal();
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 hover:bg-indigo-50 border border-indigo-100 transition text-left cursor-pointer my-1.5 shadow-2xs"
+                      >
+                        <span className="text-sm">⚡</span>
+                        <span>Register as Club Executive</span>
+                      </button>
+                    )}
 
                     <div className="h-px bg-slate-100 my-1" />
 
